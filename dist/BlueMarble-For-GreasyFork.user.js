@@ -2,7 +2,7 @@
 // @name            Blue Marble
 // @name:en         Blue Marble
 // @namespace       https://github.com/SwingTheVine/
-// @version         0.90.68
+// @version         0.90.76
 // @description     A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @description:en  A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @author          SwingTheVine
@@ -2066,20 +2066,44 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       console.log(`Absolute coordinates: (${absoluteSmallestX}, ${absoluteSmallestY}) and (${absoluteLargestX}, ${absoluteLargestY})`);
       const templateWidth = absoluteLargestX - absoluteSmallestX;
       const templateHeight = absoluteLargestY - absoluteSmallestY;
+      const canvasWidth = templateWidth * this.drawMult;
+      const canvasHeight = templateHeight * this.drawMult;
       console.log(`Template Width: ${templateWidth}
-Template Height: ${templateHeight}`);
-      const canvas = new OffscreenCanvas(templateWidth, templateHeight);
+Template Height: ${templateHeight}
+Canvas Width: ${canvasWidth}
+Canvas Height: ${canvasHeight}`);
+      const canvas = new OffscreenCanvas(canvasWidth, canvasHeight);
       const context = canvas.getContext("2d");
-      context.imageSmoothingEnabled = false;
       templateTileKeysSorted.forEach((key, index) => {
         const [tileX, tileY, pixelX, pixelY] = key.split(",").map(Number);
         const tileImage = templateTilesImageSorted[index];
         const absoluteX = tileX * this.tileSize + pixelX;
         const absoluteY = tileY * this.tileSize + pixelY;
         console.log(`Drawing tile (${tileX}, ${tileY}, ${pixelX}, ${pixelY}) (${absoluteX}, ${absoluteY}) at (${absoluteX - absoluteSmallestX}, ${absoluteY - absoluteSmallestY}) on the canvas...`);
-        context.drawImage(tileImage, absoluteX - absoluteSmallestX, absoluteY - absoluteSmallestY, tileImage.width / this.drawMult, tileImage.height / this.drawMult);
+        context.drawImage(tileImage, (absoluteX - absoluteSmallestX) * this.drawMult, (absoluteY - absoluteSmallestY) * this.drawMult, tileImage.width, tileImage.height);
       });
-      return canvas.convertToBlob({ type: "image/png" });
+      context.globalCompositeOperation = "destination-over";
+      context.drawImage(canvas, 0, -1);
+      context.drawImage(canvas, 0, 1);
+      context.drawImage(canvas, -1, 0);
+      context.drawImage(canvas, 1, 0);
+      const smallCanvas = new OffscreenCanvas(templateWidth, templateHeight);
+      const smallContext = smallCanvas.getContext("2d");
+      smallContext.imageSmoothingEnabled = false;
+      smallContext.drawImage(
+        canvas,
+        0,
+        0,
+        templateWidth * this.drawMult,
+        templateHeight * this.drawMult,
+        // Source image size
+        0,
+        0,
+        templateWidth,
+        templateHeight
+        // Small canvas size
+      );
+      return smallCanvas.convertToBlob({ type: "image/png" });
       function convertBase64ToImage(base64) {
         return new Promise((resolve, reject) => {
           const image = new Image();
