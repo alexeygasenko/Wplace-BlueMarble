@@ -1,5 +1,5 @@
 import Template from "./Template";
-import { base64ToUint8, colorpaletteForBlueMarble, consoleError, consoleLog, consoleWarn, localizeNumber, numberToEncoded, sleep } from "./utils";
+import { base64ToUint8, colorpaletteForBlueMarble, consoleError, consoleLog, consoleWarn, localizeNumber, numberToEncoded, sleep, viewCanvasInNewTab } from "./utils";
 import WindowWizard from "./WindowWizard";
 
 /** Manages the template system.
@@ -351,13 +351,14 @@ export default class TemplateManager {
     // Calculates the template/canvas width and height
     const templateWidth = absoluteLargestX - absoluteSmallestX;
     const templateHeight = absoluteLargestY - absoluteSmallestY;
+    const canvasWidth = templateWidth * this.drawMult;
+    const canvasHeight = templateHeight * this.drawMult;
 
-    console.log(`Template Width: ${templateWidth}\nTemplate Height: ${templateHeight}`);
+    console.log(`Template Width: ${templateWidth}\nTemplate Height: ${templateHeight}\nCanvas Width: ${canvasWidth}\nCanvas Height: ${canvasHeight}`);
 
     // Creates a new canvas the size of the template
-    const canvas = new OffscreenCanvas(templateWidth, templateHeight);
+    const canvas = new OffscreenCanvas(canvasWidth, canvasHeight);
     const context = canvas.getContext('2d');
-    context.imageSmoothingEnabled = false; // Forces nearest neighbor scaling algorithm
 
     // For each tile...
     templateTileKeysSorted.forEach((key, index) => {
@@ -373,12 +374,36 @@ export default class TemplateManager {
 
       console.log(`Drawing tile (${tileX}, ${tileY}, ${pixelX}, ${pixelY}) (${absoluteX}, ${absoluteY}) at (${absoluteX - absoluteSmallestX}, ${absoluteY - absoluteSmallestY}) on the canvas...`);
 
-      // Draws the tile to the canvas AND scales it down in the process
-      context.drawImage(tileImage, absoluteX - absoluteSmallestX, absoluteY - absoluteSmallestY, tileImage.width / this.drawMult, tileImage.height / this.drawMult);
+      // Draws the tile to the canvas
+      context.drawImage(tileImage, (absoluteX - absoluteSmallestX) * this.drawMult, (absoluteY - absoluteSmallestY) * this.drawMult, tileImage.width, tileImage.height);
     })
 
+    // The expanded template is now on the canvas
+
+    context.globalCompositeOperation = "destination-over"; // Draw under the canvas (new draws only show in place of transparent pixels)
+
+    // Extends the template vertically to create columns
+    context.drawImage(canvas, 0, -1);
+    context.drawImage(canvas, 0, 1);
+
+    // Extends the columns horizontally to become a solid template
+    context.drawImage(canvas, -1, 0);
+    context.drawImage(canvas, 1, 0);
+
+    const smallCanvas = new OffscreenCanvas(templateWidth, templateHeight);
+    const smallContext = smallCanvas.getContext("2d");
+
+    smallContext.imageSmoothingEnabled = false; // Forces nearest neighbor scaling algorithm
+
+    // Downscale the template
+    smallContext.drawImage(
+      canvas,
+      0, 0, templateWidth * this.drawMult, templateHeight * this.drawMult, // Source image size
+      0, 0, templateWidth, templateHeight // Small canvas size
+    );
+
     // Returns a blob
-    return canvas.convertToBlob({ type: 'image/png' });
+    return smallCanvas.convertToBlob({ type: 'image/png' });
 
     /** Turns a chunked base 64 string template tile into an Image template tile
      * @param {string} base64 - Base64 string of image data (without URI header)
