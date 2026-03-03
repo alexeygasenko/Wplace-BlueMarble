@@ -279,7 +279,8 @@ input[type=file] {
   font-family: monospace;
 }
 .bm-container:not(#bm-window-main .bm-container) {
-  margin: 0.25em 0;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
 }
 .bm-windowed h1:not(#bm-window-main h1) {
   font-size: 1em;
