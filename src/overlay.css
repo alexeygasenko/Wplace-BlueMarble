@@ -92,7 +92,9 @@
 }
 
 /* Header 1 when inside dragbar */
-.bm-dragbar h1 {
+/* Or, when the custom class is used */
+.bm-dragbar h1,
+.bm-dragbar-text {
   font-size: 1.2em;
   user-select: none;
   overflow: hidden;
