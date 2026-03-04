@@ -522,18 +522,21 @@ export default class WindowFilter extends Overlay {
     }
   }
 
+  /** The information about a specific color on the palette.
+   * @typedef {Object} ColorData
+   * @property {number | string} colorTotal
+   * @property {string} colorTotalLocalized
+   * @property {number | string} colorCorrect
+   * @property {string} colorCorrectLocalized
+   * @property {string} colorPercent
+   * @property {number} colorIncorrect
+   */
+
   /** Updates the information inside the colors in the color list.
    * If the color list does not exist yet, it returns the color information instead.
    * This assumes the information inside each element is the same between fullscreen and windowed mode.
    * @since 0.90.60
-   * @returns {Object<number, {
-   *   colorTotal: number | string,
-   *   colorTotalLocalized: string,
-   *   colorCorrect: number | string,
-   *   colorCorrectLocalized: string,
-   *   colorPercent: string,
-   *   colorIncorrect: number
-   * }}
+   * @returns {Object.<number, ColorData>}
    */
   updateColorList() {
 
