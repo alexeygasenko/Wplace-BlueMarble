@@ -105,7 +105,7 @@ export default class WindowCredts extends Overlay {
             .addLi({'textContent': 'raiken_au'}).buildElement()
             .addLi({'textContent': 'Jacob'}).buildElement()
             .addLi({'textContent': 'StupidOne'}).buildElement()
-            .addLi({'textContent': '1 Anonymous Supporter'}).buildElement()
+            .addLi({'textContent': '2 Anonymous Supporters'}).buildElement()
           .buildElement()
         .buildElement()
       .buildElement()

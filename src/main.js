@@ -8,6 +8,7 @@ import TemplateManager from './templateManager.js';
 import { consoleLog, consoleWarn } from './utils.js';
 import WindowMain from './WindowMain.js';
 import WindowTelemetry from './WindowTelemetry.js';
+import SettingsManager from './settingsManager.js';
 
 const name = GM_info.script.name.toString(); // Name of userscript
 const version = GM_info.script.version.toString(); // Version of userscript
@@ -186,19 +187,22 @@ if (!!(robotoMonoInjectionPoint.indexOf('@font-face') + 1)) {
   document.head?.appendChild(stylesheetLink);
 }
 
+const userSettings = JSON.parse(GM_getValue('bmUserSettings', '{}')); // Loads the user settings
+
 // CONSTRUCTORS
 const observers = new Observers(); // Constructs a new Observers object
 const windowMain = new WindowMain(name, version); // Constructs a new Overlay object for the main overlay
 const templateManager = new TemplateManager(name, version, windowMain); // Constructs a new TemplateManager object
 const apiManager = new ApiManager(templateManager); // Constructs a new ApiManager object
+const settingsManager = new SettingsManager(name, version, userSettings); // Constructs a new SettingsManager
 
+windowMain.setSettingsManager(settingsManager); // Sets the settings manager
 windowMain.setApiManager(apiManager); // Sets the API manager
 
 const storageTemplates = JSON.parse(GM_getValue('bmTemplates', '{}'));
 console.log(storageTemplates);
 templateManager.importJSON(storageTemplates); // Loads the templates
 
-const userSettings = JSON.parse(GM_getValue('bmUserSettings', '{}')); // Loads the user settings
 
 console.log(userSettings);
 console.log(Object.keys(userSettings).length);

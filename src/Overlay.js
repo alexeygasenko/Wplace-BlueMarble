@@ -37,6 +37,9 @@ export default class Overlay {
 
     /** The API manager instance. Later populated when setApiManager is called @type {ApiManager} */
     this.apiManager = null;
+
+    /** The Settings Manager instance. Later populated when setSettingsManager is called @type {SettingsManager} */
+    this.settingsManager = null;
     
     this.outputStatusId = 'bm-output-status'; // ID for status element
 
@@ -50,6 +53,12 @@ export default class Overlay {
    * @since 0.41.4
    */
   setApiManager(apiManager) {this.apiManager = apiManager;}
+
+  /** Populates the settingsManager variable with the settingsManager class.
+   * @param {SettingsManager} settingsManager - The settingsManager class instance
+   * @since 0.91.11
+   */
+  setSettingsManager(settingsManager) {this.settingsManager = settingsManager;}
 
   /** Creates an element.
    * For **internal use** of the {@link Overlay} class.
@@ -109,10 +118,7 @@ export default class Overlay {
         ).join('')
       ] = value;
     } else if (property.startsWith('aria')) {
-      const camelCase = property.slice(5).split('-').map(
-        (part, i) => (i == 0) ? part : part[0].toUpperCase() + part.slice(1)
-      ).join('');
-      element['aria' + camelCase[0].toUpperCase() + camelCase.slice(1)] = value;
+      element.setAttribute(property, value); // We can't do the solution for 'data', as 'aria-labelledby' would fail to apply
     } else {
       element[property] = value;
     }

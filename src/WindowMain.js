@@ -163,6 +163,11 @@ export default class WindowMain extends Overlay {
           .addDiv({'class': 'bm-container bm-flex-between', 'style': 'margin-bottom: 0; flex-direction: column;'})
             .addDiv({'class': 'bm-flex-between'})
               // .addButton({'class': 'bm-button-circle', 'innerHTML': '🖌'}).buildElement()
+              .addButton({'class': 'bm-button-circle', 'innerHTML': '⚙️', 'title': 'Settings'}, (instance, button) => {
+                button.onclick = () => {
+                  instance.settingsManager.buildWindow();
+                }
+              }).buildElement()
               .addButton({'class': 'bm-button-circle', 'innerHTML': '🧙', 'title': 'Template Wizard'}, (instance, button) => {
                 button.onclick = () => {
                   const templateManager = instance.apiManager?.templateManager;
