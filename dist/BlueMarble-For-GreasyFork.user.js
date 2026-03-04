@@ -2,7 +2,7 @@
 // @name            Blue Marble
 // @name:en         Blue Marble
 // @namespace       https://github.com/SwingTheVine/
-// @version         0.91.8
+// @version         0.91.10
 // @description     A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @description:en  A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @author          SwingTheVine
@@ -2821,7 +2821,7 @@ Did you try clicking the canvas first?`);
         button.onclick = () => {
           const windowedColorTotals = document.querySelector("#bm-filter-windowed-color-totals");
           if (windowedColorTotals) {
-            windowedColorTotals.style.display = button.dataset["status"] == "expanded" ? "none" : "";
+            windowedColorTotals.style.display = button.dataset["buttonStatus"] == "expanded" ? "none" : "";
           }
           instance.handleMinimization(button);
         };
@@ -2859,18 +2859,20 @@ Did you try clicking the canvas first?`);
       __privateMethod(this, _WindowFilter_instances, buildColorList_fn).call(this, scrollableContainer);
       __privateMethod(this, _WindowFilter_instances, sortColorList_fn).call(this, this.sortPrimary, this.sortSecondary, this.showUnused);
     }
+    /** The information about a specific color on the palette.
+     * @typedef {Object} ColorData
+     * @property {number | string} colorTotal
+     * @property {string} colorTotalLocalized
+     * @property {number | string} colorCorrect
+     * @property {string} colorCorrectLocalized
+     * @property {string} colorPercent
+     * @property {number} colorIncorrect
+     */
     /** Updates the information inside the colors in the color list.
      * If the color list does not exist yet, it returns the color information instead.
      * This assumes the information inside each element is the same between fullscreen and windowed mode.
      * @since 0.90.60
-     * @returns {Object<number, {
-     *   colorTotal: number | string,
-     *   colorTotalLocalized: string,
-     *   colorCorrect: number | string,
-     *   colorCorrectLocalized: string,
-     *   colorPercent: string,
-     *   colorIncorrect: number
-     * }}
+     * @returns {Object.<number, ColorData>}
      */
     updateColorList() {
       __privateMethod(this, _WindowFilter_instances, calculatePixelStatistics_fn).call(this);
@@ -2930,7 +2932,7 @@ Did you try clicking the canvas first?`);
         }
         const pixelDesc = document.querySelector(`#${this.windowID} .bm-filter-color[data-id="${colorID}"] .bm-filter-color-pxl-desc`);
         if (pixelDesc) {
-          pixelDesc.textContent = `${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} incorrect pixels. Completed: ${colorPercent}`;
+          pixelDesc.textContent = `${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} incorrect pixel${colorIncorrect == 1 ? "" : "s"}. Completed: ${colorPercent}`;
         }
       }
       __privateMethod(this, _WindowFilter_instances, sortColorList_fn).call(this, this.sortPrimary, this.sortSecondary, this.showUnused);
@@ -3045,7 +3047,7 @@ Did you try clicking the canvas first?`);
               button.disabled = true;
             }
           }
-        ).buildElement().buildElement().addSmall({ "textContent": color.id == -2 ? "???????" : colorValueHex }).buildElement().buildElement().addDiv({ "class": "bm-flex-between" }).addHeader(2, { "textContent": (color.premium ? "\u2605 " : "") + color.name }).buildElement().addDiv({ "class": "bm-flex-between", "style": "gap: 1.5ch;" }).addSmall({ "textContent": `#${color.id.toString().padStart(2, 0)}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-cnt", "textContent": `${colorCorrectLocalized} / ${colorTotalLocalized}` }).buildElement().buildElement().addP({ "class": "bm-filter-color-pxl-desc", "textContent": `${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} incorrect pixels. Completed: ${colorPercent}` }).buildElement().buildElement().buildElement();
+        ).buildElement().buildElement().addSmall({ "textContent": color.id == -2 ? "???????" : colorValueHex }).buildElement().buildElement().addDiv({ "class": "bm-flex-between" }).addHeader(2, { "textContent": (color.premium ? "\u2605 " : "") + color.name }).buildElement().addDiv({ "class": "bm-flex-between", "style": "gap: 1.5ch;" }).addSmall({ "textContent": `#${color.id.toString().padStart(2, 0)}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-cnt", "textContent": `${colorCorrectLocalized} / ${colorTotalLocalized}` }).buildElement().buildElement().addP({ "class": "bm-filter-color-pxl-desc", "textContent": `${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} incorrect pixel${colorIncorrect == 1 ? "" : "s"}. Completed: ${colorPercent}` }).buildElement().buildElement().buildElement();
       }
     }
     colorList.buildOverlay(parentElement);

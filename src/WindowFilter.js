@@ -213,7 +213,7 @@ export default class WindowFilter extends Overlay {
           button.onclick = () => {
             const windowedColorTotals = document.querySelector('#bm-filter-windowed-color-totals');
             if (windowedColorTotals) {
-              windowedColorTotals.style.display = (button.dataset['status'] == 'expanded') ? 'none' : '';
+              windowedColorTotals.style.display = (button.dataset['buttonStatus'] == 'expanded') ? 'none' : '';
             }
             instance.handleMinimization(button);
           };

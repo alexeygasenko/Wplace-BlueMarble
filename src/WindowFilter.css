@@ -136,3 +136,8 @@
 #bm-window-filter.bm-windowed .bm-filter-color h2 {
   font-size: 0.75em;
 }
+
+/* Filter window dragbar text area in windowed mode */
+#bm-window-filter #bm-filter-windowed-color-totals {
+  font-size: 1em;
+}

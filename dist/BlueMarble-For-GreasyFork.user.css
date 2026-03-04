@@ -385,6 +385,9 @@ input[type=file] {
 #bm-window-filter.bm-windowed .bm-filter-color h2 {
   font-size: 0.75em;
 }
+#bm-window-filter #bm-filter-windowed-color-totals {
+  font-size: 1em;
+}
 
 /* src/WindowWizard.css */
 #bm-wizard-tlist {
