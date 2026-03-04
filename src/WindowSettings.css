@@ -12,6 +12,7 @@
 /* Highlight pattern button */
 #bm-window-settings .bm-highlight-grid > button {
   width: 100%;
+  padding: 0;
   aspect-ratio: 1 / 1;
   background-color: white;
   border: #333 1px solid;
