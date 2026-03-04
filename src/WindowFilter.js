@@ -432,7 +432,7 @@ export default class WindowFilter extends Overlay {
               .addSmall({'textContent': `#${color.id.toString().padStart(2, 0)}`}).buildElement()
               .addSmall({'class': 'bm-filter-color-pxl-cnt', 'textContent': `${colorCorrectLocalized} / ${colorTotalLocalized}`}).buildElement()
             .buildElement()
-            .addP({'class': 'bm-filter-color-pxl-desc', 'textContent': `${((typeof colorIncorrect == 'number') && !isNaN(colorIncorrect)) ? colorIncorrect : '???'} incorrect pixels. Completed: ${colorPercent}`}).buildElement()
+            .addP({'class': 'bm-filter-color-pxl-desc', 'textContent': `${((typeof colorIncorrect == 'number') && !isNaN(colorIncorrect)) ? colorIncorrect : '???'} incorrect pixel${(colorIncorrect == 1) ? '' : 's'}. Completed: ${colorPercent}`}).buildElement()
           .buildElement()
         .buildElement();
       }
@@ -638,7 +638,7 @@ export default class WindowFilter extends Overlay {
 
       // Updates the pixel description if it exists
       const pixelDesc = document.querySelector(`#${this.windowID} .bm-filter-color[data-id="${colorID}"] .bm-filter-color-pxl-desc`);
-      if (pixelDesc) {pixelDesc.textContent = `${((typeof colorIncorrect == 'number') && !isNaN(colorIncorrect)) ? colorIncorrect : '???'} incorrect pixels. Completed: ${colorPercent}`;}
+      if (pixelDesc) {pixelDesc.textContent = `${((typeof colorIncorrect == 'number') && !isNaN(colorIncorrect)) ? colorIncorrect : '???'} incorrect pixel${(colorIncorrect == 1) ? '' : 's'}. Completed: ${colorPercent}`;}
     }
 
     // Since the dataset has changed, we need to sort again
