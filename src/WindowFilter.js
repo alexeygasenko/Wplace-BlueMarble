@@ -210,10 +210,19 @@ export default class WindowFilter extends Overlay {
     this.window = this.addDiv({'id': this.windowID, 'class': 'bm-window bm-windowed'})
       .addDragbar()
         .addButton({'class': 'bm-button-circle', 'textContent': '▼', 'aria-label': 'Minimize window "Color Filter"', 'data-button-status': 'expanded'}, (instance, button) => {
-          button.onclick = () => instance.handleMinimization(button);
+          button.onclick = () => {
+            const windowedColorTotals = document.querySelector('#bm-filter-windowed-color-totals');
+            if (windowedColorTotals) {
+              windowedColorTotals.style.display = (button.dataset['status'] == 'expanded') ? 'none' : '';
+            }
+            instance.handleMinimization(button);
+          };
           button.ontouchend = () => {button.click()}; // Needed only to negate weird interaction with dragbar
         }).buildElement()
-        .addDiv().buildElement() // Contains the minimized h1 element
+        .addDiv()
+          .addSpan({'id': 'bm-filter-windowed-color-totals', 'class': 'bm-dragbar-text', 'style': 'font-weight: 700;'}).buildElement() // Contains correct / total pixel values
+          // Minimized h1 element will appear here
+        .buildElement() 
         .addDiv({'class': 'bm-flex-center'})
           .addButton({'class': 'bm-button-circle', 'textContent': '🗖', 'aria-label': 'Switch to fullscreen mode for "Color Filter"'}, (instance, button) => {
             button.onclick = () => {
@@ -575,6 +584,22 @@ export default class WindowFilter extends Overlay {
         colorPercent: colorPercent,
         colorIncorrect: colorIncorrect
       }
+    }
+
+    // Obtains the correct / total pixels display element, or `undefined` if in fullscreen mode
+    const windowedColorTotals = document.querySelector('#bm-filter-windowed-color-totals');
+
+    // If the element exists...
+    if (windowedColorTotals) {
+
+      // Returns the number, unlocalized (no space to localize)
+      // OR returns the three characters on either end of the string, with the middle replaced with an ellipse.
+      // E.g. '1234567' or '123…678'
+      const allCorrect = (this.allPixelsCorrectTotal.toString().length > 7) ? this.allPixelsCorrectTotal.toString().slice(0, 2) + '…' + this.allPixelsCorrectTotal.toString().slice(-3) : this.allPixelsCorrectTotal.toString();
+      const allTotal = (this.allPixelsTotal.toString().length > 7) ? this.allPixelsTotal.toString().slice(0, 2) + '…' + this.allPixelsTotal.toString().slice(-3) : this.allPixelsTotal.toString();
+
+      // Updates the display with XSS protection enabled (because why not)
+      this.updateInnerHTML('#bm-filter-windowed-color-totals', `${allCorrect}/${allTotal}`, true);
     }
 
     // Return early if the color list does not exist.
