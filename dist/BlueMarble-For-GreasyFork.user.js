@@ -2,7 +2,7 @@
 // @name            Blue Marble
 // @name:en         Blue Marble
 // @namespace       https://github.com/SwingTheVine/
-// @version         0.91.38
+// @version         0.91.42
 // @description     A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @description:en  A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @author          SwingTheVine
@@ -3469,7 +3469,24 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
       super(name2, version2);
       __privateAdd(this, _SettingsManager_instances);
       this.userSettings = userSettings2;
+      this.userSettingsOld = structuredClone(this.userSettings);
+      this.userSettingsSaveLocation = "bmUserSettings";
+      this.updateFrequency = 5e3;
       this.lastUpdateTime = 0;
+      setInterval(this.updateUserStorage.bind(this), this.updateFrequency);
+    }
+    /** Updates the user settings in userscript storage
+     * @since 0.91.39
+     */
+    async updateUserStorage() {
+      const userSettingsCurrent = JSON.stringify(this.userSettings);
+      const userSettingsOld = JSON.stringify(this.userSettingsOld);
+      if (userSettingsCurrent != userSettingsOld && Date.now() - this.lastUpdateTime > this.updateFrequency) {
+        await GM.setValue(this.userSettingsSaveLocation, userSettingsCurrent);
+        this.userSettingsOld = structuredClone(this.userSettings);
+        this.lastUpdateTime = Date.now();
+        console.log(userSettingsCurrent);
+      }
     }
     // This is one of the most insane OOP setups I have ever laid my eyes on
     /** Builds the "highlight" category of the settings window
@@ -3477,25 +3494,26 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
      * @see WindowSettings#buildHighlight
      */
     buildHighlight() {
-      this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "style": "margin-left: 1.5ch;" }).addP({ "id": "bm-highlight-grid-label", "textContent": "Create a custom pattern:" }).buildElement().addDiv({ "class": "bm-highlight-grid", "role": "group", "aria-labelledby": "bm-highlight-grid-label" }).addButton({ "data-status": "Disabled", "aria-label": "Sub-pixel disabled" }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightSettings_fn).call(this, button, [-1, -1]);
-      }).buildElement().addButton({ "data-status": "Incorrect", "aria-label": "Sub-pixel disabled" }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightSettings_fn).call(this, button, [0, -1]);
-      }).buildElement().addButton({ "data-status": "Disabled", "aria-label": "Sub-pixel disabled" }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightSettings_fn).call(this, button, [1, -1]);
-      }).buildElement().addButton({ "data-status": "Incorrect", "aria-label": "Sub-pixel disabled" }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightSettings_fn).call(this, button, [-1, 0]);
-      }).buildElement().addButton({ "data-status": "Template", "aria-label": "Sub-pixel disabled" }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightSettings_fn).call(this, button, [0, 0]);
-      }).buildElement().addButton({ "data-status": "Incorrect", "aria-label": "Sub-pixel disabled" }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightSettings_fn).call(this, button, [1, 0]);
-      }).buildElement().addButton({ "data-status": "Disabled", "aria-label": "Sub-pixel disabled" }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightSettings_fn).call(this, button, [-1, 1]);
-      }).buildElement().addButton({ "data-status": "Incorrect", "aria-label": "Sub-pixel disabled" }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightSettings_fn).call(this, button, [0, 1]);
-      }).buildElement().addButton({ "data-status": "Disabled", "aria-label": "Sub-pixel disabled" }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightSettings_fn).call(this, button, [1, 1]);
-      }).buildElement().buildElement().buildElement().buildElement();
+      const storedHighlight = this.userSettings?.highlight ?? [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
+      this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "style": "margin-left: 1.5ch;" }).addP({ "id": "bm-highlight-grid-label", "textContent": "Create a custom pattern:" }).buildElement().addDiv({ "class": "bm-highlight-grid", "role": "group", "aria-labelledby": "bm-highlight-grid-label" });
+      for (let buttonY = -1; buttonY <= 1; buttonY++) {
+        for (let buttonX = -1; buttonX <= 1; buttonX++) {
+          const buttonState = storedHighlight[storedHighlight.findIndex(([, x, y]) => x == buttonX && y == buttonY)]?.[0] ?? 0;
+          let buttonStateName = "Disabled";
+          if (buttonState == 1) {
+            buttonStateName = "Incorrect";
+          } else if (buttonState == 2) {
+            buttonStateName = "Template";
+          }
+          this.window = this.addButton({
+            "data-status": buttonStateName,
+            "aria-label": `Sub-pixel ${buttonStateName.toLowerCase()}`
+          }, (instance, button) => {
+            button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightSettings_fn).call(this, button, [buttonX, buttonY]);
+          }).buildElement();
+        }
+      }
+      this.window = this.buildElement().buildElement().buildElement();
     }
   };
   _SettingsManager_instances = new WeakSet();
@@ -3508,7 +3526,7 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
     console.log(coords2);
     button.disabled = true;
     const status = button.dataset["status"];
-    const userStorageOld = this.userSettings?.highlight || [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
+    const userStorageOld = this.userSettings?.highlight ?? [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
     let userStorageChange = [2, 0, 0];
     const userStorageNew = userStorageOld;
     console.log(userStorageOld);

@@ -25,8 +25,31 @@ export default class SettingsManager extends WindowSettings {
     super(name, version); // Executes WindowSettings constructor
     
     this.userSettings = userSettings; // User settings as an Object
+    this.userSettingsOld = structuredClone(this.userSettings); // Creates a duplicate of the user settings to store the old version of user settings from 5+ seconds ago
+    this.userSettingsSaveLocation = 'bmUserSettings'; // Storage save location
 
+    this.updateFrequency = 5000; // Cooldown between saving to storage (throttle)
     this.lastUpdateTime = 0; // When this unix timestamp is within the last 5 seconds, we should save this.userSettings to storage
+
+    setInterval(this.updateUserStorage.bind(this), this.updateFrequency); // Runs every X seconds (see updateFrequency)
+  }
+
+  /** Updates the user settings in userscript storage
+   * @since 0.91.39
+   */
+  async updateUserStorage() {
+
+    // Turns the objects into a string
+    const userSettingsCurrent = JSON.stringify(this.userSettings);
+    const userSettingsOld = JSON.stringify(this.userSettingsOld);
+
+    // If the user settings have changed, AND the last update to user storage was over 5 seconds ago (5sec throttle)...
+    if ((userSettingsCurrent != userSettingsOld) && ((Date.now() - this.lastUpdateTime) > this.updateFrequency)) {
+      await GM.setValue(this.userSettingsSaveLocation, userSettingsCurrent); // Updates user storage
+      this.userSettingsOld = structuredClone(this.userSettings); // Updates the old user settings with a duplicate of the current user settings
+      this.lastUpdateTime = Date.now(); // Updates the variable that contains the last time updated
+      console.log(userSettingsCurrent);
+    }
   }
 
   // This is one of the most insane OOP setups I have ever laid my eyes on
@@ -37,27 +60,41 @@ export default class SettingsManager extends WindowSettings {
    */
   buildHighlight() {
 
+    // Obtains user settings for highlight from storage, or the default array if nothing was found
+    const storedHighlight = this.userSettings?.highlight ?? [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
+
     // Constructs the category and adds it to the window
     this.window = this.addDiv({'class': 'bm-container'})
       .addHeader(2, {'textContent': 'Pixel Highlight'}).buildElement()
       .addHr().buildElement()
       .addDiv({'style': 'margin-left: 1.5ch;'})
         .addP({'id': 'bm-highlight-grid-label', 'textContent': 'Create a custom pattern:'}).buildElement()
-        .addDiv({'class': 'bm-highlight-grid', 'role': 'group', 'aria-labelledby': 'bm-highlight-grid-label'})
-          .addButton({'data-status': 'Disabled', 'aria-label': 'Sub-pixel disabled'}, (instance, button) => {button.onclick = () => this.#updateHighlightSettings(button, [-1, -1]);}).buildElement()
-          .addButton({'data-status': 'Incorrect', 'aria-label': 'Sub-pixel disabled'}, (instance, button) => {button.onclick = () => this.#updateHighlightSettings(button, [0, -1]);}).buildElement()
-          .addButton({'data-status': 'Disabled', 'aria-label': 'Sub-pixel disabled'}, (instance, button) => {button.onclick = () => this.#updateHighlightSettings(button, [1, -1]);}).buildElement()
-          .addButton({'data-status': 'Incorrect', 'aria-label': 'Sub-pixel disabled'}, (instance, button) => {button.onclick = () => this.#updateHighlightSettings(button, [-1, 0]);}).buildElement()
-          .addButton({'data-status': 'Template', 'aria-label': 'Sub-pixel disabled'}, (instance, button) => {button.onclick = () => this.#updateHighlightSettings(button, [0, 0]);}).buildElement()
-          .addButton({'data-status': 'Incorrect', 'aria-label': 'Sub-pixel disabled'}, (instance, button) => {button.onclick = () => this.#updateHighlightSettings(button, [1, 0]);}).buildElement()
-          .addButton({'data-status': 'Disabled', 'aria-label': 'Sub-pixel disabled'}, (instance, button) => {button.onclick = () => this.#updateHighlightSettings(button, [-1, 1]);}).buildElement()
-          .addButton({'data-status': 'Incorrect', 'aria-label': 'Sub-pixel disabled'}, (instance, button) => {button.onclick = () => this.#updateHighlightSettings(button, [0, 1]);}).buildElement()
-          .addButton({'data-status': 'Disabled', 'aria-label': 'Sub-pixel disabled'}, (instance, button) => {button.onclick = () => this.#updateHighlightSettings(button, [1, 1]);}).buildElement()
-        .buildElement()
+        .addDiv({'class': 'bm-highlight-grid', 'role': 'group', 'aria-labelledby': 'bm-highlight-grid-label'});
+          // We leave this open so we can add buttons
+
+          // For each of the 9 buttons...
+          for (let buttonY = -1; buttonY <= 1; buttonY++) {
+            for (let buttonX = -1; buttonX <= 1; buttonX++) {
+              const buttonState = storedHighlight[storedHighlight.findIndex(([, x, y]) => ((x == buttonX) && (y == buttonY)))]?.[0] ?? 0;
+              let buttonStateName = 'Disabled';
+              if (buttonState == 1) {
+                buttonStateName = 'Incorrect';
+              } else if (buttonState == 2) {
+                buttonStateName = 'Template';
+              }
+              this.window = this.addButton({
+                'data-status': buttonStateName,
+                'aria-label': `Sub-pixel ${buttonStateName.toLowerCase()}`
+              }, (instance, button) => {
+                button.onclick = () => this.#updateHighlightSettings(button, [buttonX, buttonY])
+              }).buildElement();
+            }
+          }
+
+          // Resumes from where we left off before we added buttons
+        this.window = this.buildElement()
       .buildElement()
     .buildElement();
-
-    // TODO: First-time load of highlight settings from user storage
   }
 
   /** Updates the display of the highlight buttons in the settings window.
@@ -74,7 +111,7 @@ export default class SettingsManager extends WindowSettings {
     const status = button.dataset['status']; // Obtains the current status of the button
 
     /** Obtains the old highlight storage, or sets it to default. @type {Array<number[]>} */
-    const userStorageOld = this.userSettings?.highlight || [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
+    const userStorageOld = this.userSettings?.highlight ?? [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
 
     let userStorageChange = [2, 0, 0]; // The new change to the user storage
 
