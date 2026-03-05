@@ -1,5 +1,7 @@
+import SettingsManager from "./settingsManager";
 import Template from "./Template";
 import { base64ToUint8, colorpaletteForBlueMarble, consoleError, consoleLog, consoleWarn, localizeNumber, numberToEncoded, sleep, viewCanvasInNewTab } from "./utils";
+import WindowMain from "./WindowMain";
 import WindowWizard from "./WindowWizard";
 
 /** Manages the template system.
@@ -83,14 +85,17 @@ import WindowWizard from "./WindowWizard";
 export default class TemplateManager {
 
   /** The constructor for the {@link TemplateManager} class.
+   * @param {string} name - The name of the userscript
+   * @param {string} version - The version of the userscript (SemVer as string)
    * @since 0.55.8
    */
-  constructor(name, version, overlay) {
+  constructor(name, version) {
 
     // Meta
     this.name = name; // Name of userscript
     this.version = version; // Version of userscript
-    this.overlay = overlay; // The main instance of the Overlay class
+    this.windowMain = null; // The main instance of the Overlay class
+    this.settingsManager = null; // The main instance of the SettingsManager class
     this.schemaVersion = '2.0.0'; // Version of JSON schema
     this.userID = null; // The ID of the current user
     this.encodingBase = '!#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~'; // Characters to use for encoding/decoding
@@ -109,6 +114,22 @@ export default class TemplateManager {
     this.templatePixelsCorrect = null; // An object where the keys are the tile coords, and the values are Maps (BM palette color IDs) containing the amount of correctly placed pixels for that tile in this template
     /** Will contain all color ID's to filter @type {Map<number, boolean>} */
     this.shouldFilterColor = new Map();
+  }
+
+  /** Updates the stored instance of the main window.
+   * @param {WindowMain} windowMain - The main window instance
+   * @since 0.91.54
+   */
+  setWindowMain(windowMain) {
+    this.windowMain = windowMain;
+  }
+
+  /** Updates the stored instance of the SettingsManager.
+   * @param {SettingsManager} settingsManager - The settings manager instance
+   * @since 0.91.54
+   */
+  setSettingsManager(settingsManager) {
+    this.settingsManager = settingsManager;
   }
 
   /** Creates the JSON object to store templates in
@@ -135,7 +156,7 @@ export default class TemplateManager {
     // Creates the JSON object if it does not already exist
     if (!this.templatesJSON) {this.templatesJSON = await this.createJSON(); console.log(`Creating JSON...`);}
 
-    this.overlay.handleDisplayStatus(`Creating template at ${coords.join(', ')}...`);
+    this.windowMain.handleDisplayStatus(`Creating template at ${coords.join(', ')}...`);
 
     // Creates a new template instance
     const template = new Template({
@@ -166,7 +187,7 @@ export default class TemplateManager {
     this.templatesArray = []; // Remove this to enable multiple templates (2/2)
     this.templatesArray.push(template); // Pushes the Template object instance to the Template Array
 
-    this.overlay.handleDisplayStatus(`Template created at ${coords.join(', ')}!`);
+    this.windowMain.handleDisplayStatus(`Template created at ${coords.join(', ')}!`);
 
     console.log(Object.keys(this.templatesJSON.templates).length);
     console.log(this.templatesJSON);
@@ -497,12 +518,12 @@ export default class TemplateManager {
       const pixelCountFormatted = localizeNumber(totalPixels);
       
       // Display status information about the templates being rendered
-      this.overlay.handleDisplayStatus(
+      this.windowMain.handleDisplayStatus(
         `Displaying ${templateCount} template${templateCount == 1 ? '' : 's'}.\nTotal pixels: ${pixelCountFormatted}`
       );
     } else {
       //this.overlay.handleDisplayStatus(`Displaying ${templateCount} templates.`);
-      this.overlay.handleDisplayStatus(`Sleeping\nVersion: ${this.version}`);
+      this.windowMain.handleDisplayStatus(`Sleeping\nVersion: ${this.version}`);
       return tileBlob; // No templates are on this tile. Return the original tile early
     }
     
@@ -523,6 +544,26 @@ export default class TemplateManager {
 
     const tileBeforeTemplates = context.getImageData(0, 0, drawSize, drawSize);
     const tileBeforeTemplates32 = new Uint32Array(tileBeforeTemplates.data.buffer);
+
+    // Obtains the highlight pattern
+    const highlightPattern = this.settingsManager?.userSettings?.highlight || [[2, 0, 0]];
+    // The code demands that a highlight pattern always exists.
+    // Therefore, to disable highlighting, the highlight pattern is `[[2, 0, 0]]`.
+    // `[[2, 0, 0]]` is special, and will skip the highlighting code altogether.
+    // As a side-effect, the template will always display while enabled.
+    // You can't disable all sub-pixels in order to hide the template.
+
+    // Contains the first index of the highlight pattern.
+    const highlightPatternIndexZero = highlightPattern?.[0];
+    // This is so we can later determine if the pattern is the preset "None"
+
+    // Should highlighting be disabled?
+    const highlightDisabled = (
+      (highlightPattern?.length == 1)
+      && (highlightPatternIndexZero?.[0] == 2)
+      && (highlightPatternIndexZero?.[1] == 0)
+      && (highlightPatternIndexZero?.[2] == 0)
+    )
     
     // For each template in this tile, draw them.
     for (const template of templatesToDraw) {
@@ -557,7 +598,9 @@ export default class TemplateManager {
       } = this.#calculateCorrectPixelsOnTile_And_FilterTile({
         tile: tileBeforeTemplates32,
         template: templateBeforeFilter32,
-        templateInfo: [coordXtoDrawAt, coordYtoDrawAt, template.bitmap.width, template.bitmap.height]
+        templateInfo: [coordXtoDrawAt, coordYtoDrawAt, template.bitmap.width, template.bitmap.height],
+        highlightPattern: highlightPattern,
+        highlightDisabled: highlightDisabled
       });
 
       let pixelsCorrectTotal = 0;
@@ -573,7 +616,8 @@ export default class TemplateManager {
 
       // If there are colors to filter, then we draw the filtered template on the canvas
       // Or, if there are Erased (#deface) pixels, then we draw the modified template on the canvas
-      if ((this.shouldFilterColor.size != 0) || templateHasErased) {
+      // Or, if the user has enabled highlighting, then we draw the modified template on the canvas
+      if ((this.shouldFilterColor.size != 0) || templateHasErased || !highlightDisabled) {
         console.log('Colors to filter: ', this.shouldFilterColor);
         //context.putImageData(new ImageData(new Uint8ClampedArray(templateAfterFilter.buffer), template.bitmap.width, template.bitmap.height), coordXtoDrawAt, coordYtoDrawAt);
         context.drawImage(await createImageBitmap(new ImageData(new Uint8ClampedArray(templateAfterFilter.buffer), template.bitmap.width, template.bitmap.height)), coordXtoDrawAt, coordYtoDrawAt);
@@ -654,7 +698,7 @@ export default class TemplateManager {
     } else {
       // We don't know what the schema is. Unsupported?
 
-      this.overlay.handleDisplayError(`Template version ${schemaVersion} is unsupported.\nUse Blue Marble version ${scriptVersion} or load a new template.`);
+      this.windowMain.handleDisplayError(`Template version ${schemaVersion} is unsupported.\nUse Blue Marble version ${scriptVersion} or load a new template.`);
     }
 
     /** Loads schema of Blue Marble template storage
@@ -762,12 +806,16 @@ export default class TemplateManager {
    * @param {Uint32Array} params.tile - The tile without templates as a Uint32Array
    * @param {Uint32Array} params.template - The template without filtering as a Uint32Array
    * @param {Array<Number, Number, Number, Number>} params.templateInfo - Information about template location and size
+   * @param {Array<number[]>} params.highlightPattern - The highlight pattern selected by the user
+   * @param {boolean} params.highlightDisabled - Should highlighting be disabled?
    * @returns {{correctPixels: Map<number, number>, filteredTemplate: Uint32Array}} A Map containing the color IDs (keys) and how many correct pixels there are for that color (values)
    */
   #calculateCorrectPixelsOnTile_And_FilterTile({
     tile: tile32, 
     template: template32, 
-    templateInfo: templateInformation
+    templateInfo: templateInformation,
+    highlightPattern: highlightPattern,
+    highlightDisabled: highlightDisabled
   }) {
 
     // Size of a pixel in actuality
@@ -796,6 +844,10 @@ export default class TemplateManager {
     // For each center pixel...
     for (let templateRow = 1; templateRow < templateHeight; templateRow += pixelSize) {
       for (let templateColumn = 1; templateColumn < templateWidth; templateColumn += pixelSize) {
+        // ROWS ARE VERTICAL. "ROWS" AS IN, LIKE ON A SPREADSHEET
+        // COLUMNS ARE HORIZONTAL. "COLUMNS" AS IN, LIKE ON A SPREADSHEET
+        // THE FIFTH ROW IS FIVE DOWN FROM THE ZEROTH ROW
+        // THE THIRD COLUMN IS TO THE RIGHT OF THE FIRST COLUMN
 
         // The pixel on the tile to target (1 pixel above the template)
         const tileRow = (templateCoordY + templateRow) + tilePixelOffsetY; // (Template offset + current row) - 1
@@ -877,8 +929,38 @@ export default class TemplateManager {
         // Finds the best matching color ID for the tile pixel. If none is found, default to "-2"
         const bestTileColorID = lookupTable.get(tilePixelAbove) ?? -2;
 
-        // If the template pixel does not match the tile pixel, then the pixel is skipped.
-        if (bestTileColorID != bestTemplateColorID) {continue;}
+        // If the template pixel does not match the tile pixel, then the pixel is skipped after highlighting.
+        if (bestTileColorID != bestTemplateColorID) {
+
+          // -----     HIGHLIGHTING      -----
+
+          // If highlighting is disabled, then we skip highlighting
+          if (highlightDisabled) {continue;}
+
+          // Obtains the template color of this pixel
+          const templatePixelColor = template32[(templateRow * templateWidth) + templateColumn];
+          // This will retrieve the tile background instead if the color is filtered!
+
+          for (const subpixelPattern of highlightPattern) {
+
+            // Deconstructs the sub pixel
+            const [subpixelState, subpixelColumnDelta, subpixelRowDelta] = subpixelPattern;
+            // "Delta" because the coordinate of the sub-pixel is relative to the center of the pixel
+
+            // Obtains the subpixel color to use
+            const subpixelColor = (subpixelState != 0) ? ((subpixelState != 1) ? templatePixelColor : 0xFF0000FF) : 0x00000000;
+            // 0 = Transparent (black)
+            // 1 = Red (#FF0000)
+            // 2 = Template (matches template or hides if filtered)
+
+            // Sets the subpixel to match the color on the highlight pattern
+            template32[((templateRow + subpixelRowDelta) * templateWidth) + (templateColumn + subpixelColumnDelta)] = subpixelColor;
+          }
+
+          // -----  END OF HIGHLIGHTING  -----
+
+          continue;
+        }
         // If the code passes this point, the template pixel matches the tile pixel.
 
         // Increments the count by 1 for the best matching color ID (which can be negative).

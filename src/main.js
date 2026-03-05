@@ -192,12 +192,15 @@ const userSettings = JSON.parse(GM_getValue('bmUserSettings', '{}')); // Loads t
 // CONSTRUCTORS
 const observers = new Observers(); // Constructs a new Observers object
 const windowMain = new WindowMain(name, version); // Constructs a new Overlay object for the main overlay
-const templateManager = new TemplateManager(name, version, windowMain); // Constructs a new TemplateManager object
+const templateManager = new TemplateManager(name, version); // Constructs a new TemplateManager object
 const apiManager = new ApiManager(templateManager); // Constructs a new ApiManager object
 const settingsManager = new SettingsManager(name, version, userSettings); // Constructs a new SettingsManager
 
 windowMain.setSettingsManager(settingsManager); // Sets the settings manager
 windowMain.setApiManager(apiManager); // Sets the API manager
+
+templateManager.setWindowMain(windowMain);
+templateManager.setSettingsManager(settingsManager); // Sets the settings manager
 
 const storageTemplates = JSON.parse(GM_getValue('bmTemplates', '{}'));
 console.log(storageTemplates);
