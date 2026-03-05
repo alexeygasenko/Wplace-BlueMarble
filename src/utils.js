@@ -15,7 +15,7 @@ export function getWplaceVersion() {
 
 /** Halts execution of this specific userscript, for the specified time.
  * This will not block the thread.
- * @param {number} - Time to wait in milliseconds
+ * @param {number} time - Time to wait in milliseconds
  * @since 0.88.483
  * @returns {Promise} Promise of a setTimeout()
  */

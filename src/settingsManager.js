@@ -1,7 +1,9 @@
+import { sleep } from "./utils";
 import WindowSettings from "./WindowSettings";
 
 /** SettingsManager class for handling user settings and making them persist between sessions.
  * Logic for {@link WindowSettings} is managed here.
+ * "Flags" should follow the same styling as `.classList()` and should not contain spaces.
  * @class SettingsManager
  * @since 0.91.11
  * @examples
@@ -60,6 +62,9 @@ export default class SettingsManager extends WindowSettings {
    */
   buildHighlight() {
 
+    const highlightPresetOff = '<svg viewBox="0 0 3 3"><path d="M0,0H3V3H0ZM0,1H3M0,2H3M1,0V3M2,0V3" fill="#fff"/><path d="M1,1H2V2H1Z" fill="#2f4f4f"/></svg>';
+    const highlightPresetCross = '<svg viewBox="0 0 3 3"><path d="M0,0H3V3H0Z" fill="#fff"/><path d="M1,0H2V1H3V2H2V3H1V2H0V1H1Z" fill="brown"/><path d="M1,1H2V2H1Z" fill="#2f4f4f"/></svg>';
+    
     // Obtains user settings for highlight from storage, or the default array if nothing was found
     const storedHighlight = this.userSettings?.highlight ?? [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
 
@@ -68,6 +73,25 @@ export default class SettingsManager extends WindowSettings {
       .addHeader(2, {'textContent': 'Pixel Highlight'}).buildElement()
       .addHr().buildElement()
       .addDiv({'style': 'margin-left: 1.5ch;'})
+        .addP({'id': 'bm-highlight-preset-label', 'textContent': 'Choose a preset:'}).buildElement()
+        .addDiv({'class': 'bm-container bm-flex-center', 'style': 'width: 50%;', 'role': 'group', 'aria-labelledby': 'bm-highlight-preset-label'})
+          .addDiv({'class': 'bm-highlight-preset-container'})
+            .addSpan({'textContent': 'None'}).buildElement()
+            .addButton({'innerHTML': highlightPresetOff, 'aria-label': 'Preset "None"'}, (instance, button) => {button.onclick = () => this.#updateHighlightToPreset('None')}).buildElement()
+          .buildElement()
+          .addDiv({'class': 'bm-highlight-preset-container'})
+            .addSpan({'textContent': 'Cross'}).buildElement()
+            .addButton({'innerHTML': highlightPresetCross, 'aria-label': 'Preset "Cross Shape"'}, (instance, button) => {button.onclick = () => this.#updateHighlightToPreset('Cross')}).buildElement()
+          .buildElement()
+          .addDiv({'class': 'bm-highlight-preset-container'})
+            .addSpan({'textContent': 'X'}).buildElement()
+            .addButton({'innerHTML': highlightPresetCross.replace('d="M1,0H2V1H3V2H2V3H1V2H0V1H1Z"', 'd="M0,0V1H3V0H2V3H3V2H0V3H1V0Z"'), 'aria-label': 'Preset "X Shape"'}, (instance, button) => {button.onclick = () => this.#updateHighlightToPreset('X')}).buildElement()
+          .buildElement()
+          .addDiv({'class': 'bm-highlight-preset-container'})
+            .addSpan({'textContent': 'Full'}).buildElement()
+            .addButton({'innerHTML': highlightPresetOff.replace('#fff', '#2f4f4f'), 'aria-label': 'Preset "Full Template"'}, (instance, button) => {button.onclick = () => this.#updateHighlightToPreset('Full')}).buildElement()
+          .buildElement()
+        .buildElement()
         .addP({'id': 'bm-highlight-grid-label', 'textContent': 'Create a custom pattern:'}).buildElement()
         .addDiv({'class': 'bm-highlight-grid', 'role': 'group', 'aria-labelledby': 'bm-highlight-grid-label'});
           // We leave this open so we can add buttons
@@ -101,6 +125,7 @@ export default class SettingsManager extends WindowSettings {
    * Additionally, it will update user settings with the new selection.
    * @param {HTMLButtonElement} button - The button that was pressed
    * @param {Array<number, number>} coords - The relative coordinates of the button
+   * @since 0.91.46
    */
   #updateHighlightSettings(button, coords) {
 
@@ -177,5 +202,88 @@ export default class SettingsManager extends WindowSettings {
     // TODO: Add timer update here
 
     button.disabled = false; // Reenables the button since we are done
+  }
+
+  /** Changes the highlight buttons to the clicked preset.
+   * @param {string} preset - The name of the preset
+   * @since 0.91.49
+   */
+  async #updateHighlightToPreset(preset) {
+
+    // Obtains all preset buttons as a NodeList
+    const presetButtons = document.querySelectorAll('.bm-highlight-preset-container button');
+
+    // For each preset...
+    for (const button of presetButtons) {
+      button.disabled = true; // Disables the button
+    }
+
+    let presetArray = [0,0,0,0,2,0,0,0,0]; // The preset "None"
+
+    // Selects the preset passed in
+    switch (preset) {
+      case 'Cross':
+        presetArray = [0,1,0,1,2,1,0,1,0]; // The preset "Cross"
+        break;
+      case 'X':
+        presetArray = [1,0,1,0,2,0,1,0,1]; // The preset "X"
+        break;
+      case 'Full': 
+        presetArray = [2,2,2,2,2,2,2,2,2]; // The preset "Full"
+        break;
+    }
+
+    // Obtains the buttons to click as a NodeList
+    const buttons = document.querySelector('.bm-highlight-grid')?.childNodes ?? [];
+
+    // For each button...
+    for (let buttonIndex = 0; buttonIndex < buttons.length; buttonIndex++) {
+
+      const button = buttons[buttonIndex]; // Gets the current button to check
+
+      // Gets the state of the button as a number
+      let buttonState = button.dataset['status'];
+      buttonState = (buttonState != 'Disabled') ? ((buttonState != 'Incorrect') ? 2 : 1) : 0;
+
+      // Finds the difference between the preset and the button
+      let buttonStateDelta = presetArray[buttonIndex] - buttonState;
+
+      // Since there is no difference, the button matches, so we skip it
+      if (buttonStateDelta == 0) {continue;}
+
+      // Makes the difference positive
+      buttonStateDelta += (buttonStateDelta < 0) ? 3 : 0;
+
+      /** At this point, these are the possible options:
+       * 1. The preset is zero and the button is two (-2) so we need to click once
+       * 2. The preset is one and the button is two (-1) so we need to click twice
+       * 3. The preset is one ahead of the button (1) so we need to click once
+       * 4. The preset is two ahead of the button (2) so we need to click twice
+       * Due to the addition of three in the line above, options 1 & 3 combine, and options 2 & 4 combine.
+       * Now the only options we have are:
+       * 1. If (1) then click once
+       * 2. If (2) then click twice
+       * Also due to the addition of three in the line above, our two options are POSITIVE numbers
+       */
+
+      button.click(); // Clicks once
+      
+      // Clicks a second time if needed
+      if (buttonStateDelta == 2) {
+
+        // For 0.2 seconds, or when the button is NOT disabled, wait for 10 milliseconds before attempting to continue
+        for (let timeWaited = 0; timeWaited < 200; timeWaited += 10) {
+          if (!button.disabled) {break;} // Breaks early once the button is enabled
+          await sleep(10);
+        }
+
+        button.click(); // Clicks again
+      }
+    }
+
+    // For each preset...
+    for (const button of presetButtons) {
+      button.disabled = false; // Re-enables the button
+    }
   }
 }

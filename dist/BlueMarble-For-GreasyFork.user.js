@@ -2,7 +2,7 @@
 // @name            Blue Marble
 // @name:en         Blue Marble
 // @namespace       https://github.com/SwingTheVine/
-// @version         0.91.42
+// @version         0.91.53
 // @description     A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @description:en  A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @author          SwingTheVine
@@ -3435,7 +3435,7 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically" }).addHeader(1, { "textContent": "Settings" }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-scrollable" }, (instance, div) => {
+      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically" }).addHeader(1, { "textContent": "Settings" }).buildElement().buildElement().addHr().buildElement().addP({ "textContent": "Settings take 5 seconds to save." }).buildElement().addDiv({ "class": "bm-container bm-scrollable" }, (instance, div) => {
         this.buildHighlight();
       }).buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
       this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
@@ -3457,7 +3457,7 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
   };
 
   // src/settingsManager.js
-  var _SettingsManager_instances, updateHighlightSettings_fn;
+  var _SettingsManager_instances, updateHighlightSettings_fn, updateHighlightToPreset_fn;
   var SettingsManager = class extends WindowSettings {
     /** Constructor for the SettingsManager class
      * @param {string} name - The name of the userscript
@@ -3494,8 +3494,18 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
      * @see WindowSettings#buildHighlight
      */
     buildHighlight() {
+      const highlightPresetOff = '<svg viewBox="0 0 3 3"><path d="M0,0H3V3H0ZM0,1H3M0,2H3M1,0V3M2,0V3" fill="#fff"/><path d="M1,1H2V2H1Z" fill="#2f4f4f"/></svg>';
+      const highlightPresetCross = '<svg viewBox="0 0 3 3"><path d="M0,0H3V3H0Z" fill="#fff"/><path d="M1,0H2V1H3V2H2V3H1V2H0V1H1Z" fill="brown"/><path d="M1,1H2V2H1Z" fill="#2f4f4f"/></svg>';
       const storedHighlight = this.userSettings?.highlight ?? [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
-      this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "style": "margin-left: 1.5ch;" }).addP({ "id": "bm-highlight-grid-label", "textContent": "Create a custom pattern:" }).buildElement().addDiv({ "class": "bm-highlight-grid", "role": "group", "aria-labelledby": "bm-highlight-grid-label" });
+      this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "style": "margin-left: 1.5ch;" }).addP({ "id": "bm-highlight-preset-label", "textContent": "Choose a preset:" }).buildElement().addDiv({ "class": "bm-container bm-flex-center", "style": "width: 50%;", "role": "group", "aria-labelledby": "bm-highlight-preset-label" }).addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "None" }).buildElement().addButton({ "innerHTML": highlightPresetOff, "aria-label": 'Preset "None"' }, (instance, button) => {
+        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "None");
+      }).buildElement().buildElement().addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "Cross" }).buildElement().addButton({ "innerHTML": highlightPresetCross, "aria-label": 'Preset "Cross Shape"' }, (instance, button) => {
+        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "Cross");
+      }).buildElement().buildElement().addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "X" }).buildElement().addButton({ "innerHTML": highlightPresetCross.replace('d="M1,0H2V1H3V2H2V3H1V2H0V1H1Z"', 'd="M0,0V1H3V0H2V3H3V2H0V3H1V0Z"'), "aria-label": 'Preset "X Shape"' }, (instance, button) => {
+        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "X");
+      }).buildElement().buildElement().addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "Full" }).buildElement().addButton({ "innerHTML": highlightPresetOff.replace("#fff", "#2f4f4f"), "aria-label": 'Preset "Full Template"' }, (instance, button) => {
+        button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "Full");
+      }).buildElement().buildElement().buildElement().addP({ "id": "bm-highlight-grid-label", "textContent": "Create a custom pattern:" }).buildElement().addDiv({ "class": "bm-highlight-grid", "role": "group", "aria-labelledby": "bm-highlight-grid-label" });
       for (let buttonY = -1; buttonY <= 1; buttonY++) {
         for (let buttonX = -1; buttonX <= 1; buttonX++) {
           const buttonState = storedHighlight[storedHighlight.findIndex(([, x, y]) => x == buttonX && y == buttonY)]?.[0] ?? 0;
@@ -3521,6 +3531,7 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
    * Additionally, it will update user settings with the new selection.
    * @param {HTMLButtonElement} button - The button that was pressed
    * @param {Array<number, number>} coords - The relative coordinates of the button
+   * @since 0.91.46
    */
   updateHighlightSettings_fn = function(button, coords2) {
     console.log(coords2);
@@ -3565,6 +3576,48 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
     console.log(userStorageNew);
     this.userSettings["highlight"] = userStorageNew;
     button.disabled = false;
+  };
+  updateHighlightToPreset_fn = async function(preset) {
+    const presetButtons = document.querySelectorAll(".bm-highlight-preset-container button");
+    for (const button of presetButtons) {
+      button.disabled = true;
+    }
+    let presetArray = [0, 0, 0, 0, 2, 0, 0, 0, 0];
+    switch (preset) {
+      case "Cross":
+        presetArray = [0, 1, 0, 1, 2, 1, 0, 1, 0];
+        break;
+      case "X":
+        presetArray = [1, 0, 1, 0, 2, 0, 1, 0, 1];
+        break;
+      case "Full":
+        presetArray = [2, 2, 2, 2, 2, 2, 2, 2, 2];
+        break;
+    }
+    const buttons = document.querySelector(".bm-highlight-grid")?.childNodes ?? [];
+    for (let buttonIndex = 0; buttonIndex < buttons.length; buttonIndex++) {
+      const button = buttons[buttonIndex];
+      let buttonState = button.dataset["status"];
+      buttonState = buttonState != "Disabled" ? buttonState != "Incorrect" ? 2 : 1 : 0;
+      let buttonStateDelta = presetArray[buttonIndex] - buttonState;
+      if (buttonStateDelta == 0) {
+        continue;
+      }
+      buttonStateDelta += buttonStateDelta < 0 ? 3 : 0;
+      button.click();
+      if (buttonStateDelta == 2) {
+        for (let timeWaited = 0; timeWaited < 200; timeWaited += 10) {
+          if (!button.disabled) {
+            break;
+          }
+          await sleep(10);
+        }
+        button.click();
+      }
+    }
+    for (const button of presetButtons) {
+      button.disabled = false;
+    }
   };
 
   // src/main.js
