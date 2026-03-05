@@ -390,6 +390,31 @@ input[type=file] {
 }
 
 /* src/WindowSettings.css */
+#bm-window-settings .bm-highlight-preset-container {
+  display: flex;
+  flex-direction: column;
+}
+#bm-window-settings .bm-highlight-preset-container span {
+  width: fit-content;
+  margin: auto;
+  font-size: 0.7em;
+}
+#bm-window-settings .bm-highlight-preset-container button {
+  width: fit-content;
+  padding: 0;
+  border-radius: 0;
+}
+#bm-window-settings .bm-highlight-preset-container svg {
+  stroke: #333;
+  stroke-width: 0.02px;
+  width: 100%;
+  min-width: 1ch;
+  max-width: 10ch;
+}
+#bm-window-settings .bm-highlight-preset-container button:hover svg,
+#bm-window-settings .bm-highlight-preset-container button:focus svg {
+  opacity: 0.9;
+}
 #bm-window-settings .bm-highlight-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -399,6 +424,7 @@ input[type=file] {
 }
 #bm-window-settings .bm-highlight-grid > button {
   width: 100%;
+  padding: 0;
   aspect-ratio: 1 / 1;
   background-color: white;
   border: #333 1px solid;
