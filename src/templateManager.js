@@ -801,6 +801,7 @@ export default class TemplateManager {
   /** Calculates the correct pixels on this tile.
    * In addition, this function filters colors based on user input.
    * In addition, this function modifies colors to properly display (#deface).
+   * In addition, this function modifies incorrect pixels to display highlighting.
    * This function has multiple purposes only to reduce iterations of scans over every pixel on the template.
    * @param {Object} params - Object containing all parameters
    * @param {Uint32Array} params.tile - The tile without templates as a Uint32Array
@@ -836,6 +837,10 @@ export default class TemplateManager {
 
     //console.log(`TemplateX: ${templateCoordX}\nTemplateY: ${templateCoordY}\nStarting Row:${templateCoordY+tilePixelOffsetY}\nStarting Column:${templateCoordX+tilePixelOffsetX}`);
 
+    // Obtains if the user wants to highlight tile pixels that are transparent, but the template pixel is not
+    const shouldTransparentTilePixelsBeHighlighted = !this.settingsManager?.userSettings?.flags?.includes('hl-noTrans');
+    // The actual logic of this boolean is "should all pixels be highlighted"
+
     const { palette: _, LUT: lookupTable } = this.paletteBM; // Obtains the palette and LUT
 
     // Makes a copy of the color palette Blue Marble uses, turns it into a Map, and adds data to count the amount of each color
@@ -863,6 +868,9 @@ export default class TemplateManager {
 
         // Finds the best matching color ID for the template pixel. If none is found, default to "-2"
         const bestTemplateColorID = lookupTable.get(templatePixel) ?? -2;
+
+        // Finds the best matching color ID for the tile pixel. If none is found, default to "-2"
+        const bestTileColorID = lookupTable.get(tilePixelAbove) ?? -2;
 
         // -----     COLOR FILTER      -----
         // If this pixel on the template is a color the user wants to hide on the canvas...
@@ -909,6 +917,39 @@ export default class TemplateManager {
         }
         // -----     END OF ERASED     -----
 
+        // -----     HIGHLIGHTING      -----
+
+        // If highlighting is enabled, AND the template pixel is NOT transparent AND the template pixel does NOT match the tile pixel
+        if (!highlightDisabled && (templatePixelAlpha > tolerance) && (bestTileColorID != bestTemplateColorID)) {
+
+          // If the tile pixel is NOT transparent, OR the user wants to highlight transparent pixels
+          if (shouldTransparentTilePixelsBeHighlighted || (tilePixelAlpha > tolerance)) {
+
+            // Obtains the template color of this pixel
+            const templatePixelColor = template32[(templateRow * templateWidth) + templateColumn];
+            // This will retrieve the tile background instead if the color is filtered!
+
+            // For each of the 9 subpixels inside the pixel...
+            for (const subpixelPattern of highlightPattern) {
+
+              // Deconstructs the sub pixel
+              const [subpixelState, subpixelColumnDelta, subpixelRowDelta] = subpixelPattern;
+              // "Delta" because the coordinate of the sub-pixel is relative to the center of the pixel
+
+              // Obtains the subpixel color to use
+              const subpixelColor = (subpixelState != 0) ? ((subpixelState != 1) ? templatePixelColor : 0xFF0000FF) : 0x00000000;
+              // 0 = Transparent (black)
+              // 1 = Red (#FF0000)
+              // 2 = Template (matches template or hides if filtered)
+
+              // Sets the subpixel to match the color on the highlight pattern
+              template32[((templateRow + subpixelRowDelta) * templateWidth) + (templateColumn + subpixelColumnDelta)] = subpixelColor;
+            }
+          }
+        }
+
+        // -----  END OF HIGHLIGHTING  -----
+
         // If the template pixel is Erased, and the tile pixel is transparent...
         if ((bestTemplateColorID == -1) && (tilePixelAbove <= tolerance)) {
 
@@ -926,39 +967,8 @@ export default class TemplateManager {
         }
         // If the code passes this point, both pixels are opaque & not Erased.
 
-        // Finds the best matching color ID for the tile pixel. If none is found, default to "-2"
-        const bestTileColorID = lookupTable.get(tilePixelAbove) ?? -2;
-
         // If the template pixel does not match the tile pixel, then the pixel is skipped after highlighting.
         if (bestTileColorID != bestTemplateColorID) {
-
-          // -----     HIGHLIGHTING      -----
-
-          // If highlighting is disabled, then we skip highlighting
-          if (highlightDisabled) {continue;}
-
-          // Obtains the template color of this pixel
-          const templatePixelColor = template32[(templateRow * templateWidth) + templateColumn];
-          // This will retrieve the tile background instead if the color is filtered!
-
-          for (const subpixelPattern of highlightPattern) {
-
-            // Deconstructs the sub pixel
-            const [subpixelState, subpixelColumnDelta, subpixelRowDelta] = subpixelPattern;
-            // "Delta" because the coordinate of the sub-pixel is relative to the center of the pixel
-
-            // Obtains the subpixel color to use
-            const subpixelColor = (subpixelState != 0) ? ((subpixelState != 1) ? templatePixelColor : 0xFF0000FF) : 0x00000000;
-            // 0 = Transparent (black)
-            // 1 = Red (#FF0000)
-            // 2 = Template (matches template or hides if filtered)
-
-            // Sets the subpixel to match the color on the highlight pattern
-            template32[((templateRow + subpixelRowDelta) * templateWidth) + (templateColumn + subpixelColumnDelta)] = subpixelColor;
-          }
-
-          // -----  END OF HIGHLIGHTING  -----
-
           continue;
         }
         // If the code passes this point, the template pixel matches the tile pixel.

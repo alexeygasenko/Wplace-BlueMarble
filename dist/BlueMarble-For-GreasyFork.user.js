@@ -2,7 +2,7 @@
 // @name            Blue Marble
 // @name:en         Blue Marble
 // @namespace       https://github.com/SwingTheVine/
-// @version         0.91.59
+// @version         0.91.65
 // @description     A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @description:en  A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @author          SwingTheVine
@@ -1606,9 +1606,11 @@
      * @since 0.91.11
      */
     constructor(name2, version2, userSettings2) {
+      var _a;
       super(name2, version2);
       __privateAdd(this, _SettingsManager_instances);
       this.userSettings = userSettings2;
+      (_a = this.userSettings).flags ?? (_a.flags = []);
       this.userSettingsOld = structuredClone(this.userSettings);
       this.userSettingsSaveLocation = "bmUserSettings";
       this.updateFrequency = 5e3;
@@ -1628,6 +1630,21 @@
         console.log(userSettingsCurrent);
       }
     }
+    /** Toggles a boolean flag to the state that was passed in.
+     * If no state was passed in, the flag will flip to the opposite state.
+     * The existence of the flag determines its state. If it exists, it is `true`.
+     * @param {string} flagName - The name of the flag to toggle
+     * @param {boolean} [state=undefined] - (Optional) The state to change the flag to
+     * @since 0.91.60
+     */
+    toggleFlag(flagName, state = void 0) {
+      const flagIndex = this.userSettings?.flags?.indexOf(flagName) ?? -1;
+      if (flagIndex != -1 && state !== true) {
+        this.userSettings?.flags?.splice(flagIndex, 1);
+      } else if (flagIndex == -1 && state !== false) {
+        this.userSettings?.flags?.push(flagName);
+      }
+    }
     // This is one of the most insane OOP setups I have ever laid my eyes on
     /** Builds the "highlight" category of the settings window
      * @since 0.91.18
@@ -1637,7 +1654,10 @@
       const highlightPresetOff = '<svg viewBox="0 0 3 3"><path d="M0,0H3V3H0ZM0,1H3M0,2H3M1,0V3M2,0V3" fill="#fff"/><path d="M1,1H2V2H1Z" fill="#2f4f4f"/></svg>';
       const highlightPresetCross = '<svg viewBox="0 0 3 3"><path d="M0,0H3V3H0Z" fill="#fff"/><path d="M1,0H2V1H3V2H2V3H1V2H0V1H1Z" fill="brown"/><path d="M1,1H2V2H1Z" fill="#2f4f4f"/></svg>';
       const storedHighlight = this.userSettings?.highlight ?? [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
-      this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "style": "margin-left: 1.5ch;" }).addP({ "id": "bm-highlight-preset-label", "textContent": "Choose a preset:" }).buildElement().addDiv({ "class": "bm-container bm-flex-center", "style": "width: 50%;", "role": "group", "aria-labelledby": "bm-highlight-preset-label" }).addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "None" }).buildElement().addButton({ "innerHTML": highlightPresetOff, "aria-label": 'Preset "None"' }, (instance, button) => {
+      this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "style": "margin-left: 1.5ch;" }).addCheckbox({ "textContent": "Highlight transparent pixels" }, (instance, label, checkbox) => {
+        checkbox.checked = !this.userSettings?.flags?.includes("hl-noTrans");
+        checkbox.onchange = (event) => this.toggleFlag("hl-noTrans", !event.target.checked);
+      }).buildElement().addP({ "id": "bm-highlight-preset-label", "textContent": "Choose a preset:" }).buildElement().addDiv({ "class": "bm-container bm-flex-center", "style": "width: 50%;", "role": "group", "aria-labelledby": "bm-highlight-preset-label" }).addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "None" }).buildElement().addButton({ "innerHTML": highlightPresetOff, "aria-label": 'Preset "None"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "None");
       }).buildElement().buildElement().addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "Cross" }).buildElement().addButton({ "innerHTML": highlightPresetCross, "aria-label": 'Preset "Cross Shape"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "Cross");
@@ -2041,7 +2061,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically" }).addHeader(1, { "textContent": "Credits" }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-scrollable" }).addSpan({ "role": "img", "aria-label": this.name }).addSpan({ "innerHTML": ascii, "class": "bm-ascii", "aria-hidden": "true" }).buildElement().buildElement().addBr().buildElement().addHr().buildElement().addBr().buildElement().addSpan({ "textContent": '"Blue Marble" userscript is made by SwingTheVine.' }).buildElement().addBr().buildElement().addSpan({ "innerHTML": 'The <a href="https://bluemarble.lol/" target="_blank" rel="noopener noreferrer">Blue Marble Website</a> is made by <a href="https://github.com/crqch" target="_blank" rel="noopener noreferrer">crqch</a>.' }).buildElement().addBr().buildElement().addSpan({ "textContent": `The Blue Marble Website used until ${localizeDate(new Date(1756069320 * 1e3))} was made by Camille Daguin.` }).buildElement().addBr().buildElement().addSpan({ "textContent": 'The favicon "Blue Marble" is owned by NASA. (The image of the Earth is owned by NASA)' }).buildElement().addBr().buildElement().addSpan({ "textContent": "Special Thanks:" }).buildElement().addUl().addLi({ "textContent": "Espresso, Meqa, and Robot for moderating SwingTheVine's community." }).buildElement().addLi({ "innerHTML": 'nof, <a href="https://github.com/TouchedByDarkness" target="_blank" rel="noopener noreferrer">darkness</a> for creating similar userscripts!' }).buildElement().addLi({ "innerHTML": '<a href="https://wondapon.net/" target="_blank" rel="noopener noreferrer">Wonda</a> for the Blue Marble banner image!' }).buildElement().addLi({ "innerHTML": '<a href="https://github.com/BullStein" target="_blank" rel="noopener noreferrer">BullStein</a>, <a href="https://github.com/allanf181" target="_blank" rel="noopener noreferrer">allanf181</a> for being early beta testers!' }).buildElement().addLi({ "innerHTML": 'guidu_ and <a href="https://github.com/Nick-machado" target="_blank" rel="noopener noreferrer">Nick-machado</a> for the original "Minimize" Button code!' }).buildElement().addLi({ "innerHTML": 'Nomad and <a href="https://www.youtube.com/@gustav_vv" target="_blank" rel="noopener noreferrer">Gustav</a> for the tutorials!' }).buildElement().addLi({ "innerHTML": '<a href="https://github.com/cfpwastaken" target="_blank" rel="noopener noreferrer">cfp</a> for creating the template overlay that Blue Marble was based on!' }).buildElement().addLi({ "innerHTML": '<a href="https://forcenetwork.cloud/" target="_blank" rel="noopener noreferrer">Force Network</a> for hosting the <a href="https://github.com/SwingTheVine/Wplace-TelemetryServer" target="_blank" rel="noopener noreferrer">telemetry server</a>!' }).buildElement().addLi({ "innerHTML": '<a href="https://thebluecorner.net" target="_blank" rel="noopener noreferrer">TheBlueCorner</a> for getting me interested in online pixel canvases!' }).buildElement().buildElement().addBr().buildElement().addSpan({ "innerHTML": '<a href="https://ko-fi.com/swingthevine" target="_blank" rel="noopener noreferrer">Donators</a>:' }).buildElement().addUl().addLi({ "textContent": "Espresso" }).buildElement().addLi({ "textContent": "BEST FAN" }).buildElement().addLi({ "textContent": "Jack" }).buildElement().addLi({ "textContent": "raiken_au" }).buildElement().addLi({ "textContent": "Jacob" }).buildElement().addLi({ "textContent": "StupidOne" }).buildElement().addLi({ "textContent": "2 Anonymous Supporters" }).buildElement().buildElement().buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
+      }).buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically" }).addHeader(1, { "textContent": "Credits" }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-scrollable" }).addSpan({ "role": "img", "aria-label": this.name }).addSpan({ "innerHTML": ascii, "class": "bm-ascii", "aria-hidden": "true" }).buildElement().buildElement().addBr().buildElement().addHr().buildElement().addBr().buildElement().addSpan({ "textContent": '"Blue Marble" userscript is made by SwingTheVine.' }).buildElement().addBr().buildElement().addSpan({ "innerHTML": 'The <a href="https://bluemarble.lol/" target="_blank" rel="noopener noreferrer">Blue Marble Website</a> is made by <a href="https://github.com/crqch" target="_blank" rel="noopener noreferrer">crqch</a>.' }).buildElement().addBr().buildElement().addSpan({ "textContent": `The Blue Marble Website used until ${localizeDate(new Date(1756069320 * 1e3))} was made by Camille Daguin.` }).buildElement().addBr().buildElement().addSpan({ "textContent": 'The favicon "Blue Marble" is owned by NASA. (The image of the Earth is owned by NASA)' }).buildElement().addBr().buildElement().addSpan({ "textContent": "Special Thanks:" }).buildElement().addUl().addLi({ "textContent": "Espresso, Meqa, and Robot for moderating SwingTheVine's community." }).buildElement().addLi({ "innerHTML": 'nof, <a href="https://github.com/TouchedByDarkness" target="_blank" rel="noopener noreferrer">darkness</a> for creating similar userscripts!' }).buildElement().addLi({ "innerHTML": '<a href="https://wondapon.net/" target="_blank" rel="noopener noreferrer">Wonda</a> for the Blue Marble banner image!' }).buildElement().addLi({ "innerHTML": '<a href="https://github.com/BullStein" target="_blank" rel="noopener noreferrer">BullStein</a>, <a href="https://github.com/allanf181" target="_blank" rel="noopener noreferrer">allanf181</a> for being early beta testers!' }).buildElement().addLi({ "innerHTML": 'guidu_ and <a href="https://github.com/Nick-machado" target="_blank" rel="noopener noreferrer">Nick-machado</a> for the original "Minimize" Button code!' }).buildElement().addLi({ "innerHTML": 'Nomad and <a href="https://www.youtube.com/@gustav_vv" target="_blank" rel="noopener noreferrer">Gustav</a> for the tutorials!' }).buildElement().addLi({ "innerHTML": '<a href="https://github.com/cfpwastaken" target="_blank" rel="noopener noreferrer">cfp</a> for creating the template overlay that Blue Marble was based on!' }).buildElement().addLi({ "innerHTML": '<a href="https://forcenetwork.cloud/" target="_blank" rel="noopener noreferrer">Force Network</a> for hosting the <a href="https://github.com/SwingTheVine/Wplace-TelemetryServer" target="_blank" rel="noopener noreferrer">telemetry server</a>!' }).buildElement().addLi({ "innerHTML": '<a href="https://thebluecorner.net" target="_blank" rel="noopener noreferrer">TheBlueCorner</a> for getting me interested in online pixel canvases!' }).buildElement().buildElement().addBr().buildElement().addSpan({ "innerHTML": '<a href="https://ko-fi.com/swingthevine" target="_blank" rel="noopener noreferrer">Donators</a>:' }).buildElement().addUl().addLi({ "textContent": "Espresso" }).buildElement().addLi({ "textContent": "BEST FAN" }).buildElement().addLi({ "textContent": "FuchsDresden" }).buildElement().addLi({ "textContent": "Jack" }).buildElement().addLi({ "textContent": "raiken_au" }).buildElement().addLi({ "textContent": "Jacob" }).buildElement().addLi({ "textContent": "StupidOne" }).buildElement().addLi({ "textContent": "2 Anonymous Supporters" }).buildElement().buildElement().buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
       this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
     }
   };
@@ -3320,6 +3340,7 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
   /** Calculates the correct pixels on this tile.
    * In addition, this function filters colors based on user input.
    * In addition, this function modifies colors to properly display (#deface).
+   * In addition, this function modifies incorrect pixels to display highlighting.
    * This function has multiple purposes only to reduce iterations of scans over every pixel on the template.
    * @param {Object} params - Object containing all parameters
    * @param {Uint32Array} params.tile - The tile without templates as a Uint32Array
@@ -3346,6 +3367,7 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
     const templateWidth = templateInformation[2];
     const templateHeight = templateInformation[3];
     const tolerance = this.paletteTolerance;
+    const shouldTransparentTilePixelsBeHighlighted = !this.settingsManager?.userSettings?.flags?.includes("hl-noTrans");
     const { palette: _, LUT: lookupTable } = this.paletteBM;
     const _colorpalette = /* @__PURE__ */ new Map();
     for (let templateRow = 1; templateRow < templateHeight; templateRow += pixelSize) {
@@ -3357,6 +3379,7 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
         const templatePixelAlpha = templatePixel >>> 24 & 255;
         const tilePixelAlpha = tilePixelAbove >>> 24 & 255;
         const bestTemplateColorID = lookupTable.get(templatePixel) ?? -2;
+        const bestTileColorID = lookupTable.get(tilePixelAbove) ?? -2;
         if (this.shouldFilterColor.get(bestTemplateColorID)) {
           template32[templateRow * templateWidth + templateColumn] = tilePixelAbove;
         }
@@ -3380,6 +3403,16 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
             }
           }
         }
+        if (!highlightDisabled && templatePixelAlpha > tolerance && bestTileColorID != bestTemplateColorID) {
+          if (shouldTransparentTilePixelsBeHighlighted || tilePixelAlpha > tolerance) {
+            const templatePixelColor = template32[templateRow * templateWidth + templateColumn];
+            for (const subpixelPattern of highlightPattern) {
+              const [subpixelState, subpixelColumnDelta, subpixelRowDelta] = subpixelPattern;
+              const subpixelColor = subpixelState != 0 ? subpixelState != 1 ? templatePixelColor : 4278190335 : 0;
+              template32[(templateRow + subpixelRowDelta) * templateWidth + (templateColumn + subpixelColumnDelta)] = subpixelColor;
+            }
+          }
+        }
         if (bestTemplateColorID == -1 && tilePixelAbove <= tolerance) {
           const colorIDcount2 = _colorpalette.get(bestTemplateColorID);
           _colorpalette.set(bestTemplateColorID, colorIDcount2 ? colorIDcount2 + 1 : 1);
@@ -3388,17 +3421,7 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
         if (templatePixelAlpha <= tolerance || tilePixelAlpha <= tolerance) {
           continue;
         }
-        const bestTileColorID = lookupTable.get(tilePixelAbove) ?? -2;
         if (bestTileColorID != bestTemplateColorID) {
-          if (highlightDisabled) {
-            continue;
-          }
-          const templatePixelColor = template32[templateRow * templateWidth + templateColumn];
-          for (const subpixelPattern of highlightPattern) {
-            const [subpixelState, subpixelColumnDelta, subpixelRowDelta] = subpixelPattern;
-            const subpixelColor = subpixelState != 0 ? subpixelState != 1 ? templatePixelColor : 4278190335 : 0;
-            template32[(templateRow + subpixelRowDelta) * templateWidth + (templateColumn + subpixelColumnDelta)] = subpixelColor;
-          }
           continue;
         }
         const colorIDcount = _colorpalette.get(bestTemplateColorID);

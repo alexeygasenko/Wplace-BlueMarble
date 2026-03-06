@@ -4,13 +4,17 @@ import WindowSettings from "./WindowSettings";
 /** SettingsManager class for handling user settings and making them persist between sessions.
  * Logic for {@link WindowSettings} is managed here.
  * "Flags" should follow the same styling as `.classList()` and should not contain spaces.
+ * A flag should always be false by default.
+ * When a flag is false, it will not exist in the "flags" Array.
+ * (Therefore, "flags" should be `[]` by default)
+ * If it exists in the "flags" Array, then the flag is `true`.
  * @class SettingsManager
  * @since 0.91.11
- * @examples
+ * @example
  * {
  *   "uuid": "497dcba3-ecbf-4587-a2dd-5eb0665e6880",
  *   "telemetry": 1,
- *   "flags": ["willHighlight", "openWindowed"],
+ *   "flags": ["hl-noTrans", "ftr-oWin"],
  *   "highlight": [[1,0,-1],[1,-1,0],[2,1,0],[1,0,1]],
  *   "filter": [-2,0,4,5,6,29,63]
  * }
@@ -27,6 +31,7 @@ export default class SettingsManager extends WindowSettings {
     super(name, version); // Executes WindowSettings constructor
     
     this.userSettings = userSettings; // User settings as an Object
+    this.userSettings.flags ??= []; // Makes sure the key "flags" always exists
     this.userSettingsOld = structuredClone(this.userSettings); // Creates a duplicate of the user settings to store the old version of user settings from 5+ seconds ago
     this.userSettingsSaveLocation = 'bmUserSettings'; // Storage save location
 
@@ -54,6 +59,27 @@ export default class SettingsManager extends WindowSettings {
     }
   }
 
+  /** Toggles a boolean flag to the state that was passed in.
+   * If no state was passed in, the flag will flip to the opposite state.
+   * The existence of the flag determines its state. If it exists, it is `true`.
+   * @param {string} flagName - The name of the flag to toggle
+   * @param {boolean} [state=undefined] - (Optional) The state to change the flag to
+   * @since 0.91.60
+   */
+  toggleFlag(flagName, state = undefined) {
+
+    const flagIndex = this.userSettings?.flags?.indexOf(flagName) ?? -1; // Is the flag `true`?
+
+    // If the flag is enabled, AND the user does not want to force the flag to be true...
+    if ((flagIndex != -1) && (state !== true)) {
+
+      this.userSettings?.flags?.splice(flagIndex, 1); // Remove the flag (makes it false)
+    } else if ((flagIndex == -1) && (state !== false)) {
+      // Else if the flag is disabled, AND the user does not want to force the flag to be false...
+      this.userSettings?.flags?.push(flagName); // Add the flag (makes it true)
+    }
+  }
+
   // This is one of the most insane OOP setups I have ever laid my eyes on
 
   /** Builds the "highlight" category of the settings window
@@ -73,6 +99,10 @@ export default class SettingsManager extends WindowSettings {
       .addHeader(2, {'textContent': 'Pixel Highlight'}).buildElement()
       .addHr().buildElement()
       .addDiv({'style': 'margin-left: 1.5ch;'})
+        .addCheckbox({'textContent': 'Highlight transparent pixels'}, (instance, label, checkbox) => {
+          checkbox.checked = !this.userSettings?.flags?.includes('hl-noTrans'); // Makes the checkbox match the last stored user setting
+          checkbox.onchange = (event) => this.toggleFlag('hl-noTrans', !event.target.checked); // Forces the flag to be the opposite state as the checkbox. E.g. "Checked" means 'hl-noTrans' is false (does not exist).
+        }).buildElement()
         .addP({'id': 'bm-highlight-preset-label', 'textContent': 'Choose a preset:'}).buildElement()
         .addDiv({'class': 'bm-container bm-flex-center', 'style': 'width: 50%;', 'role': 'group', 'aria-labelledby': 'bm-highlight-preset-label'})
           .addDiv({'class': 'bm-highlight-preset-container'})
