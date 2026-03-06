@@ -58,6 +58,7 @@ export default class WindowSettings extends Overlay {
         .addDiv({'class': 'bm-container bm-scrollable'}, (instance, div) => {
           // Each category in the settings window
           this.buildHighlight();
+          this.buildTemplate();
         }).buildElement()
       .buildElement()
     .buildElement().buildOverlay(this.windowParent);
@@ -68,6 +69,7 @@ export default class WindowSettings extends Overlay {
 
   /** Displays an error when a settings category fails to load.
    * @param {string} name - The name of the category
+   * @since 0.91.11
    */
   #errorOverrideFailure(name) {
     this.window = this.addDiv({'class': 'bm-container'})
@@ -83,5 +85,13 @@ export default class WindowSettings extends Overlay {
    */
   buildHighlight() {
     this.#errorOverrideFailure('Pixel Highlight');
+  }
+
+  /** Builds the template section of the window.
+   * This should be overriden by {@link SettingsManager}
+   * @since 0.91.68
+   */
+  buildTemplate() {
+    this.#errorOverrideFailure('Template');
   }
 }

@@ -14,7 +14,7 @@ import WindowSettings from "./WindowSettings";
  * {
  *   "uuid": "497dcba3-ecbf-4587-a2dd-5eb0665e6880",
  *   "telemetry": 1,
- *   "flags": ["hl-noTrans", "ftr-oWin"],
+ *   "flags": ["hl-noTrans", "ftr-oWin", "te-noSkip"],
  *   "highlight": [[1,0,-1],[1,-1,0],[2,1,0],[1,0,1]],
  *   "filter": [-2,0,4,5,6,29,63]
  * }
@@ -104,7 +104,7 @@ export default class SettingsManager extends WindowSettings {
           checkbox.onchange = (event) => this.toggleFlag('hl-noTrans', !event.target.checked); // Forces the flag to be the opposite state as the checkbox. E.g. "Checked" means 'hl-noTrans' is false (does not exist).
         }).buildElement()
         .addP({'id': 'bm-highlight-preset-label', 'textContent': 'Choose a preset:', 'style': 'font-weight: 700;'}).buildElement()
-        .addDiv({'class': 'bm-flex-center', 'style': 'width: 50%;', 'role': 'group', 'aria-labelledby': 'bm-highlight-preset-label'})
+        .addDiv({'class': 'bm-flex-center', 'role': 'group', 'aria-labelledby': 'bm-highlight-preset-label'})
           .addDiv({'class': 'bm-highlight-preset-container'})
             .addSpan({'textContent': 'None'}).buildElement()
             .addButton({'innerHTML': highlightPresetOff, 'aria-label': 'Preset "None"'}, (instance, button) => {button.onclick = () => this.#updateHighlightToPreset('None')}).buildElement()
@@ -159,8 +159,6 @@ export default class SettingsManager extends WindowSettings {
    */
   #updateHighlightSettings(button, coords) {
 
-    console.log(coords);
-
     button.disabled = true; // Disabled the button until we are done
 
     const status = button.dataset['status']; // Obtains the current status of the button
@@ -171,8 +169,6 @@ export default class SettingsManager extends WindowSettings {
     let userStorageChange = [2, 0, 0]; // The new change to the user storage
 
     const userStorageNew = userStorageOld; // The old storage with the new change
-
-    console.log(userStorageOld);
 
     // For each different type of status...
     switch (status) {
@@ -205,12 +201,8 @@ export default class SettingsManager extends WindowSettings {
         break;
     }
 
-    console.log(userStorageChange);
-
     // Finds the index of the pixel to change
     const indexOfChange = userStorageOld.findIndex(([, x, y]) => ((x == userStorageChange[1]) && (y == userStorageChange[2])));
-
-    console.log(indexOfChange);
 
     // If the new sub-pixel state is NOT disabled
     if (userStorageChange[0] != 0) {
@@ -225,8 +217,6 @@ export default class SettingsManager extends WindowSettings {
       // Else, it is disabled. We want to remove it if it exists.
       userStorageNew.splice(indexOfChange, 1); // Removes 1 index from the array at the index of the pixel change
     }
-
-    console.log(userStorageNew);
 
     this.userSettings['highlight'] = userStorageNew;
     // TODO: Add timer update here
@@ -315,5 +305,27 @@ export default class SettingsManager extends WindowSettings {
     for (const button of presetButtons) {
       button.disabled = false; // Re-enables the button
     }
+  }
+
+  /** Build the "template" category of settings window
+   * @since 0.91.68
+   * @see WindowSettings#buildTemplate
+   */
+  buildTemplate() {
+
+    this.window = this.addDiv({'class': 'bm-container'})
+      .addHeader(2, {'textContent': 'Pixel Highlight'}).buildElement()
+      .addHr().buildElement()
+      .addDiv({'class': 'bm-container', 'style': 'margin-left: 1.5ch;'})
+        .addCheckbox({'textContent': 'Template creation should skip transparent tiles'}, (instance, label, checkbox) => {
+          checkbox.checked = !this.userSettings?.flags?.includes('hl-noSkip'); // Makes the checkbox match the last stored user setting
+          checkbox.onchange = (event) => this.toggleFlag('hl-noSkip', !event.target.checked); // If the user wants to skip, then the checkbox is NOT checked
+        }).buildElement()
+        .addCheckbox({'innerHTML': 'Experimental: Template creation should <em>aggressively</em> skip transparent tiles'}, (instance, label, checkbox) => {
+          checkbox.checked = this.userSettings?.flags?.includes('hl-agSkip'); // Makes the checkbox match the last stored user setting
+          checkbox.onchange = (event) => this.toggleFlag('hl-agSkip', event.target.checked); // If the user wants to aggressively skip, then the checkbox is checked
+        }).buildElement()
+      .buildElement()
+    .buildElement()
   }
 }

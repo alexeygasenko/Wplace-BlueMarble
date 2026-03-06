@@ -1,9 +1,16 @@
 /* @since 0.91.22 */
 
+/* Highlight preset group container */
+#bm-window-settings div:has(> .bm-highlight-preset-container) {
+  width: fit-content;
+  justify-content: flex-start;
+}
+
 /* Highlight preset container */
 #bm-window-settings .bm-highlight-preset-container {
   display: flex;
   flex-direction: column;
+  width: 13%;
 }
 
 /* Highlight preset title */
@@ -25,8 +32,8 @@
   stroke: #333;
   stroke-width: 0.02px;
   width: 100%;
-  min-width: 1ch;
-  max-width: 10ch;
+  min-width: 1.5ch;
+  max-width: 14.5ch;
 }
 
 /* Highlight preset SVG on hover/focus */
@@ -41,7 +48,7 @@
   grid-template-columns: 1fr 1fr 1fr;
   width: 25%;
   min-width: 3ch;
-  max-width: 30ch;
+  max-width: 15ch;
 }
 
 /* Highlight pattern button */

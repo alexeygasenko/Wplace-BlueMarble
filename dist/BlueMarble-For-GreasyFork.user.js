@@ -2,7 +2,7 @@
 // @name            Blue Marble
 // @name:en         Blue Marble
 // @namespace       https://github.com/SwingTheVine/
-// @version         0.91.67
+// @version         0.91.74
 // @description     A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @description:en  A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @author          SwingTheVine
@@ -713,8 +713,15 @@
     addCheckbox(additionalProperties = {}, callback = () => {
     }) {
       const properties = { "type": "checkbox" };
-      const label = __privateMethod(this, _Overlay_instances, createElement_fn).call(this, "label", { "textContent": additionalProperties["textContent"] ?? "" });
-      delete additionalProperties["textContent"];
+      const labelContent = {};
+      if (!!additionalProperties["textContent"]) {
+        labelContent["textContent"] = additionalProperties["textContent"];
+        delete additionalProperties["textContent"];
+      } else if (!!additionalProperties["innerHTML"]) {
+        labelContent["innerHTML"] = additionalProperties["innerHTML"];
+        delete additionalProperties["textContent"];
+      }
+      const label = __privateMethod(this, _Overlay_instances, createElement_fn).call(this, "label", labelContent);
       const checkbox = __privateMethod(this, _Overlay_instances, createElement_fn).call(this, "input", properties, additionalProperties);
       label.insertBefore(checkbox, label.firstChild);
       this.buildElement();
@@ -1577,6 +1584,7 @@
         };
       }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically" }).addHeader(1, { "textContent": "Settings" }).buildElement().buildElement().addHr().buildElement().addP({ "textContent": "Settings take 5 seconds to save." }).buildElement().addDiv({ "class": "bm-container bm-scrollable" }, (instance, div) => {
         this.buildHighlight();
+        this.buildTemplate();
       }).buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
       this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
     }
@@ -1587,10 +1595,18 @@
     buildHighlight() {
       __privateMethod(this, _WindowSettings_instances, errorOverrideFailure_fn).call(this, "Pixel Highlight");
     }
+    /** Builds the template section of the window.
+     * This should be overriden by {@link SettingsManager}
+     * @since 0.91.68
+     */
+    buildTemplate() {
+      __privateMethod(this, _WindowSettings_instances, errorOverrideFailure_fn).call(this, "Template");
+    }
   };
   _WindowSettings_instances = new WeakSet();
   /** Displays an error when a settings category fails to load.
    * @param {string} name - The name of the category
+   * @since 0.91.11
    */
   errorOverrideFailure_fn = function(name2) {
     this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": name2 }).buildElement().addHr().buildElement().addP({ "innerHTML": `An error occured loading the ${name2} category. <code>SettingsManager</code> failed to override the ${name2} function inside <code>WindowSettings</code>.` }).buildElement().buildElement();
@@ -1657,7 +1673,7 @@
       this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "class": "bm-container", "style": "margin-left: 1.5ch;" }).addCheckbox({ "textContent": "Highlight transparent pixels" }, (instance, label, checkbox) => {
         checkbox.checked = !this.userSettings?.flags?.includes("hl-noTrans");
         checkbox.onchange = (event) => this.toggleFlag("hl-noTrans", !event.target.checked);
-      }).buildElement().addP({ "id": "bm-highlight-preset-label", "textContent": "Choose a preset:", "style": "font-weight: 700;" }).buildElement().addDiv({ "class": "bm-flex-center", "style": "width: 50%;", "role": "group", "aria-labelledby": "bm-highlight-preset-label" }).addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "None" }).buildElement().addButton({ "innerHTML": highlightPresetOff, "aria-label": 'Preset "None"' }, (instance, button) => {
+      }).buildElement().addP({ "id": "bm-highlight-preset-label", "textContent": "Choose a preset:", "style": "font-weight: 700;" }).buildElement().addDiv({ "class": "bm-flex-center", "role": "group", "aria-labelledby": "bm-highlight-preset-label" }).addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "None" }).buildElement().addButton({ "innerHTML": highlightPresetOff, "aria-label": 'Preset "None"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "None");
       }).buildElement().buildElement().addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "Cross" }).buildElement().addButton({ "innerHTML": highlightPresetCross, "aria-label": 'Preset "Cross Shape"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "Cross");
@@ -1685,6 +1701,19 @@
       }
       this.window = this.buildElement().buildElement().buildElement();
     }
+    /** Build the "template" category of settings window
+     * @since 0.91.68
+     * @see WindowSettings#buildTemplate
+     */
+    buildTemplate() {
+      this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "class": "bm-container", "style": "margin-left: 1.5ch;" }).addCheckbox({ "textContent": "Template creation should skip transparent tiles" }, (instance, label, checkbox) => {
+        checkbox.checked = !this.userSettings?.flags?.includes("hl-noSkip");
+        checkbox.onchange = (event) => this.toggleFlag("hl-noSkip", !event.target.checked);
+      }).buildElement().addCheckbox({ "innerHTML": "Experimental: Template creation should <em>aggressively</em> skip transparent tiles" }, (instance, label, checkbox) => {
+        checkbox.checked = this.userSettings?.flags?.includes("hl-agSkip");
+        checkbox.onchange = (event) => this.toggleFlag("hl-agSkip", event.target.checked);
+      }).buildElement().buildElement().buildElement();
+    }
   };
   _SettingsManager_instances = new WeakSet();
   /** Updates the display of the highlight buttons in the settings window.
@@ -1694,13 +1723,11 @@
    * @since 0.91.46
    */
   updateHighlightSettings_fn = function(button, coords2) {
-    console.log(coords2);
     button.disabled = true;
     const status = button.dataset["status"];
     const userStorageOld = this.userSettings?.highlight ?? [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
     let userStorageChange = [2, 0, 0];
     const userStorageNew = userStorageOld;
-    console.log(userStorageOld);
     switch (status) {
       // If the button was in the "Disabled" state
       case "Disabled":
@@ -1721,9 +1748,7 @@
         userStorageChange = [0, ...coords2];
         break;
     }
-    console.log(userStorageChange);
     const indexOfChange = userStorageOld.findIndex(([, x, y]) => x == userStorageChange[1] && y == userStorageChange[2]);
-    console.log(indexOfChange);
     if (userStorageChange[0] != 0) {
       if (indexOfChange != -1) {
         userStorageNew[indexOfChange] = userStorageChange;
@@ -1733,7 +1758,6 @@
     } else if (indexOfChange != -1) {
       userStorageNew.splice(indexOfChange, 1);
     }
-    console.log(userStorageNew);
     this.userSettings["highlight"] = userStorageNew;
     button.disabled = false;
   };

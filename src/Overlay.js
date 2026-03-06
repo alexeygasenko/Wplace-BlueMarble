@@ -517,8 +517,24 @@ export default class Overlay {
 
     const properties = {'type': 'checkbox'}; // Shared checkbox DOM properties
 
-    const label = this.#createElement('label', {'textContent': additionalProperties['textContent'] ?? ''}); // Creates the label element
-    delete additionalProperties['textContent']; // Deletes 'textContent' DOM property before adding the properties to the checkbox
+    // Stores the label content from the additional property
+    const labelContent = {};
+
+    // If the label content was passed in as 'textContent'...
+    if (!!additionalProperties['textContent']) {
+
+      // Store the information, then delete it from additionalProperties
+      labelContent['textContent'] = additionalProperties['textContent'];
+      delete additionalProperties['textContent']; // Deletes 'textContent' DOM property before adding the properties to the checkbox
+    } else if (!!additionalProperties['innerHTML']) {
+      // Else if the label content was passed in as 'innerHTML'...
+
+      // Store the information, then delete it from additionalProperties
+      labelContent['innerHTML'] = additionalProperties['innerHTML'];
+      delete additionalProperties['textContent'];
+    }
+
+    const label = this.#createElement('label', labelContent); // Creates the label element
     const checkbox = this.#createElement('input', properties, additionalProperties); // Creates the checkbox element
     label.insertBefore(checkbox, label.firstChild); // Makes the checkbox the first child of the label (before the text content)
     this.buildElement(); // Signifies that we are done adding children to the checkbox
