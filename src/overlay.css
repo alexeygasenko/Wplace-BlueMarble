@@ -347,7 +347,7 @@ input[type="file"] {
 
 /* Containers for "sections" of elements in windowed mode */
 /* Does not apply to the main window */
-.bm-container:not(#bm-window-main .bm-container) {
+.bm-windowed .bm-container:not(#bm-window-main .bm-container) {
   margin-top: 0.25em;
   margin-bottom: 0.25em;
   /* Do not use 'margin' shorthand, as it will override left/right margin */

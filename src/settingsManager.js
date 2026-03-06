@@ -98,13 +98,13 @@ export default class SettingsManager extends WindowSettings {
     this.window = this.addDiv({'class': 'bm-container'})
       .addHeader(2, {'textContent': 'Pixel Highlight'}).buildElement()
       .addHr().buildElement()
-      .addDiv({'style': 'margin-left: 1.5ch;'})
+      .addDiv({'class': 'bm-container', 'style': 'margin-left: 1.5ch;'})
         .addCheckbox({'textContent': 'Highlight transparent pixels'}, (instance, label, checkbox) => {
           checkbox.checked = !this.userSettings?.flags?.includes('hl-noTrans'); // Makes the checkbox match the last stored user setting
           checkbox.onchange = (event) => this.toggleFlag('hl-noTrans', !event.target.checked); // Forces the flag to be the opposite state as the checkbox. E.g. "Checked" means 'hl-noTrans' is false (does not exist).
         }).buildElement()
-        .addP({'id': 'bm-highlight-preset-label', 'textContent': 'Choose a preset:'}).buildElement()
-        .addDiv({'class': 'bm-container bm-flex-center', 'style': 'width: 50%;', 'role': 'group', 'aria-labelledby': 'bm-highlight-preset-label'})
+        .addP({'id': 'bm-highlight-preset-label', 'textContent': 'Choose a preset:', 'style': 'font-weight: 700;'}).buildElement()
+        .addDiv({'class': 'bm-flex-center', 'style': 'width: 50%;', 'role': 'group', 'aria-labelledby': 'bm-highlight-preset-label'})
           .addDiv({'class': 'bm-highlight-preset-container'})
             .addSpan({'textContent': 'None'}).buildElement()
             .addButton({'innerHTML': highlightPresetOff, 'aria-label': 'Preset "None"'}, (instance, button) => {button.onclick = () => this.#updateHighlightToPreset('None')}).buildElement()
@@ -122,7 +122,7 @@ export default class SettingsManager extends WindowSettings {
             .addButton({'innerHTML': highlightPresetOff.replace('#fff', '#2f4f4f'), 'aria-label': 'Preset "Full Template"'}, (instance, button) => {button.onclick = () => this.#updateHighlightToPreset('Full')}).buildElement()
           .buildElement()
         .buildElement()
-        .addP({'id': 'bm-highlight-grid-label', 'textContent': 'Create a custom pattern:'}).buildElement()
+        .addP({'id': 'bm-highlight-grid-label', 'textContent': 'Create a custom pattern:', 'style': 'font-weight: 700;'}).buildElement()
         .addDiv({'class': 'bm-highlight-grid', 'role': 'group', 'aria-labelledby': 'bm-highlight-grid-label'});
           // We leave this open so we can add buttons
 
