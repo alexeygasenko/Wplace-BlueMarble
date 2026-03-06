@@ -39,6 +39,7 @@ Special Thanks:
 [Donators](https://ko-fi.com/swingthevine):
 * Espresso
 * BEST FAN
+* FuchsDresden
 * Jack
 * raiken_au
 * Jacob
