@@ -166,8 +166,16 @@ export default class TemplateManager {
       file: blob,
       coords: coords
     });
+
+    // Does the user want to skip transparent tiles while creating templates?
+    const shouldSkipTransTiles = !this.settingsManager?.userSettings?.flags?.includes('hl-noSkip');
+
+    // Does the user want to aggressively skip transparent tiles while creating templates?
+    const shouldAggSkipTransTiles = this.settingsManager?.userSettings?.flags?.includes('hl-agSkip');
+
+    console.log(`Should Skip: ${shouldSkipTransTiles}; Should Agg Skip: ${shouldAggSkipTransTiles}`);
     
-    const { templateTiles, templateTilesBuffers } = await template.createTemplateTiles(this.tileSize, this.paletteBM); // Chunks the tiles
+    const { templateTiles, templateTilesBuffers } = await template.createTemplateTiles(this.tileSize, this.paletteBM, shouldSkipTransTiles, shouldAggSkipTransTiles); // Chunks the tiles
     
     template.chunked = templateTiles; // Stores the chunked tile bitmaps
 

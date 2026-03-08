@@ -1,4 +1,4 @@
-import { uint8ToBase64 } from "./utils";
+import { sleep, uint8ToBase64, viewCanvasInNewTab } from "./utils";
 
 /** An instance of a template.
  * Handles all mathematics, manipulation, and analysis regarding a single template.
@@ -43,16 +43,25 @@ export default class Template {
     this.tileSize = tileSize;
     /** Total pixel count in template @type {{total: number, colors: Map<number, number>, correct?: { [key: string]: Map<number, number> }}} */
     this.pixelCount = { total: 0, colors: new Map() };
+
+    this.shouldSkipTransTiles = true; // Should transparent template tiles be skipped during template creation?
+    this.shouldAggSkipTransTiles = false; // Should transparent template tiles be aggressively skipped during tempalte creation?
   }
 
   /** Creates chunks of the template for each tile.
    * @param {Number} tileSize - Size of the tile as determined by templateManager
    * @param {Object} paletteBM - An collection of Uint32Arrays containing the palette BM uses
+   * @param {boolean} shouldSkipTransTiles - Should transparent tiles be skipped over when creating the template?
+   * @param {boolean} shouldAggSkipTransTiles - Should transparent tiles be aggressively skipped over when creating the template?
    * @returns {Object} Collection of template bitmaps & buffers organized by tile coordinates
    * @since 0.65.4
    */
-  async createTemplateTiles(tileSize, paletteBM) {
+  async createTemplateTiles(tileSize, paletteBM, shouldSkipTransTiles, shouldAggSkipTransTiles) {
     console.log('Template coordinates:', this.coords);
+
+    // Updates the class instance variable with the new information
+    this.shouldSkipTransTiles = shouldSkipTransTiles;
+    this.shouldAggSkipTransTiles = shouldAggSkipTransTiles;
 
     const shreadSize = 3; // Scale image factor for pixel art enhancement (must be odd)
     const bitmap = await createImageBitmap(this.file); // Create efficient bitmap from uploaded file
@@ -64,8 +73,16 @@ export default class Template {
     const templateTiles = {}; // Holds the template tiles
     const templateTilesBuffers = {}; // Holds the buffers of the template tiles
 
+    // The main canvas used during template creation
     const canvas = new OffscreenCanvas(this.tileSize, this.tileSize);
     const context = canvas.getContext('2d', { willReadFrequently: true });
+
+    // The canvas used to check if a specific template tile is transparent or not
+    const transCanvas = new OffscreenCanvas(this.tileSize, this.tileSize);
+    const transContext = transCanvas.getContext('2d', { willReadFrequently: true });
+
+    // Makes it so that `.drawImage()` calls on the canvas used to calculate transparency always draw below what is already on the canvas
+    transContext.globalCompositeOperation = "destination-over";
   
     // Prep the canvas for drawing the entire template (so we can find total pixels)
     canvas.width = imageWidth;
@@ -101,7 +118,7 @@ export default class Template {
     contextMask.fillRect(1, 1, 1, 1);
 
     // For every tile...
-    for (let pixelY = this.coords[3]; pixelY < imageHeight + this.coords[3]; ) {
+    for (let pixelY = this.coords[3]; pixelY < imageHeight + this.coords[3];) {
 
       // Draws the partial tile first, if any
       // This calculates the size based on which is smaller:
@@ -121,6 +138,26 @@ export default class Template {
         // B. The top left corner of the current tile to the bottom right corner of the image
         const drawSizeX = Math.min(this.tileSize - (pixelX % this.tileSize), imageWidth - (pixelX - this.coords[2]));
 
+        // If the user wants to skip any tiles where the template is transparent...
+        if (shouldSkipTransTiles) {
+
+          // Detects if the canvas is fully transparent
+          const isTemplateTileTransparent = !this.calculateCanvasTransparency({
+            bitmap: bitmap,
+            bitmapParams: [pixelX - this.coords[2], pixelY - this.coords[3], drawSizeX, drawSizeY], // Top left X, Top left Y, Width, Height
+            transCanvas: transCanvas,
+            transContext: transContext
+          });
+
+          console.log(`Tile contains template: ${!isTemplateTileTransparent}`);
+
+          // If the template in this tile is transparent...
+          if (isTemplateTileTransparent) {
+            pixelX += drawSizeX; // If you remove this, it will get stuck forever processing the template
+            continue; // ...the user does not want to save this tile, so we skip to the next tile
+          }
+        }
+        
         console.log(`Math.min(${this.tileSize} - (${pixelX} % ${this.tileSize}), ${imageWidth} - (${pixelX - this.coords[2]}))`);
 
         console.log(`Draw Size X: ${drawSizeX}\nDraw Size Y: ${drawSizeY}`);
@@ -154,6 +191,8 @@ export default class Template {
         context.save(); // Saves the current context of the canvas
         context.globalCompositeOperation = "destination-in"; // The existing canvas content is kept where both the new shape and existing canvas content overlap. Everything else is made transparent.
         // For our purposes, this means any non-transparent pixels on the mask will be kept
+
+        console.log(`Should Skip: ${shouldSkipTransTiles}; Should Agg Skip: ${shouldAggSkipTransTiles}`);
 
         // Fills the canvas with the mask
         context.fillStyle = context.createPattern(canvasMask, "repeat");
@@ -195,6 +234,110 @@ export default class Template {
     console.log('Template Tiles Buffers: ', templateTilesBuffers);
     console.log('Template Tiles Uint32Array: ', this.chunked32);
     return { templateTiles, templateTilesBuffers };
+  }
+
+  /** Detects if the canvas is transparent.
+   * @param {Object} param - Object that contains the parameters for the function
+   * @param {ImageBitmap} param.bitmap - The bitmap template image
+   * @param {Array<number, number, number, number>} param.bitmapParams - The parameters to obtain the template tile image from the bitmap
+   * @param {OffscreenCanvas | HTMLCanvasElement} param.transCanvas - The canvas to draw to in order to calculate this
+   * @param {OffscreenCanvasRenderingContext2D} param.transContext - The context for the transparent canvas to draw to
+   * @return {boolean} Is the canvas transparent? If transparent, then `true` is returned. Otherwise, `false`.
+   * @since 0.91.75
+   */
+  calculateCanvasTransparency({
+    bitmap: bitmap,
+    bitmapParams: bitmapParams,
+    transCanvas: transCanvas,
+    transContext: transContext
+  }) {
+
+    console.log(`Calculating template tile transparency...`);
+
+    console.log(`Should Skip: ${this.shouldSkipTransTiles}; Should Agg: ${this.shouldAggSkipTransTiles}`);
+
+    const timer = Date.now(); // Starts the timer
+
+    // Contains the directions to move the canvas when duplicating, in the unit of pixels
+    const duplicationCoordinateArray = [
+      [  0,   1], // E.g. move 0 on the x axis, and 1 down on the y axis
+      [  1,   0],
+      [  0,  -2], // E.g. move 0 on the x axis, and 2 up on the y axis
+      [ -2,   0],
+      [  0,   4],
+      [  4,   0],
+      [  0,  -8],
+      [ -8,   0],
+      [  0,  16],
+      [ 16,   0],
+      [  0, -32],
+      [-32,   0]
+    ];
+
+    // Changes the size of the canvas so that it equals the template tile
+    const transCanvasWidth = bitmapParams[2];
+    const transCanvasHeight = bitmapParams[3];
+    transCanvas.width = transCanvasWidth;
+    transCanvas.height = transCanvasHeight;
+
+    transContext.clearRect(0, 0, transCanvasWidth, transCanvasHeight); // Clear any previous drawing (only runs when canvas size does not change)
+
+    // If the user does want to aggressively skip transparent template tiles...
+    if (this.shouldAggSkipTransTiles) {
+      // (This code will only run if `this.shouldSkipTransTiles` is `true`)
+
+      // Draw the template tile onto the canvas scaled down to 10x10
+      transContext.drawImage(
+        bitmap, // The bitmap image
+        ...bitmapParams, // Bitmap image parameters (x, y, width, height)
+        0, 0, // The coordinate draw the output *at*
+        10, 10 // The width and height of the output
+      );
+    } else {
+      // Else, the user wants to skip transparent template tiles normally...
+
+      // Draw the template tile onto the canvas
+      transContext.drawImage(
+        bitmap, // The bitmap image
+        ...bitmapParams, // Bitmap image parameters (x, y, width, height)
+        0, 0, // The coordinate draw the output *at*
+        transCanvasWidth, transCanvasHeight // Stretch to canvas (the canvas should already be the same size as the template image)
+      )
+
+      // For each canvas duplication...
+      for (const [relativeX, relativeY] of duplicationCoordinateArray) {
+
+        // Duplicate the canvas onto itself, but shifted slightly
+        transContext.drawImage(
+          transCanvas, // The canvas we are drawing to *is* the source image
+          0, 0, transCanvasWidth, transCanvasHeight, // The entire canvas (as a source image)
+          relativeX, relativeY, transCanvasWidth, transCanvasHeight // The output coordinates and size on the same canvas
+        )
+      }
+
+      // Scale down the image to 10x10, and store it between (0, 0) and (9, 9) on the canvas
+      transContext.drawImage(
+        transCanvas, // The canvas we are drawing to *is* the source image
+        0, 0, transCanvasWidth, transCanvasHeight, // The entire canvas (as a source image)
+        0, 0, 10, 10 // The output coordinates and size on the same canvas
+      );
+    }
+
+    const shunkCanvas = transContext.getImageData(0, 0, 10, 10);
+    const shunkCanvas32 = new Uint32Array(shunkCanvas.data.buffer);
+
+    console.log(`Calculated canvas transparency in ${(Date.now() - timer) / 1000} seconds.`);
+
+    // For every pixel in the `shrunkCanvas32` array...
+    for (const pixel of shunkCanvas32) {
+
+      // If the pixel is NOT 100% transparent
+      if (!!pixel) {
+        return true; // Return `true` early since we confirmed a template exists in the tile
+      }
+    }
+
+    return false; // Since we could not confirm any template exists, we assume no template eixsts in this tile
   }
 
   /** Calculates top left coordinate of template.

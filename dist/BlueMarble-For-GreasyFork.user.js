@@ -2,7 +2,7 @@
 // @name            Blue Marble
 // @name:en         Blue Marble
 // @namespace       https://github.com/SwingTheVine/
-// @version         0.91.74
+// @version         0.91.102
 // @description     A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @description:en  A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @author          SwingTheVine
@@ -1843,15 +1843,21 @@
       this.chunked32 = chunked32;
       this.tileSize = tileSize;
       this.pixelCount = { total: 0, colors: /* @__PURE__ */ new Map() };
+      this.shouldSkipTransTiles = true;
+      this.shouldAggSkipTransTiles = false;
     }
     /** Creates chunks of the template for each tile.
      * @param {Number} tileSize - Size of the tile as determined by templateManager
      * @param {Object} paletteBM - An collection of Uint32Arrays containing the palette BM uses
+     * @param {boolean} shouldSkipTransTiles - Should transparent tiles be skipped over when creating the template?
+     * @param {boolean} shouldAggSkipTransTiles - Should transparent tiles be aggressively skipped over when creating the template?
      * @returns {Object} Collection of template bitmaps & buffers organized by tile coordinates
      * @since 0.65.4
      */
-    async createTemplateTiles(tileSize, paletteBM) {
+    async createTemplateTiles(tileSize, paletteBM, shouldSkipTransTiles, shouldAggSkipTransTiles) {
       console.log("Template coordinates:", this.coords);
+      this.shouldSkipTransTiles = shouldSkipTransTiles;
+      this.shouldAggSkipTransTiles = shouldAggSkipTransTiles;
       const shreadSize = 3;
       const bitmap = await createImageBitmap(this.file);
       const imageWidth = bitmap.width;
@@ -1861,6 +1867,9 @@
       const templateTilesBuffers = {};
       const canvas = new OffscreenCanvas(this.tileSize, this.tileSize);
       const context = canvas.getContext("2d", { willReadFrequently: true });
+      const transCanvas = new OffscreenCanvas(this.tileSize, this.tileSize);
+      const transContext = transCanvas.getContext("2d", { willReadFrequently: true });
+      transContext.globalCompositeOperation = "destination-over";
       canvas.width = imageWidth;
       canvas.height = imageHeight;
       context.imageSmoothingEnabled = false;
@@ -1890,6 +1899,20 @@
           console.log(`Pixel X: ${pixelX}
 Pixel Y: ${pixelY}`);
           const drawSizeX = Math.min(this.tileSize - pixelX % this.tileSize, imageWidth - (pixelX - this.coords[2]));
+          if (shouldSkipTransTiles) {
+            const isTemplateTileTransparent = !this.calculateCanvasTransparency({
+              bitmap,
+              bitmapParams: [pixelX - this.coords[2], pixelY - this.coords[3], drawSizeX, drawSizeY],
+              // Top left X, Top left Y, Width, Height
+              transCanvas,
+              transContext
+            });
+            console.log(`Tile contains template: ${!isTemplateTileTransparent}`);
+            if (isTemplateTileTransparent) {
+              pixelX += drawSizeX;
+              continue;
+            }
+          }
           console.log(`Math.min(${this.tileSize} - (${pixelX} % ${this.tileSize}), ${imageWidth} - (${pixelX - this.coords[2]}))`);
           console.log(`Draw Size X: ${drawSizeX}
 Draw Size Y: ${drawSizeY}`);
@@ -1927,6 +1950,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
           );
           context.save();
           context.globalCompositeOperation = "destination-in";
+          console.log(`Should Skip: ${shouldSkipTransTiles}; Should Agg Skip: ${shouldAggSkipTransTiles}`);
           context.fillStyle = context.createPattern(canvasMask, "repeat");
           context.fillRect(0, 0, canvasWidth, canvasHeight);
           context.restore();
@@ -1949,6 +1973,110 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       console.log("Template Tiles Buffers: ", templateTilesBuffers);
       console.log("Template Tiles Uint32Array: ", this.chunked32);
       return { templateTiles, templateTilesBuffers };
+    }
+    /** Detects if the canvas is transparent.
+     * @param {Object} param - Object that contains the parameters for the function
+     * @param {ImageBitmap} param.bitmap - The bitmap template image
+     * @param {Array<number, number, number, number>} param.bitmapParams - The parameters to obtain the template tile image from the bitmap
+     * @param {OffscreenCanvas | HTMLCanvasElement} param.transCanvas - The canvas to draw to in order to calculate this
+     * @param {OffscreenCanvasRenderingContext2D} param.transContext - The context for the transparent canvas to draw to
+     * @return {boolean} Is the canvas transparent? If transparent, then `true` is returned. Otherwise, `false`.
+     * @since 0.91.75
+     */
+    calculateCanvasTransparency({
+      bitmap,
+      bitmapParams,
+      transCanvas,
+      transContext
+    }) {
+      console.log(`Calculating template tile transparency...`);
+      console.log(`Should Skip: ${this.shouldSkipTransTiles}; Should Agg: ${this.shouldAggSkipTransTiles}`);
+      const timer = Date.now();
+      const duplicationCoordinateArray = [
+        [0, 1],
+        // E.g. move 0 on the x axis, and 1 down on the y axis
+        [1, 0],
+        [0, -2],
+        // E.g. move 0 on the x axis, and 2 up on the y axis
+        [-2, 0],
+        [0, 4],
+        [4, 0],
+        [0, -8],
+        [-8, 0],
+        [0, 16],
+        [16, 0],
+        [0, -32],
+        [-32, 0]
+      ];
+      const transCanvasWidth = bitmapParams[2];
+      const transCanvasHeight = bitmapParams[3];
+      transCanvas.width = transCanvasWidth;
+      transCanvas.height = transCanvasHeight;
+      transContext.clearRect(0, 0, transCanvasWidth, transCanvasHeight);
+      if (this.shouldAggSkipTransTiles) {
+        transContext.drawImage(
+          bitmap,
+          ...bitmapParams,
+          // Bitmap image parameters (x, y, width, height)
+          0,
+          0,
+          // The coordinate draw the output *at*
+          10,
+          10
+          // The width and height of the output
+        );
+      } else {
+        transContext.drawImage(
+          bitmap,
+          ...bitmapParams,
+          // Bitmap image parameters (x, y, width, height)
+          0,
+          0,
+          // The coordinate draw the output *at*
+          transCanvasWidth,
+          transCanvasHeight
+          // Stretch to canvas (the canvas should already be the same size as the template image)
+        );
+        for (const [relativeX, relativeY] of duplicationCoordinateArray) {
+          transContext.drawImage(
+            transCanvas,
+            // The canvas we are drawing to *is* the source image
+            0,
+            0,
+            transCanvasWidth,
+            transCanvasHeight,
+            // The entire canvas (as a source image)
+            relativeX,
+            relativeY,
+            transCanvasWidth,
+            transCanvasHeight
+            // The output coordinates and size on the same canvas
+          );
+        }
+        transContext.drawImage(
+          transCanvas,
+          // The canvas we are drawing to *is* the source image
+          0,
+          0,
+          transCanvasWidth,
+          transCanvasHeight,
+          // The entire canvas (as a source image)
+          0,
+          0,
+          10,
+          10
+          // The output coordinates and size on the same canvas
+        );
+      }
+      const shunkCanvas = transContext.getImageData(0, 0, 10, 10);
+      const shunkCanvas32 = new Uint32Array(shunkCanvas.data.buffer);
+      console.log(`Calculated canvas transparency in ${(Date.now() - timer) / 1e3} seconds.`);
+      for (const pixel of shunkCanvas32) {
+        if (!!pixel) {
+          return true;
+        }
+      }
+      return false;
     }
     /** Calculates top left coordinate of template.
      * It uses `Template.chunked` to update `Template.coords`
@@ -2950,7 +3078,10 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
         file: blob,
         coords: coords2
       });
-      const { templateTiles, templateTilesBuffers } = await template.createTemplateTiles(this.tileSize, this.paletteBM);
+      const shouldSkipTransTiles = !this.settingsManager?.userSettings?.flags?.includes("hl-noSkip");
+      const shouldAggSkipTransTiles = this.settingsManager?.userSettings?.flags?.includes("hl-agSkip");
+      console.log(`Should Skip: ${shouldSkipTransTiles}; Should Agg Skip: ${shouldAggSkipTransTiles}`);
+      const { templateTiles, templateTilesBuffers } = await template.createTemplateTiles(this.tileSize, this.paletteBM, shouldSkipTransTiles, shouldAggSkipTransTiles);
       template.chunked = templateTiles;
       const _pixels = { "total": template.pixelCount.total, "colors": Object.fromEntries(template.pixelCount.colors) };
       this.templatesJSON.templates[`${template.sortID} ${template.authorID}`] = {
