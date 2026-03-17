@@ -2,14 +2,14 @@
 // @name            Blue Marble
 // @name:en         Blue Marble
 // @namespace       https://github.com/SwingTheVine/
-// @version         0.91.116
+// @version         0.92.0
 // @description     A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @description:en  A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @author          SwingTheVine
 // @license         MPL-2.0
 // @supportURL      https://discord.gg/tpeBPy46hf
 // @homepageURL     https://bluemarble.lol/
-// @icon            https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/78477321232b29c09e3794c360068d7d23a0172c/dist/assets/Favicon.png
+// @icon            https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/2cd51bf91944ae2acb253ea5bbd76f79b7a2edd3/dist/assets/Favicon.png
 // @updateURL       https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/BlueMarble.user.js
 // @downloadURL     https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/BlueMarble.user.js
 // @match           https://wplace.live/*
@@ -21,7 +21,7 @@
 // @grant           GM_xmlhttpRequest
 // @grant           GM.download
 // @connect         telemetry.thebluecorner.net
-// @resource        CSS-BM-File https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/78477321232b29c09e3794c360068d7d23a0172c/dist/BlueMarble.user.css
+// @resource        CSS-BM-File https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/2cd51bf91944ae2acb253ea5bbd76f79b7a2edd3/dist/BlueMarble.user.css
 // @antifeature     tracking Anonymous opt-in telemetry data
 // @noframes
 // ==/UserScript==
