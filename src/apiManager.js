@@ -106,13 +106,19 @@ export default class ApiManager {
           }
           
           this.coordsTilePixel = [...coordsTile, ...coordsPixel]; // Combines the two arrays such that [x, y, x, y]
-          const displayTP = serverTPtoDisplayTP(coordsTile, coordsPixel);
           
+          const displayTP = serverTPtoDisplayTP(coordsTile, coordsPixel); // Retrieves the coordinates that Wplace displays for this region
+
           const spanElements = document.querySelectorAll('span'); // Retrieves all span elements
 
           // For every span element, find the one we want (pixel numbers when canvas clicked)
           for (const element of spanElements) {
-            if (element.textContent.trim().includes(`${displayTP[0]}, ${displayTP[1]}`)) {
+            // We use the pixel numbers to find this element because it is the only identifiable piece of information, assuming the website can load in non-Engligh languages.
+
+            const elementTextTrimmed = element.textContent.trim(); // Stores the text of the span element, without leading or trailing spaces
+
+            // If the text content of the element includes both coordinates seperatly (avoids failure when the comma seperator changes due to localization)
+            if (elementTextTrimmed.includes(displayTP[0]) && elementTextTrimmed.includes(displayTP[1])) {
 
               let displayCoords = document.querySelector('#bm-display-coords'); // Find the additional pixel coords span
 
@@ -124,7 +130,7 @@ export default class ApiManager {
                 displayCoords.id = 'bm-display-coords';
                 displayCoords.textContent = text;
                 displayCoords.style = 'margin-left: calc(var(--spacing)*3); font-size: small;';
-                element.parentNode.parentNode.insertAdjacentElement('afterend', displayCoords);
+                element.parentNode.parentNode.parentNode.insertAdjacentElement('afterend', displayCoords);
               } else {
                 displayCoords.textContent = text;
               }
