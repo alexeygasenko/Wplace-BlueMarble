@@ -37,6 +37,7 @@ Special Thanks:
 * TheBlueCorner for getting me interested in online pixel canvases!
 
 [Donators](https://ko-fi.com/swingthevine):
+* Soultree
 * Espresso
 * BEST FAN
 * FuchsDresden
