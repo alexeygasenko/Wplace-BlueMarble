@@ -9,7 +9,7 @@
 // @license         MPL-2.0
 // @supportURL      https://discord.gg/tpeBPy46hf
 // @homepageURL     https://bluemarble.lol/
-// @icon            https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/78477321232b29c09e3794c360068d7d23a0172c/dist/assets/Favicon.png
+// @icon            https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/2cd51bf91944ae2acb253ea5bbd76f79b7a2edd3/dist/assets/Favicon.png
 // @updateURL       https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/BlueMarble.user.js
 // @downloadURL     https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/BlueMarble.user.js
 // @match           https://wplace.live/*
@@ -21,7 +21,7 @@
 // @grant           GM_xmlhttpRequest
 // @grant           GM.download
 // @connect         telemetry.thebluecorner.net
-// @resource        CSS-BM-File https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/78477321232b29c09e3794c360068d7d23a0172c/dist/BlueMarble.user.css
+// @resource        CSS-BM-File https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/2cd51bf91944ae2acb253ea5bbd76f79b7a2edd3/dist/BlueMarble.user.css
 // @antifeature     tracking Anonymous opt-in telemetry data
 // @noframes
 // ==/UserScript==
