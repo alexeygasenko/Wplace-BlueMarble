@@ -99,6 +99,7 @@ export default class WindowCredts extends Overlay {
           .addBr().buildElement()
           .addSpan({'innerHTML': '<a href="https://ko-fi.com/swingthevine" target="_blank" rel="noopener noreferrer">Donators</a>:'}).buildElement()
           .addUl()
+            .addLi({'textContent': 'Soultree'}).buildElement()
             .addLi({'textContent': 'Espresso'}).buildElement()
             .addLi({'textContent': 'BEST FAN'}).buildElement()
             .addLi({'textContent': 'FuchsDresden'}).buildElement()
