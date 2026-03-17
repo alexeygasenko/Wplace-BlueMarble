@@ -124,15 +124,44 @@ export default class ApiManager {
 
               const text = `(Tl X: ${coordsTile[0]}, Tl Y: ${coordsTile[1]}, Px X: ${coordsPixel[0]}, Px Y: ${coordsPixel[1]})`;
               
+              // All 4 coordinate labels, IDs, and values
+              const coordsLabel = ['Tl X:', 'Tl Y:', 'Px X:', 'Px Y:'];
+              const coordsID = ['bm-tile-x', 'bm-tile-y', 'bm-pixel-x', 'bm-pixel-y'];
+              const coordsCombined = [...coordsTile, ...coordsPixel];
+
               // If we could not find the addition coord span, we make it then update the textContent with the new coords
               if (!displayCoords) {
                 displayCoords = document.createElement('span');
                 displayCoords.id = 'bm-display-coords';
-                displayCoords.textContent = text;
-                displayCoords.style = 'margin-left: calc(var(--spacing)*3); font-size: small;';
+                displayCoords.style = 'display: flex; flex-wrap: wrap; gap: 0 1ch; font-size: small;';
+
+                // For each of the 4 coordinates...
+                for (const [coordIndex, coordValue] of coordsCombined.entries()) {
+
+                  const coordElement = document.createElement('span'); // Creates a `<span>` element
+
+                  coordElement.id = coordsID[coordsCombined.indexOf(coordValue) ?? '']; // Applys the ID to the coord element
+
+                  // Outputs something like "Tl X: 483"
+                  coordElement.textContent = `${coordsLabel[coordIndex] ?? '??:'} ${coordValue}`;
+                  // Or if the amount of labels is less than the provided values, it outputs something like "??: 483" instead of failing
+
+                  displayCoords.appendChild(coordElement); // Adds the span coordinate as a child for the flexbox container
+                }
+
+                // Adds the display coordinate flexbox container to the pixel info menu
                 element.parentNode.parentNode.parentNode.insertAdjacentElement('afterend', displayCoords);
               } else {
-                displayCoords.textContent = text;
+                
+                // For each of the 4 coordinates...
+                for (const [coordIndex, coordID] of coordsID.entries()) {
+
+                  const coordElement = document.getElementById(coordID); // Obtains the coordinate element
+
+                  // Outputs something like "Tl X: 483"
+                  coordElement.textContent = `${coordsLabel[coordIndex] ?? '??:'} ${coordsCombined[coordIndex]}`;
+                  // Or if the amount of labels is less than the provided values, it outputs something like "??: 483" instead of failing
+                }
               }
             }
           }

@@ -2,7 +2,7 @@
 // @name            Blue Marble
 // @name:en         Blue Marble
 // @namespace       https://github.com/SwingTheVine/
-// @version         0.91.106
+// @version         0.91.115
 // @description     A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @description:en  A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @author          SwingTheVine
@@ -3659,17 +3659,29 @@ Did you try clicking the canvas first?`);
             const displayTP = serverTPtoDisplayTP(coordsTile, coordsPixel);
             const spanElements = document.querySelectorAll("span");
             for (const element of spanElements) {
-              if (element.textContent.trim().includes(`${displayTP[0]}, ${displayTP[1]}`)) {
+              const elementTextTrimmed = element.textContent.trim();
+              if (elementTextTrimmed.includes(displayTP[0]) && elementTextTrimmed.includes(displayTP[1])) {
                 let displayCoords = document.querySelector("#bm-display-coords");
                 const text = `(Tl X: ${coordsTile[0]}, Tl Y: ${coordsTile[1]}, Px X: ${coordsPixel[0]}, Px Y: ${coordsPixel[1]})`;
+                const coordsLabel = ["Tl X:", "Tl Y:", "Px X:", "Px Y:"];
+                const coordsID = ["bm-tile-x", "bm-tile-y", "bm-pixel-x", "bm-pixel-y"];
+                const coordsCombined = [...coordsTile, ...coordsPixel];
                 if (!displayCoords) {
                   displayCoords = document.createElement("span");
                   displayCoords.id = "bm-display-coords";
-                  displayCoords.textContent = text;
-                  displayCoords.style = "margin-left: calc(var(--spacing)*3); font-size: small;";
-                  element.parentNode.parentNode.insertAdjacentElement("afterend", displayCoords);
+                  displayCoords.style = "display: flex; flex-wrap: wrap; gap: 0 1ch; font-size: small;";
+                  for (const [coordIndex, coordValue] of coordsCombined.entries()) {
+                    const coordElement = document.createElement("span");
+                    coordElement.id = coordsID[coordsCombined.indexOf(coordValue) ?? ""];
+                    coordElement.textContent = `${coordsLabel[coordIndex] ?? "??:"} ${coordValue}`;
+                    displayCoords.appendChild(coordElement);
+                  }
+                  element.parentNode.parentNode.parentNode.insertAdjacentElement("afterend", displayCoords);
                 } else {
-                  displayCoords.textContent = text;
+                  for (const [coordIndex, coordID] of coordsID.entries()) {
+                    const coordElement = document.getElementById(coordID);
+                    coordElement.textContent = `${coordsLabel[coordIndex] ?? "??:"} ${coordsCombined[coordIndex]}`;
+                  }
                 }
               }
             }
