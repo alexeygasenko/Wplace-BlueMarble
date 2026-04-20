@@ -154,7 +154,7 @@ export default class WindowMain extends Overlay {
               }
             }).buildElement()
             .addButton({'textContent': 'Filter'}, (instance, button) => {
-              button.onclick = () => this.#buildWindowFilter();
+              button.onclick = () => this.buildWindowFilter();
             }).buildElement()
           .buildElement()
           .addDiv({'class': 'bm-container'})
@@ -212,7 +212,7 @@ export default class WindowMain extends Overlay {
    * This might cause a memory leak. I pray that this is not the case...
    * @since 0.88.330
    */
-  #buildWindowFilter() {
+  buildWindowFilter() {
     const windowFilter = new WindowFilter(this); // Creates a new color filter window instance
     windowFilter.buildPreferredWindow();
   }

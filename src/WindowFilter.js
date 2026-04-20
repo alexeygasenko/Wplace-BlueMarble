@@ -56,8 +56,8 @@ export default class WindowFilter extends Overlay {
     this.timeRemainingLocalized = ''; // The date & time the user will complete the templates in the date-time format of the user's device, as a string
 
     // Color list display settings
-    this.sortPrimary = 'id'; // The last used primary sort option
-    this.sortSecondary = 'ascending'; // The last used secondary sort option
+    this.sortPrimary = 'total'; // The last used primary sort option
+    this.sortSecondary = 'descending'; // The last used secondary sort option
     this.showUnused = false; // Were unused colors shown the last time the user sorted the color list?
   }
 
@@ -65,7 +65,7 @@ export default class WindowFilter extends Overlay {
    * @since 0.92.0
    */
   buildPreferredWindow() {
-    if (this.settingsManager?.userSettings?.flags?.includes(this.windowModeFlag)) {
+    if (this.#prefersWindowedMode()) {
       this.buildWindowed();
       return;
     }
@@ -205,6 +205,7 @@ export default class WindowFilter extends Overlay {
     
     // These run when the user opens the Color Filter window
     this.#buildColorList(scrollableContainer);
+    this.#syncSortFormControls();
     this.#sortColorList(this.sortPrimary, this.sortSecondary, this.showUnused);
 
     // Displays some template statistics to the user
@@ -305,6 +306,7 @@ export default class WindowFilter extends Overlay {
     
     // These run when the user opens the Color Filter window
     this.#buildColorList(scrollableContainer);
+    this.#syncSortFormControls();
     this.#sortColorList(this.sortPrimary, this.sortSecondary, this.showUnused);
   }
 
@@ -318,14 +320,49 @@ export default class WindowFilter extends Overlay {
     return this.settingsManager.userSettings[this.windowStateKey];
   }
 
+  /** Returns whether the filter should open in windowed mode.
+   * Defaults to windowed mode when no explicit preference was stored.
+   * @returns {boolean}
+   * @since 0.92.1
+   */
+  #prefersWindowedMode() {
+    const windowState = this.#getWindowState();
+    if (windowState?.mode == 'windowed') {return true;}
+    if (windowState?.mode == 'fullscreen') {return false;}
+    return true;
+  }
+
   /** Updates the preferred window mode setting.
    * @param {boolean} shouldBeWindowed
    * @since 0.92.0
    */
   #setWindowModePreference(shouldBeWindowed) {
+    const windowState = this.#getWindowState();
+    if (windowState) {
+      windowState.mode = shouldBeWindowed ? 'windowed' : 'fullscreen';
+    }
     if (!this.settingsManager) {return;}
     this.settingsManager.toggleFlag(this.windowModeFlag, shouldBeWindowed);
     void this.settingsManager.saveUserStorageNow();
+  }
+
+  /** Updates the visible sort controls to reflect the active sort state.
+   * @since 0.92.1
+   */
+  #syncSortFormControls() {
+    const sortPrimaryInput = document.querySelector(`#${this.windowID} #bm-filter-sort-primary`);
+    const sortSecondaryInput = document.querySelector(`#${this.windowID} #bm-filter-sort-secondary`);
+    const showUnusedInput = document.querySelector(`#${this.windowID} #bm-filter-show-unused`);
+
+    if (sortPrimaryInput instanceof HTMLSelectElement) {
+      sortPrimaryInput.value = this.sortPrimary;
+    }
+    if (sortSecondaryInput instanceof HTMLSelectElement) {
+      sortSecondaryInput.value = this.sortSecondary;
+    }
+    if (showUnusedInput instanceof HTMLInputElement) {
+      showUnusedInput.checked = this.showUnused;
+    }
   }
 
   /** Immediately closes the filter window and cleans up persistence observers.
@@ -886,6 +923,8 @@ export default class WindowFilter extends Overlay {
   #calculatePixelStatistics() {
 
     // Resets pixel totals to 0
+    this.tilesLoadedTotal = 0;
+    this.tilesTotal = 0;
     this.allPixelsTotal = 0;
     this.allPixelsCorrectTotal = 0;
     this.allPixelsCorrect = new Map();

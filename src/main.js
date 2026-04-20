@@ -204,7 +204,6 @@ templateManager.setSettingsManager(settingsManager); // Sets the settings manage
 
 const storageTemplates = JSON.parse(GM_getValue('bmTemplates', '{}'));
 console.log(storageTemplates);
-templateManager.importJSON(storageTemplates); // Loads the templates
 
 
 console.log(userSettings);
@@ -236,13 +235,20 @@ if ((previousTelemetryVersion == undefined) || (previousTelemetryVersion > curre
   windowTelemetry.buildWindow(); // Asks the user if they want to enable telemetry
 }
 
-windowMain.buildWindow(); // Builds the main Blue Marble window
+void initializeBlueMarble();
 
-apiManager.spontaneousResponseListener(windowMain); // Reads spontaneous fetch responces
+async function initializeBlueMarble() {
+  await templateManager.importJSON(storageTemplates); // Loads the templates
 
-observeBlack(); // Observes the black palette color
+  windowMain.buildWindow(); // Builds the main Blue Marble window
+  windowMain.buildWindowFilter(); // Opens the Color Filter window automatically on page load
 
-consoleLog(`%c${name}%c (${version}) userscript has loaded!`, 'color: cornflowerblue;', '');
+  apiManager.spontaneousResponseListener(windowMain); // Reads spontaneous fetch responces
+
+  observeBlack(); // Observes the black palette color
+
+  consoleLog(`%c${name}%c (${version}) userscript has loaded!`, 'color: cornflowerblue;', '');
+}
 
 /** Observe the black color, and add the "Move" button.
  * @since 0.66.3

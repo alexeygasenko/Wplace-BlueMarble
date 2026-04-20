@@ -2358,7 +2358,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
   };
 
   // src/WindowFilter.js
-  var _WindowFilter_instances, getWindowState_fn, setWindowModePreference_fn, closeWindow_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, calculatePixelStatistics_fn;
+  var _WindowFilter_instances, getWindowState_fn, prefersWindowedMode_fn, setWindowModePreference_fn, syncSortFormControls_fn, closeWindow_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, calculatePixelStatistics_fn;
   var WindowFilter = class extends Overlay {
     /** Constructor for the color filter window
      * @param {*} executor - The executing class
@@ -2395,15 +2395,15 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       this.allPixelsTotal = 0;
       this.timeRemaining = 0;
       this.timeRemainingLocalized = "";
-      this.sortPrimary = "id";
-      this.sortSecondary = "ascending";
+      this.sortPrimary = "total";
+      this.sortSecondary = "descending";
       this.showUnused = false;
     }
     /** Builds the preferred filter window mode for the user.
      * @since 0.92.0
      */
     buildPreferredWindow() {
-      if (this.settingsManager?.userSettings?.flags?.includes(this.windowModeFlag)) {
+      if (__privateMethod(this, _WindowFilter_instances, prefersWindowedMode_fn).call(this)) {
         this.buildWindowed();
         return;
       }
@@ -2464,6 +2464,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
       const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
       __privateMethod(this, _WindowFilter_instances, buildColorList_fn).call(this, scrollableContainer);
+      __privateMethod(this, _WindowFilter_instances, syncSortFormControls_fn).call(this);
       __privateMethod(this, _WindowFilter_instances, sortColorList_fn).call(this, this.sortPrimary, this.sortSecondary, this.showUnused);
       this.updateInnerHTML("#bm-filter-tile-load", `<b>Tiles Loaded:</b> ${localizeNumber(this.tilesLoadedTotal)} / ${localizeNumber(this.tilesTotal)}`);
       this.updateInnerHTML("#bm-filter-tot-correct", `<b>Correct Pixels:</b> ${localizeNumber(this.allPixelsCorrectTotal)}`);
@@ -2531,6 +2532,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       __privateMethod(this, _WindowFilter_instances, initializeWindowedPersistence_fn).call(this);
       const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
       __privateMethod(this, _WindowFilter_instances, buildColorList_fn).call(this, scrollableContainer);
+      __privateMethod(this, _WindowFilter_instances, syncSortFormControls_fn).call(this);
       __privateMethod(this, _WindowFilter_instances, sortColorList_fn).call(this, this.sortPrimary, this.sortSecondary, this.showUnused);
     }
     /** The information about a specific color on the palette.
@@ -2625,16 +2627,52 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     (_a = this.settingsManager.userSettings)[_b = this.windowStateKey] ?? (_a[_b] = {});
     return this.settingsManager.userSettings[this.windowStateKey];
   };
+  /** Returns whether the filter should open in windowed mode.
+   * Defaults to windowed mode when no explicit preference was stored.
+   * @returns {boolean}
+   * @since 0.92.1
+   */
+  prefersWindowedMode_fn = function() {
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn).call(this);
+    if (windowState?.mode == "windowed") {
+      return true;
+    }
+    if (windowState?.mode == "fullscreen") {
+      return false;
+    }
+    return true;
+  };
   /** Updates the preferred window mode setting.
    * @param {boolean} shouldBeWindowed
    * @since 0.92.0
    */
   setWindowModePreference_fn = function(shouldBeWindowed) {
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn).call(this);
+    if (windowState) {
+      windowState.mode = shouldBeWindowed ? "windowed" : "fullscreen";
+    }
     if (!this.settingsManager) {
       return;
     }
     this.settingsManager.toggleFlag(this.windowModeFlag, shouldBeWindowed);
     void this.settingsManager.saveUserStorageNow();
+  };
+  /** Updates the visible sort controls to reflect the active sort state.
+   * @since 0.92.1
+   */
+  syncSortFormControls_fn = function() {
+    const sortPrimaryInput = document.querySelector(`#${this.windowID} #bm-filter-sort-primary`);
+    const sortSecondaryInput = document.querySelector(`#${this.windowID} #bm-filter-sort-secondary`);
+    const showUnusedInput = document.querySelector(`#${this.windowID} #bm-filter-show-unused`);
+    if (sortPrimaryInput instanceof HTMLSelectElement) {
+      sortPrimaryInput.value = this.sortPrimary;
+    }
+    if (sortSecondaryInput instanceof HTMLSelectElement) {
+      sortSecondaryInput.value = this.sortSecondary;
+    }
+    if (showUnusedInput instanceof HTMLInputElement) {
+      showUnusedInput.checked = this.showUnused;
+    }
   };
   /** Immediately closes the filter window and cleans up persistence observers.
    * @since 0.92.0
@@ -2977,6 +3015,8 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
    * @since 0.90.34
    */
   calculatePixelStatistics_fn = function() {
+    this.tilesLoadedTotal = 0;
+    this.tilesTotal = 0;
     this.allPixelsTotal = 0;
     this.allPixelsCorrectTotal = 0;
     this.allPixelsCorrect = /* @__PURE__ */ new Map();
@@ -3177,7 +3217,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
   var WindowWizard = _WindowWizard;
 
   // src/WindowMain.js
-  var _WindowMain_instances, buildWindowFilter_fn, coordinateInputPaste_fn;
+  var _WindowMain_instances, coordinateInputPaste_fn;
   var WindowMain = class extends Overlay {
     /** Constructor for the main Blue Marble window
      * @param {string} name - The name of the userscript
@@ -3294,7 +3334,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
           instance.handleDisplayStatus(`Drew to canvas!`);
         };
       }).buildElement().addButton({ "textContent": "Filter" }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _WindowMain_instances, buildWindowFilter_fn).call(this);
+        button.onclick = () => this.buildWindowFilter();
       }).buildElement().buildElement().addDiv({ "class": "bm-container" }).addTextarea({ "id": this.outputStatusId, "placeholder": `Status: Sleeping...
 Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().addDiv({ "class": "bm-container bm-flex-between", "style": "margin-bottom: 0; flex-direction: column;" }).addDiv({ "class": "bm-flex-between" }).addButton({ "class": "bm-button-circle", "innerHTML": "\u2699\uFE0F", "title": "Settings" }, (instance, button) => {
         button.onclick = () => {
@@ -3326,17 +3366,17 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
       }).buildElement().buildElement().addSmall({ "textContent": "Made by SwingTheVine", "style": "margin-top: auto;" }).buildElement().buildElement().buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
       this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
     }
+    /** Displays a new color filter window.
+     * This is a helper function that creates a new class instance.
+     * This might cause a memory leak. I pray that this is not the case...
+     * @since 0.88.330
+     */
+    buildWindowFilter() {
+      const windowFilter = new WindowFilter(this);
+      windowFilter.buildPreferredWindow();
+    }
   };
   _WindowMain_instances = new WeakSet();
-  /** Displays a new color filter window.
-   * This is a helper function that creates a new class instance.
-   * This might cause a memory leak. I pray that this is not the case...
-   * @since 0.88.330
-   */
-  buildWindowFilter_fn = function() {
-    const windowFilter = new WindowFilter(this);
-    windowFilter.buildPreferredWindow();
-  };
   coordinateInputPaste_fn = async function(instance, input, event) {
     event.preventDefault();
     const data = await getClipboardData(event);
@@ -3724,11 +3764,11 @@ There are ${pixelsCorrectTotal} correct pixels.`);
     /** Imports the JSON object, and appends it to any JSON object already loaded
      * @param {string} json - The JSON string to parse
      */
-    importJSON(json) {
+    async importJSON(json) {
       console.log(`Importing JSON...`);
       console.log(json);
       if (json?.whoami == "BlueMarble") {
-        __privateMethod(this, _TemplateManager_instances, parseBlueMarble_fn).call(this, json);
+        await __privateMethod(this, _TemplateManager_instances, parseBlueMarble_fn).call(this, json);
       }
     }
     /** Sets the `templatesShouldBeDrawn` boolean to a value.
@@ -4320,7 +4360,6 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   templateManager.setSettingsManager(settingsManager);
   var storageTemplates = JSON.parse(GM_getValue("bmTemplates", "{}"));
   console.log(storageTemplates);
-  templateManager.importJSON(storageTemplates);
   console.log(userSettings);
   console.log(Object.keys(userSettings).length);
   if (Object.keys(userSettings).length == 0) {
@@ -4339,10 +4378,15 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
     windowTelemetry.setApiManager(apiManager);
     windowTelemetry.buildWindow();
   }
-  windowMain.buildWindow();
-  apiManager.spontaneousResponseListener(windowMain);
-  observeBlack();
-  consoleLog(`%c${name}%c (${version}) userscript has loaded!`, "color: cornflowerblue;", "");
+  void initializeBlueMarble();
+  async function initializeBlueMarble() {
+    await templateManager.importJSON(storageTemplates);
+    windowMain.buildWindow();
+    windowMain.buildWindowFilter();
+    apiManager.spontaneousResponseListener(windowMain);
+    observeBlack();
+    consoleLog(`%c${name}%c (${version}) userscript has loaded!`, "color: cornflowerblue;", "");
+  }
   function observeBlack() {
     const observer = new MutationObserver((mutations, observer2) => {
       const black = document.querySelector("#color-1");
@@ -4373,4 +4417,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: f5ff285a601e
+// Build Hash: 7a3fb47cff90
