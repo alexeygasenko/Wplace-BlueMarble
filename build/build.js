@@ -10,6 +10,7 @@
 
 // ES Module imports
 import esbuild from 'esbuild';
+import crypto from 'crypto';
 import fs from 'fs';
 import { execSync } from 'child_process';
 import { consoleStyle } from './utils.js';
@@ -21,6 +22,24 @@ const require = createRequire(import.meta.url);
 const terser = require('terser');
 
 const isGitHub = !!process.env?.GITHUB_ACTIONS; // Is this running in a GitHub Action Workflow?'
+
+/** Appends a build hash comment to an output file.
+ * The hash is based on the file contents before the hash comment is added.
+ * @param {string} path - Path to the file
+ * @param {'js' | 'css'} type - Output type for comment syntax
+ * @returns {string} The short build hash
+ * @since 0.92.0
+ */
+function appendBuildHashComment(path, type = 'js') {
+  const content = fs.readFileSync(path, 'utf8').trimEnd();
+  const hash = crypto.createHash('sha256').update(content, 'utf8').digest('hex').slice(0, 12);
+  const comment = (type == 'css')
+    ? `/* Build Hash: ${hash} */`
+    : `// Build Hash: ${hash}`;
+
+  fs.writeFileSync(path, `${content}\n\n${comment}\n`, 'utf8');
+  return hash;
+}
 
 console.log(`${consoleStyle.BLUE}Starting build...${consoleStyle.RESET}`);
 
@@ -214,4 +233,16 @@ esbuild.build({
 
 fs.writeFileSync(`dist/${greasyForkName}.user.js`, greasyForkBMjs, 'utf-8');
 
+const buildHashes = {
+  'BlueMarble.user.css': appendBuildHashComment('dist/BlueMarble.user.css', 'css'),
+  'BlueMarble.user.js': appendBuildHashComment('dist/BlueMarble.user.js', 'js'),
+  [`${standaloneName}.user.js`]: appendBuildHashComment(`dist/${standaloneName}.user.js`, 'js'),
+  [`${greasyForkName}.user.css`]: appendBuildHashComment(`dist/${greasyForkName}.user.css`, 'css'),
+  [`${greasyForkName}.user.js`]: appendBuildHashComment(`dist/${greasyForkName}.user.js`, 'js')
+};
+
 console.log(`${consoleStyle.GREEN + consoleStyle.BOLD + consoleStyle.UNDERLINE}Building complete!${consoleStyle.RESET}`);
+console.log(`Build hashes:`);
+for (const [file, hash] of Object.entries(buildHashes)) {
+  console.log(`- ${file}: ${hash}`);
+}

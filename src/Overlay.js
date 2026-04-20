@@ -1278,11 +1278,12 @@ export default class Overlay {
    * @param {string} iMoveThingsSelector - The drag handle element
    * @since 0.8.2
   */
-  handleDrag(moveMeSelector, iMoveThingsSelector) {
+  handleDrag(moveMeSelector, iMoveThingsSelector, options = {}) {
 
     // Retrieves the elements
     const moveMe = document.querySelector(moveMeSelector);
     const iMoveThings = document.querySelector(iMoveThingsSelector);
+    const onEnd = options?.onEnd ?? (() => {});
     
     // What to do when one of the two elements are not found
     if (!moveMe || !iMoveThings) {
@@ -1375,6 +1376,14 @@ export default class Overlay {
       document.removeEventListener('mouseup', endDrag);
       document.removeEventListener('touchend', endDrag);
       document.removeEventListener('touchcancel', endDrag);
+
+      onEnd({
+        element: moveMe,
+        x: currentX,
+        y: currentY
+      });
+
+      initialRect = null;
     };
 
     // Mouse move
@@ -1408,6 +1417,135 @@ export default class Overlay {
       if (!touch) {return;}
       startDrag(touch.clientX, touch.clientY);
       event.preventDefault();
+    }, { passive: false });
+  }
+
+  /** Handles resizing of an overlay window from a resize handle.
+   * @param {string} resizeMeSelector - The element to resize
+   * @param {string} iResizeThingsSelector - The resize handle element
+   * @param {{onEnd?: function({element: HTMLElement, width: number, height: number}): void, minWidth?: number, minHeight?: number, maxWidth?: number, maxHeight?: number}} [options={}]
+   * @since 0.92.0
+   */
+  handleResize(resizeMeSelector, iResizeThingsSelector, options = {}) {
+
+    const resizeMe = document.querySelector(resizeMeSelector);
+    const iResizeThings = document.querySelector(iResizeThingsSelector);
+    const onEnd = options?.onEnd ?? (() => {});
+
+    if (!resizeMe || !iResizeThings) {
+      this.handleDisplayError(`Can not resize! ${!resizeMe ? 'resizeMe' : ''} ${!resizeMe && !iResizeThings ? 'and ' : ''}${!iResizeThings ? 'iResizeThings ' : ''}was not found!`);
+      return;
+    }
+
+    let isResizing = false;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
+    let currentWidth = 0;
+    let currentHeight = 0;
+    let targetWidth = 0;
+    let targetHeight = 0;
+    let animationFrame = null;
+
+    const getMaximumWidth = () => Number.isFinite(options?.maxWidth) ? options.maxWidth : window.innerWidth - 16;
+    const getMaximumHeight = () => Number.isFinite(options?.maxHeight) ? options.maxHeight : window.innerHeight - 16;
+    const minimumWidth = Number.isFinite(options?.minWidth) ? options.minWidth : 200;
+    const minimumHeight = Number.isFinite(options?.minHeight) ? options.minHeight : 160;
+
+    const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
+
+    const updateSize = () => {
+      if (isResizing) {
+        const deltaWidth = Math.abs(currentWidth - targetWidth);
+        const deltaHeight = Math.abs(currentHeight - targetHeight);
+
+        if (deltaWidth > 0.5 || deltaHeight > 0.5) {
+          currentWidth = targetWidth;
+          currentHeight = targetHeight;
+          resizeMe.style.width = `${currentWidth}px`;
+          resizeMe.style.height = `${currentHeight}px`;
+        }
+
+        animationFrame = requestAnimationFrame(updateSize);
+      }
+    };
+
+    const startResize = (clientX, clientY) => {
+      isResizing = true;
+      startX = clientX;
+      startY = clientY;
+      startWidth = resizeMe.offsetWidth;
+      startHeight = resizeMe.offsetHeight;
+      currentWidth = startWidth;
+      currentHeight = startHeight;
+      targetWidth = startWidth;
+      targetHeight = startHeight;
+
+      document.body.style.userSelect = 'none';
+      iResizeThings.classList.add('bm-resizing');
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('mouseup', endResize);
+      document.addEventListener('touchend', endResize);
+      document.addEventListener('touchcancel', endResize);
+
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+      updateSize();
+    };
+
+    const endResize = () => {
+      isResizing = false;
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+      }
+      document.body.style.userSelect = '';
+      iResizeThings.classList.remove('bm-resizing');
+
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('mouseup', endResize);
+      document.removeEventListener('touchend', endResize);
+      document.removeEventListener('touchcancel', endResize);
+
+      onEnd({
+        element: resizeMe,
+        width: currentWidth,
+        height: currentHeight
+      });
+    };
+
+    const onMouseMove = event => {
+      if (!isResizing) {return;}
+      targetWidth = clamp(startWidth + (event.clientX - startX), minimumWidth, getMaximumWidth());
+      targetHeight = clamp(startHeight + (event.clientY - startY), minimumHeight, getMaximumHeight());
+    };
+
+    const onTouchMove = event => {
+      if (!isResizing) {return;}
+      const touch = event?.touches?.[0];
+      if (!touch) {return;}
+      targetWidth = clamp(startWidth + (touch.clientX - startX), minimumWidth, getMaximumWidth());
+      targetHeight = clamp(startHeight + (touch.clientY - startY), minimumHeight, getMaximumHeight());
+      event.preventDefault();
+    };
+
+    iResizeThings.addEventListener('mousedown', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      startResize(event.clientX, event.clientY);
+    });
+
+    iResizeThings.addEventListener('touchstart', event => {
+      const touch = event?.touches?.[0];
+      if (!touch) {return;}
+      event.preventDefault();
+      event.stopPropagation();
+      startResize(touch.clientX, touch.clientY);
     }, { passive: false });
   }
 

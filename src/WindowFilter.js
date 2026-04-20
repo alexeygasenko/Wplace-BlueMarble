@@ -21,6 +21,16 @@ export default class WindowFilter extends Overlay {
     this.windowID = 'bm-window-filter'; // The ID attribute for this window
     this.colorListID = 'bm-filter-flex'; // The ID attribute for the color list
     this.windowParent = document.body; // The parent of the window DOM tree
+    this.settingsManager = executor.settingsManager ?? null; // Settings manager from the executor
+    this.windowModeFlag = 'ftr-oWin'; // User setting flag for opening the filter in windowed mode
+    this.windowStateKey = 'windowFilter'; // User setting key for the persisted window state
+    this.windowResizeObserver = null; // Resize observer for the windowed mode
+    this.windowViewportResizeHandler = null; // Resize handler for viewport changes
+    this.windowSaveTimeout = null; // Debounce timer for resize persistence
+    this.windowMinWidth = 260; // Minimum width for the windowed filter
+    this.windowMinHeight = 220; // Minimum height for the windowed filter
+    this.windowMaxWidth = 1000; // Maximum width for the windowed filter
+    this.windowMaxHeight = 1400; // Maximum height for the windowed filter
 
     /** The templateManager instance currently being used. @type {TemplateManager} */
     this.templateManager = executor.apiManager?.templateManager;
@@ -51,6 +61,17 @@ export default class WindowFilter extends Overlay {
     this.showUnused = false; // Were unused colors shown the last time the user sorted the color list?
   }
 
+  /** Builds the preferred filter window mode for the user.
+   * @since 0.92.0
+   */
+  buildPreferredWindow() {
+    if (this.settingsManager?.userSettings?.flags?.includes(this.windowModeFlag)) {
+      this.buildWindowed();
+      return;
+    }
+    this.buildWindow();
+  }
+
   /** Spawns a Color Filter window.
    * If another color filter window already exists, we DON'T spawn another!
    * Parent/child relationships in the DOM structure below are indicated by indentation.
@@ -60,7 +81,7 @@ export default class WindowFilter extends Overlay {
 
     // If a color filter wizard window already exists, close it
     if (document.querySelector(`#${this.windowID}`)) {
-      document.querySelector(`#${this.windowID}`).remove();
+      this.#closeWindow();
       return;
     }
     
@@ -79,13 +100,14 @@ export default class WindowFilter extends Overlay {
         .addDiv({'class': 'bm-flex-center'})
           .addButton({'class': 'bm-button-circle', 'textContent': '🗗', 'aria-label': 'Switch to windowed mode for "Color Filter"'}, (instance, button) => {
             button.onclick = () => {
-              document.querySelector(`#${this.windowID}`)?.remove();
+              this.#setWindowModePreference(true);
+              this.#closeWindow();
               this.buildWindowed();
             };
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
           }).buildElement()
           .addButton({'class': 'bm-button-circle', 'textContent': '✖', 'aria-label': 'Close window "Color Filter"'}, (instance, button) => {
-            button.onclick = () => {document.querySelector(`#${this.windowID}`)?.remove();};
+            button.onclick = () => this.#closeWindow();
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
           }).buildElement()
         .buildElement()
@@ -202,12 +224,16 @@ export default class WindowFilter extends Overlay {
 
     // If a color filter wizard window already exists, close it
     if (document.querySelector(`#${this.windowID}`)) {
-      document.querySelector(`#${this.windowID}`).remove();
+      this.#closeWindow();
       return;
     }
 
     // Creates a new windowed color filter window
-    this.window = this.addDiv({'id': this.windowID, 'class': 'bm-window bm-windowed'})
+    this.window = this.addDiv({
+      'id': this.windowID,
+      'class': 'bm-window bm-windowed',
+      'style': `width: 300px; height: min(70vh, 32rem); min-width: ${this.windowMinWidth}px; min-height: ${this.windowMinHeight}px; max-width: min(${this.windowMaxWidth}px, calc(100vw - 16px)); max-height: min(${this.windowMaxHeight}px, calc(100vh - 16px));`
+    })
       .addDragbar()
         .addButton({'class': 'bm-button-circle', 'textContent': '▼', 'aria-label': 'Minimize window "Color Filter"', 'data-button-status': 'expanded'}, (instance, button) => {
           button.onclick = () => {
@@ -226,13 +252,14 @@ export default class WindowFilter extends Overlay {
         .addDiv({'class': 'bm-flex-center'})
           .addButton({'class': 'bm-button-circle', 'textContent': '🗖', 'aria-label': 'Switch to fullscreen mode for "Color Filter"'}, (instance, button) => {
             button.onclick = () => {
-              document.querySelector(`#${this.windowID}`)?.remove();
+              this.#setWindowModePreference(false);
+              this.#closeWindow();
               this.buildWindow();
             };
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
           }).buildElement()
           .addButton({'class': 'bm-button-circle', 'textContent': '✖', 'aria-label': 'Close window "Color Filter"'}, (instance, button) => {
-            button.onclick = () => {document.querySelector(`#${this.windowID}`)?.remove();};
+            button.onclick = () => this.#closeWindow();
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
           }).buildElement()
         .buildElement()
@@ -261,10 +288,17 @@ export default class WindowFilter extends Overlay {
           // Color list will appear here
         .buildElement()
       .buildElement()
+      .addDiv({
+        'class': 'bm-resize-corner',
+        'title': 'Resize Color Filter window',
+        'aria-label': 'Resize Color Filter window',
+        'role': 'presentation',
+        'textContent': '◢',
+        'style': 'position: absolute; right: 0; bottom: 0; width: 28px; height: 28px; display: flex; align-items: flex-end; justify-content: flex-end; padding-right: 4px; padding-bottom: 4px; box-sizing: border-box; z-index: 5; cursor: nwse-resize; pointer-events: auto; touch-action: none; user-select: none; font-size: 8px; line-height: 1; color: rgba(255,255,255,0.95); background: transparent; border: none; box-shadow: none;'
+      }).buildElement()
     .buildElement().buildOverlay(this.windowParent);
 
-    // Creates dragging capability on the drag bar for dragging the window
-    this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
+    this.#initializeWindowedPersistence();
 
     // Obtains the scrollable container to put the color filter in
     const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
@@ -272,6 +306,206 @@ export default class WindowFilter extends Overlay {
     // These run when the user opens the Color Filter window
     this.#buildColorList(scrollableContainer);
     this.#sortColorList(this.sortPrimary, this.sortSecondary, this.showUnused);
+  }
+
+  /** Retrieves the persisted window state object.
+   * @returns {Object | null}
+   * @since 0.92.0
+   */
+  #getWindowState() {
+    if (!this.settingsManager) {return null;}
+    this.settingsManager.userSettings[this.windowStateKey] ??= {};
+    return this.settingsManager.userSettings[this.windowStateKey];
+  }
+
+  /** Updates the preferred window mode setting.
+   * @param {boolean} shouldBeWindowed
+   * @since 0.92.0
+   */
+  #setWindowModePreference(shouldBeWindowed) {
+    if (!this.settingsManager) {return;}
+    this.settingsManager.toggleFlag(this.windowModeFlag, shouldBeWindowed);
+    void this.settingsManager.saveUserStorageNow();
+  }
+
+  /** Immediately closes the filter window and cleans up persistence observers.
+   * @since 0.92.0
+   */
+  #closeWindow() {
+    const windowElement = document.querySelector(`#${this.windowID}`);
+    if (windowElement?.classList.contains('bm-windowed')) {
+      this.#saveWindowState(windowElement);
+    }
+    this.#cleanupWindowPersistence();
+    windowElement?.remove();
+  }
+
+  /** Disconnects live observers used for window persistence.
+   * @since 0.92.0
+   */
+  #cleanupWindowPersistence() {
+    if (this.windowResizeObserver) {
+      this.windowResizeObserver.disconnect();
+      this.windowResizeObserver = null;
+    }
+    if (this.windowViewportResizeHandler) {
+      window.removeEventListener('resize', this.windowViewportResizeHandler);
+      this.windowViewportResizeHandler = null;
+    }
+    if (this.windowSaveTimeout) {
+      clearTimeout(this.windowSaveTimeout);
+      this.windowSaveTimeout = null;
+    }
+  }
+
+  /** Returns a clamped dimension value for the window.
+   * @param {number} size - The size in pixels
+   * @param {number} minimum - Minimum allowed size
+   * @param {number} maximum - Maximum allowed size
+   * @returns {number}
+   * @since 0.92.0
+   */
+  #clampWindowDimension(size, minimum, maximum) {
+    const resolvedMaximum = Math.max(minimum, maximum);
+    return Math.min(Math.max(Math.round(Number(size) || minimum), minimum), resolvedMaximum);
+  }
+
+  /** Returns a viewport-safe position for the window.
+   * @param {HTMLElement} windowElement
+   * @param {number} x
+   * @param {number} y
+   * @returns {{x: number, y: number}}
+   * @since 0.92.0
+   */
+  #clampWindowPosition(windowElement, x, y) {
+    const margin = 8;
+    const maxX = Math.max(margin, window.innerWidth - windowElement.offsetWidth - margin);
+    const maxY = Math.max(margin, window.innerHeight - windowElement.offsetHeight - margin);
+    return {
+      x: Math.min(Math.max(Math.round(Number(x) || margin), margin), maxX),
+      y: Math.min(Math.max(Math.round(Number(y) || margin), margin), maxY)
+    };
+  }
+
+  /** Applies the persisted size and position to the windowed filter.
+   * @param {HTMLElement} windowElement
+   * @since 0.92.0
+   */
+  #restoreWindowState(windowElement) {
+    const windowState = this.#getWindowState();
+    if (!windowState || !windowElement) {return;}
+
+    const width = Number(windowState.width);
+    const height = Number(windowState.height);
+    const hasWidth = Number.isFinite(width);
+    const hasHeight = Number.isFinite(height);
+
+    if (hasWidth) {
+      windowState.width = this.#clampWindowDimension(width, this.windowMinWidth, Math.min(this.windowMaxWidth, window.innerWidth - 16));
+      windowElement.style.width = `${windowState.width}px`;
+    }
+    if (hasHeight) {
+      windowState.height = this.#clampWindowDimension(height, this.windowMinHeight, Math.min(this.windowMaxHeight, window.innerHeight - 16));
+      windowElement.style.height = `${windowState.height}px`;
+    }
+
+    requestAnimationFrame(() => {
+      if (!windowElement.isConnected) {return;}
+
+      const x = Number(windowState.x);
+      const y = Number(windowState.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {return;}
+
+      const clampedPosition = this.#clampWindowPosition(windowElement, x, y);
+      windowElement.style.left = '0px';
+      windowElement.style.top = '0px';
+      windowElement.style.right = '';
+      windowElement.style.transform = `translate(${clampedPosition.x}px, ${clampedPosition.y}px)`;
+
+      if ((clampedPosition.x != x) || (clampedPosition.y != y)) {
+        windowState.x = clampedPosition.x;
+        windowState.y = clampedPosition.y;
+        void this.settingsManager?.saveUserStorageNow();
+      }
+    });
+  }
+
+  /** Saves the current size and position of the windowed filter.
+   * @param {HTMLElement} windowElement
+   * @since 0.92.0
+   */
+  #saveWindowState(windowElement) {
+    const windowState = this.#getWindowState();
+    if (!windowState || !windowElement?.isConnected || !windowElement.classList.contains('bm-windowed')) {return;}
+
+    const rect = windowElement.getBoundingClientRect();
+    const width = this.#clampWindowDimension(rect.width, this.windowMinWidth, Math.min(this.windowMaxWidth, window.innerWidth - 16));
+    const height = this.#clampWindowDimension(rect.height, this.windowMinHeight, Math.min(this.windowMaxHeight, window.innerHeight - 16));
+
+    if (Math.round(rect.width) != width) {
+      windowElement.style.width = `${width}px`;
+    }
+    if (Math.round(rect.height) != height) {
+      windowElement.style.height = `${height}px`;
+    }
+
+    const clampedPosition = this.#clampWindowPosition(windowElement, rect.left, rect.top);
+    windowElement.style.left = '0px';
+    windowElement.style.top = '0px';
+    windowElement.style.right = '';
+    windowElement.style.transform = `translate(${clampedPosition.x}px, ${clampedPosition.y}px)`;
+
+    windowState.x = clampedPosition.x;
+    windowState.y = clampedPosition.y;
+    windowState.width = width;
+    windowState.height = height;
+
+    void this.settingsManager?.saveUserStorageNow();
+  }
+
+  /** Debounces persisting the current window size and position.
+   * @param {HTMLElement} windowElement
+   * @param {number} [delay=150]
+   * @since 0.92.0
+   */
+  #scheduleWindowStateSave(windowElement, delay = 150) {
+    if (this.windowSaveTimeout) {
+      clearTimeout(this.windowSaveTimeout);
+    }
+    this.windowSaveTimeout = setTimeout(() => {
+      this.windowSaveTimeout = null;
+      this.#saveWindowState(windowElement);
+    }, delay);
+  }
+
+  /** Enables persistence and resize handling for the windowed filter.
+   * @since 0.92.0
+   */
+  #initializeWindowedPersistence() {
+    const windowElement = document.querySelector(`#${this.windowID}.bm-window`);
+    if (!windowElement) {return;}
+
+    this.#cleanupWindowPersistence();
+    this.#restoreWindowState(windowElement);
+
+    this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`, {
+      onEnd: ({element}) => this.#saveWindowState(element)
+    });
+    this.handleResize(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-resize-corner`, {
+      minWidth: this.windowMinWidth,
+      minHeight: this.windowMinHeight,
+      maxWidth: Math.min(this.windowMaxWidth, window.innerWidth - 16),
+      maxHeight: Math.min(this.windowMaxHeight, window.innerHeight - 16),
+      onEnd: ({element}) => this.#saveWindowState(element)
+    });
+
+    if (typeof ResizeObserver == 'function') {
+      this.windowResizeObserver = new ResizeObserver(() => this.#scheduleWindowStateSave(windowElement));
+      this.windowResizeObserver.observe(windowElement);
+    }
+
+    this.windowViewportResizeHandler = () => this.#scheduleWindowStateSave(windowElement, 0);
+    window.addEventListener('resize', this.windowViewportResizeHandler);
   }
 
   /** Creates the color list container.

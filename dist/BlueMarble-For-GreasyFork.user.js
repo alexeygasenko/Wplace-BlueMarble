@@ -2,14 +2,14 @@
 // @name            Blue Marble
 // @name:en         Blue Marble
 // @namespace       https://github.com/SwingTheVine/
-// @version         0.92.0
+// @version         0.92.1
 // @description     A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @description:en  A userscript to enhance the user experience on Wplace.live. This includes, but is not limited to: uploading images to display locally on a canvas, adding a button to move the Wplace color palette menu, and other QoL features.
 // @author          SwingTheVine
 // @license         MPL-2.0
 // @supportURL      https://discord.gg/tpeBPy46hf
 // @homepageURL     https://bluemarble.lol/
-// @icon            https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/78477321232b29c09e3794c360068d7d23a0172c/dist/assets/Favicon.png
+// @icon            https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/2cd51bf91944ae2acb253ea5bbd76f79b7a2edd3/dist/assets/Favicon.png
 // @updateURL       https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/BlueMarble-For-GreasyFork.user.js
 // @downloadURL     https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/BlueMarble-For-GreasyFork.user.js
 // @match           https://wplace.live/*
@@ -21,7 +21,7 @@
 // @grant           GM_xmlhttpRequest
 // @grant           GM.download
 // @connect         telemetry.thebluecorner.net
-// @resource        CSS-BM-File https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/78477321232b29c09e3794c360068d7d23a0172c/dist/BlueMarble-For-GreasyFork.user.css
+// @resource        CSS-BM-File https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/2cd51bf91944ae2acb253ea5bbd76f79b7a2edd3/dist/BlueMarble-For-GreasyFork.user.css
 // @antifeature     tracking Anonymous opt-in telemetry data
 // @noframes
 // ==/UserScript==
@@ -1366,9 +1366,11 @@
      * @param {string} iMoveThingsSelector - The drag handle element
      * @since 0.8.2
     */
-    handleDrag(moveMeSelector, iMoveThingsSelector) {
+    handleDrag(moveMeSelector, iMoveThingsSelector, options = {}) {
       const moveMe = document.querySelector(moveMeSelector);
       const iMoveThings = document.querySelector(iMoveThingsSelector);
+      const onEnd = options?.onEnd ?? (() => {
+      });
       if (!moveMe || !iMoveThings) {
         this.handleDisplayError(`Can not drag! ${!moveMe ? "moveMe" : ""} ${!moveMe && !iMoveThings ? "and " : ""}${!iMoveThings ? "iMoveThings " : ""}was not found!`);
         return;
@@ -1438,6 +1440,12 @@
         document.removeEventListener("mouseup", endDrag);
         document.removeEventListener("touchend", endDrag);
         document.removeEventListener("touchcancel", endDrag);
+        onEnd({
+          element: moveMe,
+          x: currentX,
+          y: currentY
+        });
+        initialRect = null;
       };
       const onMouseMove = (event) => {
         if (isDragging && initialRect) {
@@ -1465,6 +1473,124 @@
         }
         startDrag(touch.clientX, touch.clientY);
         event.preventDefault();
+      }, { passive: false });
+    }
+    /** Handles resizing of an overlay window from a resize handle.
+     * @param {string} resizeMeSelector - The element to resize
+     * @param {string} iResizeThingsSelector - The resize handle element
+     * @param {{onEnd?: function({element: HTMLElement, width: number, height: number}): void, minWidth?: number, minHeight?: number, maxWidth?: number, maxHeight?: number}} [options={}]
+     * @since 0.92.0
+     */
+    handleResize(resizeMeSelector, iResizeThingsSelector, options = {}) {
+      const resizeMe = document.querySelector(resizeMeSelector);
+      const iResizeThings = document.querySelector(iResizeThingsSelector);
+      const onEnd = options?.onEnd ?? (() => {
+      });
+      if (!resizeMe || !iResizeThings) {
+        this.handleDisplayError(`Can not resize! ${!resizeMe ? "resizeMe" : ""} ${!resizeMe && !iResizeThings ? "and " : ""}${!iResizeThings ? "iResizeThings " : ""}was not found!`);
+        return;
+      }
+      let isResizing = false;
+      let startX = 0;
+      let startY = 0;
+      let startWidth = 0;
+      let startHeight = 0;
+      let currentWidth = 0;
+      let currentHeight = 0;
+      let targetWidth = 0;
+      let targetHeight = 0;
+      let animationFrame = null;
+      const getMaximumWidth = () => Number.isFinite(options?.maxWidth) ? options.maxWidth : window.innerWidth - 16;
+      const getMaximumHeight = () => Number.isFinite(options?.maxHeight) ? options.maxHeight : window.innerHeight - 16;
+      const minimumWidth = Number.isFinite(options?.minWidth) ? options.minWidth : 200;
+      const minimumHeight = Number.isFinite(options?.minHeight) ? options.minHeight : 160;
+      const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
+      const updateSize = () => {
+        if (isResizing) {
+          const deltaWidth = Math.abs(currentWidth - targetWidth);
+          const deltaHeight = Math.abs(currentHeight - targetHeight);
+          if (deltaWidth > 0.5 || deltaHeight > 0.5) {
+            currentWidth = targetWidth;
+            currentHeight = targetHeight;
+            resizeMe.style.width = `${currentWidth}px`;
+            resizeMe.style.height = `${currentHeight}px`;
+          }
+          animationFrame = requestAnimationFrame(updateSize);
+        }
+      };
+      const startResize = (clientX, clientY) => {
+        isResizing = true;
+        startX = clientX;
+        startY = clientY;
+        startWidth = resizeMe.offsetWidth;
+        startHeight = resizeMe.offsetHeight;
+        currentWidth = startWidth;
+        currentHeight = startHeight;
+        targetWidth = startWidth;
+        targetHeight = startHeight;
+        document.body.style.userSelect = "none";
+        iResizeThings.classList.add("bm-resizing");
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("touchmove", onTouchMove, { passive: false });
+        document.addEventListener("mouseup", endResize);
+        document.addEventListener("touchend", endResize);
+        document.addEventListener("touchcancel", endResize);
+        if (animationFrame) {
+          cancelAnimationFrame(animationFrame);
+        }
+        updateSize();
+      };
+      const endResize = () => {
+        isResizing = false;
+        if (animationFrame) {
+          cancelAnimationFrame(animationFrame);
+          animationFrame = null;
+        }
+        document.body.style.userSelect = "";
+        iResizeThings.classList.remove("bm-resizing");
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("touchmove", onTouchMove);
+        document.removeEventListener("mouseup", endResize);
+        document.removeEventListener("touchend", endResize);
+        document.removeEventListener("touchcancel", endResize);
+        onEnd({
+          element: resizeMe,
+          width: currentWidth,
+          height: currentHeight
+        });
+      };
+      const onMouseMove = (event) => {
+        if (!isResizing) {
+          return;
+        }
+        targetWidth = clamp(startWidth + (event.clientX - startX), minimumWidth, getMaximumWidth());
+        targetHeight = clamp(startHeight + (event.clientY - startY), minimumHeight, getMaximumHeight());
+      };
+      const onTouchMove = (event) => {
+        if (!isResizing) {
+          return;
+        }
+        const touch = event?.touches?.[0];
+        if (!touch) {
+          return;
+        }
+        targetWidth = clamp(startWidth + (touch.clientX - startX), minimumWidth, getMaximumWidth());
+        targetHeight = clamp(startHeight + (touch.clientY - startY), minimumHeight, getMaximumHeight());
+        event.preventDefault();
+      };
+      iResizeThings.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        startResize(event.clientX, event.clientY);
+      });
+      iResizeThings.addEventListener("touchstart", (event) => {
+        const touch = event?.touches?.[0];
+        if (!touch) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        startResize(touch.clientX, touch.clientY);
       }, { passive: false });
     }
     /** Handles status display.
@@ -1637,14 +1763,27 @@
      * @since 0.91.39
      */
     async updateUserStorage() {
+      await this.saveUserStorage();
+    }
+    /** Saves the user settings in userscript storage.
+     * @param {boolean} [force=false] - Should the throttle be ignored?
+     * @since 0.92.0
+     */
+    async saveUserStorage(force = false) {
       const userSettingsCurrent = JSON.stringify(this.userSettings);
       const userSettingsOld = JSON.stringify(this.userSettingsOld);
-      if (userSettingsCurrent != userSettingsOld && Date.now() - this.lastUpdateTime > this.updateFrequency) {
+      if (userSettingsCurrent != userSettingsOld && (force || Date.now() - this.lastUpdateTime > this.updateFrequency)) {
         await GM.setValue(this.userSettingsSaveLocation, userSettingsCurrent);
         this.userSettingsOld = structuredClone(this.userSettings);
         this.lastUpdateTime = Date.now();
         console.log(userSettingsCurrent);
       }
+    }
+    /** Immediately saves the user settings in userscript storage.
+     * @since 0.92.0
+     */
+    async saveUserStorageNow() {
+      await this.saveUserStorage(true);
     }
     /** Toggles a boolean flag to the state that was passed in.
      * If no state was passed in, the flag will flip to the opposite state.
@@ -2219,7 +2358,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
   };
 
   // src/WindowFilter.js
-  var _WindowFilter_instances, buildColorList_fn, sortColorList_fn, selectColorList_fn, calculatePixelStatistics_fn;
+  var _WindowFilter_instances, getWindowState_fn, setWindowModePreference_fn, closeWindow_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, calculatePixelStatistics_fn;
   var WindowFilter = class extends Overlay {
     /** Constructor for the color filter window
      * @param {*} executor - The executing class
@@ -2233,6 +2372,16 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       this.windowID = "bm-window-filter";
       this.colorListID = "bm-filter-flex";
       this.windowParent = document.body;
+      this.settingsManager = executor.settingsManager ?? null;
+      this.windowModeFlag = "ftr-oWin";
+      this.windowStateKey = "windowFilter";
+      this.windowResizeObserver = null;
+      this.windowViewportResizeHandler = null;
+      this.windowSaveTimeout = null;
+      this.windowMinWidth = 260;
+      this.windowMinHeight = 220;
+      this.windowMaxWidth = 1e3;
+      this.windowMaxHeight = 1400;
       this.templateManager = executor.apiManager?.templateManager;
       this.eyeOpen = '<svg viewBox="0 .5 6 3"><path d="M0,2Q3-1 6,2Q3,5 0,2H2A1,1 0 1 0 3,1Q3,2 2,2"/></svg>';
       this.eyeClosed = '<svg viewBox="0 1 12 6"><mask id="a"><path d="M0,0H12V8L0,2" fill="#fff"/></mask><path d="M0,4Q6-2 12,4Q6,10 0,4H4A2,2 0 1 0 6,2Q6,4 4,4ZM1,2L10,6.5L9.5,7L.5,2.5" mask="url(#a)"/></svg>';
@@ -2250,6 +2399,16 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       this.sortSecondary = "ascending";
       this.showUnused = false;
     }
+    /** Builds the preferred filter window mode for the user.
+     * @since 0.92.0
+     */
+    buildPreferredWindow() {
+      if (this.settingsManager?.userSettings?.flags?.includes(this.windowModeFlag)) {
+        this.buildWindowed();
+        return;
+      }
+      this.buildWindow();
+    }
     /** Spawns a Color Filter window.
      * If another color filter window already exists, we DON'T spawn another!
      * Parent/child relationships in the DOM structure below are indicated by indentation.
@@ -2257,7 +2416,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
      */
     buildWindow() {
       if (document.querySelector(`#${this.windowID}`)) {
-        document.querySelector(`#${this.windowID}`).remove();
+        __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
         return;
       }
       this.window = this.addDiv({ "id": this.windowID, "class": "bm-window" }, (instance, div) => {
@@ -2268,16 +2427,15 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         };
       }).buildElement().addDiv().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "textContent": "\u{1F5D7}", "aria-label": 'Switch to windowed mode for "Color Filter"' }, (instance, button) => {
         button.onclick = () => {
-          document.querySelector(`#${this.windowID}`)?.remove();
+          __privateMethod(this, _WindowFilter_instances, setWindowModePreference_fn).call(this, true);
+          __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
           this.buildWindowed();
         };
         button.ontouchend = () => {
           button.click();
         };
       }).buildElement().addButton({ "class": "bm-button-circle", "textContent": "\u2716", "aria-label": 'Close window "Color Filter"' }, (instance, button) => {
-        button.onclick = () => {
-          document.querySelector(`#${this.windowID}`)?.remove();
-        };
+        button.onclick = () => __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
         button.ontouchend = () => {
           button.click();
         };
@@ -2320,10 +2478,14 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
      */
     buildWindowed() {
       if (document.querySelector(`#${this.windowID}`)) {
-        document.querySelector(`#${this.windowID}`).remove();
+        __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
         return;
       }
-      this.window = this.addDiv({ "id": this.windowID, "class": "bm-window bm-windowed" }).addDragbar().addButton({ "class": "bm-button-circle", "textContent": "\u25BC", "aria-label": 'Minimize window "Color Filter"', "data-button-status": "expanded" }, (instance, button) => {
+      this.window = this.addDiv({
+        "id": this.windowID,
+        "class": "bm-window bm-windowed",
+        "style": `width: 300px; height: min(70vh, 32rem); min-width: ${this.windowMinWidth}px; min-height: ${this.windowMinHeight}px; max-width: min(${this.windowMaxWidth}px, calc(100vw - 16px)); max-height: min(${this.windowMaxHeight}px, calc(100vh - 16px));`
+      }).addDragbar().addButton({ "class": "bm-button-circle", "textContent": "\u25BC", "aria-label": 'Minimize window "Color Filter"', "data-button-status": "expanded" }, (instance, button) => {
         button.onclick = () => {
           const windowedColorTotals = document.querySelector("#bm-filter-windowed-color-totals");
           if (windowedColorTotals) {
@@ -2336,16 +2498,15 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         };
       }).buildElement().addDiv().addSpan({ "id": "bm-filter-windowed-color-totals", "class": "bm-dragbar-text", "style": "font-weight: 700;" }).buildElement().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "textContent": "\u{1F5D6}", "aria-label": 'Switch to fullscreen mode for "Color Filter"' }, (instance, button) => {
         button.onclick = () => {
-          document.querySelector(`#${this.windowID}`)?.remove();
+          __privateMethod(this, _WindowFilter_instances, setWindowModePreference_fn).call(this, false);
+          __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
           this.buildWindow();
         };
         button.ontouchend = () => {
           button.click();
         };
       }).buildElement().addButton({ "class": "bm-button-circle", "textContent": "\u2716", "aria-label": 'Close window "Color Filter"' }, (instance, button) => {
-        button.onclick = () => {
-          document.querySelector(`#${this.windowID}`)?.remove();
-        };
+        button.onclick = () => __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
         button.ontouchend = () => {
           button.click();
         };
@@ -2359,8 +2520,15 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         };
       }).buildElement().addButton({ "textContent": "All" }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, true);
-      }).buildElement().buildElement().addDiv({ "class": "bm-container bm-scrollable" }).buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
-      this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
+      }).buildElement().buildElement().addDiv({ "class": "bm-container bm-scrollable" }).buildElement().buildElement().addDiv({
+        "class": "bm-resize-corner",
+        "title": "Resize Color Filter window",
+        "aria-label": "Resize Color Filter window",
+        "role": "presentation",
+        "textContent": "\u25E2",
+        "style": "position: absolute; right: 0; bottom: 0; width: 28px; height: 28px; display: flex; align-items: flex-end; justify-content: flex-end; padding-right: 4px; padding-bottom: 4px; box-sizing: border-box; z-index: 5; cursor: nwse-resize; pointer-events: auto; touch-action: none; user-select: none; font-size: 8px; line-height: 1; color: rgba(255,255,255,0.95); background: transparent; border: none; box-shadow: none;"
+      }).buildElement().buildElement().buildOverlay(this.windowParent);
+      __privateMethod(this, _WindowFilter_instances, initializeWindowedPersistence_fn).call(this);
       const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
       __privateMethod(this, _WindowFilter_instances, buildColorList_fn).call(this, scrollableContainer);
       __privateMethod(this, _WindowFilter_instances, sortColorList_fn).call(this, this.sortPrimary, this.sortSecondary, this.showUnused);
@@ -2445,6 +2613,196 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     }
   };
   _WindowFilter_instances = new WeakSet();
+  /** Retrieves the persisted window state object.
+   * @returns {Object | null}
+   * @since 0.92.0
+   */
+  getWindowState_fn = function() {
+    var _a, _b;
+    if (!this.settingsManager) {
+      return null;
+    }
+    (_a = this.settingsManager.userSettings)[_b = this.windowStateKey] ?? (_a[_b] = {});
+    return this.settingsManager.userSettings[this.windowStateKey];
+  };
+  /** Updates the preferred window mode setting.
+   * @param {boolean} shouldBeWindowed
+   * @since 0.92.0
+   */
+  setWindowModePreference_fn = function(shouldBeWindowed) {
+    if (!this.settingsManager) {
+      return;
+    }
+    this.settingsManager.toggleFlag(this.windowModeFlag, shouldBeWindowed);
+    void this.settingsManager.saveUserStorageNow();
+  };
+  /** Immediately closes the filter window and cleans up persistence observers.
+   * @since 0.92.0
+   */
+  closeWindow_fn = function() {
+    const windowElement = document.querySelector(`#${this.windowID}`);
+    if (windowElement?.classList.contains("bm-windowed")) {
+      __privateMethod(this, _WindowFilter_instances, saveWindowState_fn).call(this, windowElement);
+    }
+    __privateMethod(this, _WindowFilter_instances, cleanupWindowPersistence_fn).call(this);
+    windowElement?.remove();
+  };
+  /** Disconnects live observers used for window persistence.
+   * @since 0.92.0
+   */
+  cleanupWindowPersistence_fn = function() {
+    if (this.windowResizeObserver) {
+      this.windowResizeObserver.disconnect();
+      this.windowResizeObserver = null;
+    }
+    if (this.windowViewportResizeHandler) {
+      window.removeEventListener("resize", this.windowViewportResizeHandler);
+      this.windowViewportResizeHandler = null;
+    }
+    if (this.windowSaveTimeout) {
+      clearTimeout(this.windowSaveTimeout);
+      this.windowSaveTimeout = null;
+    }
+  };
+  /** Returns a clamped dimension value for the window.
+   * @param {number} size - The size in pixels
+   * @param {number} minimum - Minimum allowed size
+   * @param {number} maximum - Maximum allowed size
+   * @returns {number}
+   * @since 0.92.0
+   */
+  clampWindowDimension_fn = function(size, minimum, maximum) {
+    const resolvedMaximum = Math.max(minimum, maximum);
+    return Math.min(Math.max(Math.round(Number(size) || minimum), minimum), resolvedMaximum);
+  };
+  /** Returns a viewport-safe position for the window.
+   * @param {HTMLElement} windowElement
+   * @param {number} x
+   * @param {number} y
+   * @returns {{x: number, y: number}}
+   * @since 0.92.0
+   */
+  clampWindowPosition_fn = function(windowElement, x, y) {
+    const margin = 8;
+    const maxX = Math.max(margin, window.innerWidth - windowElement.offsetWidth - margin);
+    const maxY = Math.max(margin, window.innerHeight - windowElement.offsetHeight - margin);
+    return {
+      x: Math.min(Math.max(Math.round(Number(x) || margin), margin), maxX),
+      y: Math.min(Math.max(Math.round(Number(y) || margin), margin), maxY)
+    };
+  };
+  /** Applies the persisted size and position to the windowed filter.
+   * @param {HTMLElement} windowElement
+   * @since 0.92.0
+   */
+  restoreWindowState_fn = function(windowElement) {
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn).call(this);
+    if (!windowState || !windowElement) {
+      return;
+    }
+    const width = Number(windowState.width);
+    const height = Number(windowState.height);
+    const hasWidth = Number.isFinite(width);
+    const hasHeight = Number.isFinite(height);
+    if (hasWidth) {
+      windowState.width = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, width, this.windowMinWidth, Math.min(this.windowMaxWidth, window.innerWidth - 16));
+      windowElement.style.width = `${windowState.width}px`;
+    }
+    if (hasHeight) {
+      windowState.height = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, height, this.windowMinHeight, Math.min(this.windowMaxHeight, window.innerHeight - 16));
+      windowElement.style.height = `${windowState.height}px`;
+    }
+    requestAnimationFrame(() => {
+      if (!windowElement.isConnected) {
+        return;
+      }
+      const x = Number(windowState.x);
+      const y = Number(windowState.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return;
+      }
+      const clampedPosition = __privateMethod(this, _WindowFilter_instances, clampWindowPosition_fn).call(this, windowElement, x, y);
+      windowElement.style.left = "0px";
+      windowElement.style.top = "0px";
+      windowElement.style.right = "";
+      windowElement.style.transform = `translate(${clampedPosition.x}px, ${clampedPosition.y}px)`;
+      if (clampedPosition.x != x || clampedPosition.y != y) {
+        windowState.x = clampedPosition.x;
+        windowState.y = clampedPosition.y;
+        void this.settingsManager?.saveUserStorageNow();
+      }
+    });
+  };
+  /** Saves the current size and position of the windowed filter.
+   * @param {HTMLElement} windowElement
+   * @since 0.92.0
+   */
+  saveWindowState_fn = function(windowElement) {
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn).call(this);
+    if (!windowState || !windowElement?.isConnected || !windowElement.classList.contains("bm-windowed")) {
+      return;
+    }
+    const rect = windowElement.getBoundingClientRect();
+    const width = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, rect.width, this.windowMinWidth, Math.min(this.windowMaxWidth, window.innerWidth - 16));
+    const height = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, rect.height, this.windowMinHeight, Math.min(this.windowMaxHeight, window.innerHeight - 16));
+    if (Math.round(rect.width) != width) {
+      windowElement.style.width = `${width}px`;
+    }
+    if (Math.round(rect.height) != height) {
+      windowElement.style.height = `${height}px`;
+    }
+    const clampedPosition = __privateMethod(this, _WindowFilter_instances, clampWindowPosition_fn).call(this, windowElement, rect.left, rect.top);
+    windowElement.style.left = "0px";
+    windowElement.style.top = "0px";
+    windowElement.style.right = "";
+    windowElement.style.transform = `translate(${clampedPosition.x}px, ${clampedPosition.y}px)`;
+    windowState.x = clampedPosition.x;
+    windowState.y = clampedPosition.y;
+    windowState.width = width;
+    windowState.height = height;
+    void this.settingsManager?.saveUserStorageNow();
+  };
+  /** Debounces persisting the current window size and position.
+   * @param {HTMLElement} windowElement
+   * @param {number} [delay=150]
+   * @since 0.92.0
+   */
+  scheduleWindowStateSave_fn = function(windowElement, delay = 150) {
+    if (this.windowSaveTimeout) {
+      clearTimeout(this.windowSaveTimeout);
+    }
+    this.windowSaveTimeout = setTimeout(() => {
+      this.windowSaveTimeout = null;
+      __privateMethod(this, _WindowFilter_instances, saveWindowState_fn).call(this, windowElement);
+    }, delay);
+  };
+  /** Enables persistence and resize handling for the windowed filter.
+   * @since 0.92.0
+   */
+  initializeWindowedPersistence_fn = function() {
+    const windowElement = document.querySelector(`#${this.windowID}.bm-window`);
+    if (!windowElement) {
+      return;
+    }
+    __privateMethod(this, _WindowFilter_instances, cleanupWindowPersistence_fn).call(this);
+    __privateMethod(this, _WindowFilter_instances, restoreWindowState_fn).call(this, windowElement);
+    this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`, {
+      onEnd: ({ element }) => __privateMethod(this, _WindowFilter_instances, saveWindowState_fn).call(this, element)
+    });
+    this.handleResize(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-resize-corner`, {
+      minWidth: this.windowMinWidth,
+      minHeight: this.windowMinHeight,
+      maxWidth: Math.min(this.windowMaxWidth, window.innerWidth - 16),
+      maxHeight: Math.min(this.windowMaxHeight, window.innerHeight - 16),
+      onEnd: ({ element }) => __privateMethod(this, _WindowFilter_instances, saveWindowState_fn).call(this, element)
+    });
+    if (typeof ResizeObserver == "function") {
+      this.windowResizeObserver = new ResizeObserver(() => __privateMethod(this, _WindowFilter_instances, scheduleWindowStateSave_fn).call(this, windowElement));
+      this.windowResizeObserver.observe(windowElement);
+    }
+    this.windowViewportResizeHandler = () => __privateMethod(this, _WindowFilter_instances, scheduleWindowStateSave_fn).call(this, windowElement, 0);
+    window.addEventListener("resize", this.windowViewportResizeHandler);
+  };
   /** Creates the color list container.
    * @param {HTMLElement} parentElement - Parent element to add the color list to as a child
    * @since 0.88.222
@@ -2977,7 +3335,7 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
    */
   buildWindowFilter_fn = function() {
     const windowFilter = new WindowFilter(this);
-    windowFilter.buildWindow();
+    windowFilter.buildPreferredWindow();
   };
   coordinateInputPaste_fn = async function(instance, input, event) {
     event.preventDefault();
@@ -4014,3 +4372,5 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
     observer.observe(document.body, { childList: true, subtree: true });
   }
 })();
+
+// Build Hash: f5ff285a601e

@@ -98,33 +98,117 @@
 
 /* WINDOWED MODE */
 
+/* Resizable filter window in windowed mode */
+#bm-window-filter.bm-windowed {
+  --bm-scrollable-max-height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 300px;
+  height: min(70vh, 32rem);
+  min-width: 260px;
+  min-height: 220px;
+  max-width: min(1000px, calc(100vw - 16px)) !important;
+  max-height: min(1400px, calc(100vh - 16px)) !important;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: fixed;
+  transition: transform 0s;
+}
+
+/* Keep the content area flexible inside the resizable window */
+#bm-window-filter.bm-windowed .bm-window-content {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-row: 2;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
 /* Filter flex in windowed mode */
 #bm-window-filter.bm-windowed #bm-filter-flex {
   flex-direction: column;
+  align-items: stretch;
   gap: 0.25em;
+  width: 100%;
+  align-self: stretch;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* Filter color in windowed mode */
 #bm-window-filter.bm-windowed .bm-filter-color {
-  width: auto;
+  width: 100%;
+  max-width: none;
+  align-self: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+}
+
+#bm-window-filter.bm-windowed .bm-filter-color > .bm-flex-between {
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Let the scroll area grow and shrink with the resizable window */
+#bm-window-filter.bm-windowed .bm-container.bm-scrollable {
+  display: block;
+  grid-row: 4;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  width: 100%;
+  max-height: 100% !important;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+/* Visible resize handle in the bottom-right corner */
+#bm-window-filter.bm-windowed .bm-resize-corner {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: block;
+  width: 28px;
+  height: 28px;
+  z-index: 5;
+  cursor: nwse-resize;
+  pointer-events: auto;
+  opacity: 1;
+  touch-action: none;
+  user-select: none;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+#bm-window-filter.bm-windowed .bm-resize-corner:hover,
+#bm-window-filter.bm-windowed .bm-resize-corner.bm-resizing {
+  opacity: 1;
 }
 
 /* Filter window container for RGB color display in windowed mode */
 #bm-window-filter.bm-windowed .bm-filter-container-rgb {
   display: flex;
   width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
   gap: 0.5ch;
   align-items: center;
   padding: 0.1em 0.5ch;
   border: none;
   border-radius: 1em;
+  box-sizing: border-box;
 }
 
 /* Filter window hide color button */
 #bm-window-filter.bm-windowed .bm-filter-container-rgb button {
   padding: 0.5em 0.25ch;
+  flex: 0 0 auto;
 }
 
 /* Filter window hide color button SVG in windowed mode */
@@ -135,6 +219,10 @@
 /* Filter window header 2 in windowed mode */
 #bm-window-filter.bm-windowed .bm-filter-color h2 {
   font-size: 0.75em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Filter window dragbar text area in windowed mode */

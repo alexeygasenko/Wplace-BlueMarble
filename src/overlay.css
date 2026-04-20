@@ -38,11 +38,6 @@
   letter-spacing: 0.05em;
 }
 
-/* The Blue Marble windowed windows */
-.bm-window.bm-windowed {
-  max-width: 300px;
-}
-
 /* The drag bar */
 .bm-dragbar {
   display: grid;
@@ -281,6 +276,7 @@ input[type="file"] {
 /* Window content container */
 .bm-window-content {
   overflow: hidden;
+  max-height: calc(100% - 5px);
   transition: height 300ms cubic-bezier(.4, 0, .2, 1);
 }
 
@@ -312,7 +308,7 @@ input[type="file"] {
 
 /* Scrollable container */
 .bm-window .bm-container.bm-scrollable {
-  max-height: calc(80vh - 150px);
+  max-height: var(--bm-scrollable-max-height, calc(80vh - 150px));
   overflow: auto;
 }
 
