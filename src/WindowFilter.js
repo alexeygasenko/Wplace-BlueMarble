@@ -630,12 +630,12 @@ export default class WindowFilter extends Overlay {
                     button.innerHTML = this.eyeClosed.replace('<svg', `<svg fill="${textColorForPaletteColorBackground}"`);
                     button.dataset['state'] = 'hidden';
                     button.ariaLabel = `Show the color ${color.name || ''} on templates.`;
-                    this.templateManager.shouldFilterColor.set(color.id, true);
+                    this.templateManager.setColorFiltered(color.id, true);
                   } else {
                     button.innerHTML = this.eyeOpen.replace('<svg', `<svg fill="${textColorForPaletteColorBackground}"`);
                     button.dataset['state'] = 'shown';
                     button.ariaLabel = `Hide the color ${color.name || ''} on templates.`;
-                    this.templateManager.shouldFilterColor.delete(color.id);
+                    this.templateManager.setColorFiltered(color.id, false);
                   }
                   button.disabled = false;
                   button.style.textDecoration = '';
@@ -679,12 +679,12 @@ export default class WindowFilter extends Overlay {
                       button.innerHTML = this.eyeClosed.replace('<svg', `<svg fill="${textColorForPaletteColorBackground}"`);
                       button.dataset['state'] = 'hidden';
                       button.ariaLabel = `Show the color ${color.name || ''} on templates.`;
-                      this.templateManager.shouldFilterColor.set(color.id, true);
+                      this.templateManager.setColorFiltered(color.id, true);
                     } else {
                       button.innerHTML = this.eyeOpen.replace('<svg', `<svg fill="${textColorForPaletteColorBackground}"`);
                       button.dataset['state'] = 'shown';
                       button.ariaLabel = `Hide the color ${color.name || ''} on templates.`;
-                      this.templateManager.shouldFilterColor.delete(color.id);
+                      this.templateManager.setColorFiltered(color.id, false);
                     }
                     button.disabled = false;
                     button.style.textDecoration = '';

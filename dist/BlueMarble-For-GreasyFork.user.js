@@ -2895,12 +2895,12 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
                 button.innerHTML = this.eyeClosed.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`);
                 button.dataset["state"] = "hidden";
                 button.ariaLabel = `Show the color ${color.name || ""} on templates.`;
-                this.templateManager.shouldFilterColor.set(color.id, true);
+                this.templateManager.setColorFiltered(color.id, true);
               } else {
                 button.innerHTML = this.eyeOpen.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`);
                 button.dataset["state"] = "shown";
                 button.ariaLabel = `Hide the color ${color.name || ""} on templates.`;
-                this.templateManager.shouldFilterColor.delete(color.id);
+                this.templateManager.setColorFiltered(color.id, false);
               }
               button.disabled = false;
               button.style.textDecoration = "";
@@ -2935,12 +2935,12 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
                 button.innerHTML = this.eyeClosed.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`);
                 button.dataset["state"] = "hidden";
                 button.ariaLabel = `Show the color ${color.name || ""} on templates.`;
-                this.templateManager.shouldFilterColor.set(color.id, true);
+                this.templateManager.setColorFiltered(color.id, true);
               } else {
                 button.innerHTML = this.eyeOpen.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`);
                 button.dataset["state"] = "shown";
                 button.ariaLabel = `Hide the color ${color.name || ""} on templates.`;
-                this.templateManager.shouldFilterColor.delete(color.id);
+                this.templateManager.setColorFiltered(color.id, false);
               }
               button.disabled = false;
               button.style.textDecoration = "";
@@ -3398,7 +3398,7 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
   };
 
   // src/templateManager.js
-  var _TemplateManager_instances, loadTemplate_fn, storeTemplates_fn, parseBlueMarble_fn, parseOSU_fn, calculateCorrectPixelsOnTile_And_FilterTile_fn;
+  var _TemplateManager_instances, restoreFilteredColorsFromSettings_fn, persistFilteredColors_fn, loadTemplate_fn, storeTemplates_fn, parseBlueMarble_fn, parseOSU_fn, calculateCorrectPixelsOnTile_And_FilterTile_fn;
   var TemplateManager = class {
     /** The constructor for the {@link TemplateManager} class.
      * @param {string} name - The name of the userscript
@@ -3439,6 +3439,24 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().add
      */
     setSettingsManager(settingsManager2) {
       this.settingsManager = settingsManager2;
+      __privateMethod(this, _TemplateManager_instances, restoreFilteredColorsFromSettings_fn).call(this);
+    }
+    /** Updates whether a palette color should be hidden on the canvas.
+     * @param {number} colorID
+     * @param {boolean} shouldHide
+     * @since 0.92.1
+     */
+    setColorFiltered(colorID, shouldHide) {
+      const parsedColorID = Number(colorID);
+      if (!Number.isFinite(parsedColorID)) {
+        return;
+      }
+      if (shouldHide) {
+        this.shouldFilterColor.set(parsedColorID, true);
+      } else {
+        this.shouldFilterColor.delete(parsedColorID);
+      }
+      __privateMethod(this, _TemplateManager_instances, persistFilteredColors_fn).call(this);
     }
     /** Creates the JSON object to store templates in
      * @returns {{ whoami: string, scriptVersion: string, schemaVersion: string, templates: Object }} The JSON object
@@ -3780,6 +3798,31 @@ There are ${pixelsCorrectTotal} correct pixels.`);
     }
   };
   _TemplateManager_instances = new WeakSet();
+  /** Restores hidden colors from persisted user settings.
+   * @since 0.92.1
+   */
+  restoreFilteredColorsFromSettings_fn = function() {
+    const storedFilter = this.settingsManager?.userSettings?.filter;
+    const filteredColors = Array.isArray(storedFilter) ? storedFilter : [];
+    this.shouldFilterColor.clear();
+    for (const colorID of filteredColors) {
+      const parsedColorID = Number(colorID);
+      if (!Number.isFinite(parsedColorID)) {
+        continue;
+      }
+      this.shouldFilterColor.set(parsedColorID, true);
+    }
+  };
+  /** Persists hidden colors to user settings storage.
+   * @since 0.92.1
+   */
+  persistFilteredColors_fn = function() {
+    if (!this.settingsManager) {
+      return;
+    }
+    this.settingsManager.userSettings.filter = Array.from(this.shouldFilterColor.keys()).map((colorID) => Number(colorID)).filter((colorID) => Number.isFinite(colorID)).sort((a, b) => a - b);
+    void this.settingsManager.saveUserStorageNow();
+  };
   /** Generates a {@link Template} class instance from the JSON object template.
    * {@link createTemplate()} will create a class instance and save to template storage.
    * `#loadTemplate()` will create a class instance without saving to the template storage.
@@ -4417,4 +4460,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: 7a3fb47cff90
+// Build Hash: 94db4c70d9af
