@@ -561,20 +561,17 @@ export default class WindowFilter extends Overlay {
       // This will be displayed if the total pixels for this color is non-zero
       if (colorTotal != 0) {
 
-        // Determines the correct pixels, or the proper fallback
-        colorCorrect = this.allPixelsCorrect.get(color.id) ?? '???';
-        if ((typeof colorCorrect != 'number') && (this.tilesLoadedTotal == this.tilesTotal) && !!color.id) {
-          colorCorrect = 0;
-        }
+        // Determines the correct pixels, or defaults the counter to 0 until matches are found
+        colorCorrect = this.allPixelsCorrect.get(color.id) ?? 0;
 
         colorCorrectLocalized = (typeof colorCorrect == 'string') ? colorCorrect : localizeNumber(colorCorrect);
         colorPercent = isNaN(colorCorrect / colorTotal) ? '???' : localizePercent(colorCorrect / colorTotal);
       }
       // There are four outcomes:
       // 1. The correct pixel count is displayed, because there are correct pixels.
-      // 2. There are NO correct pixels, and the color is not transparent, but since all tiles are loaded, we know that the correct pixel count is actually 0.
-      // 3. There are NO correct pixels, and the color is not transparent, and not all tiles are loaded. We don't know if there are correct pixels or not, so we display "???" instead.
-      // 4. There are NO correct pixels, and the color is transparent, so we display '???' because tracking the "Transparent" color is currently disabled.
+      // 2. There are NO correct pixels yet, so the counter displays 0 for clarity.
+      // 3. The completion percentage is displayed when enough information exists to calculate it.
+      // 4. Transparent is still treated as a special case elsewhere in the statistics pipeline.
 
       // Incorrect pixels for this color
       const colorIncorrect = parseInt(colorTotal) - parseInt(colorCorrect);
