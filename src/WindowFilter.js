@@ -1,10 +1,29 @@
 import ConfettiManager from "./confetttiManager";
 import Overlay, { minimizeIconExpanded } from "./Overlay";
-import { calculateRelativeLuminance, localizeDate, localizeNumber, localizePercent, rgbToHex } from "./utils";
+import { calculateRelativeLuminance, localizeNumber, localizePercent, rgbToHex } from "./utils";
 
 const closeIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const fullscreenIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 4.5H4.5v4M15.5 4.5h4v4M19.5 15.5v4h-4M8.5 19.5h-4v-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
 const windowedIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 7.5V10H7.5M16.5 10H14V7.5M14 16.5V14h2.5M7.5 14H10v2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function localizeCompactDate(date) {
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = String(date.getFullYear()).slice(-2);
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  const uses12HourClock = new Intl.DateTimeFormat(undefined, {hour: 'numeric'}).resolvedOptions().hour12;
+
+  let hour = date.getHours();
+  let period = '';
+  if (uses12HourClock) {
+    period = hour >= 12 ? ' PM' : ' AM';
+    hour = hour % 12 || 12;
+  } else {
+    hour = String(hour).padStart(2, '0');
+  }
+
+  return `${month}/${day}/${year} ${hour}:${minute}${period}`;
+}
 
 /** The overlay builder for the color filter Blue Marble window.
  * @description This class handles the overlay UI for the color filter window of the Blue Marble userscript.
@@ -133,20 +152,28 @@ export default class WindowFilter extends Overlay {
         .buildElement()
         .addHr().buildElement()
         .addDiv({'class': 'bm-container bm-scrollable bm-filter-scrollable'})
-          .addDiv({'class': 'bm-container bm-filter-insights', 'style': 'margin-left: 2.5ch; margin-right: 2.5ch;'})
-            .addDiv({'class': 'bm-container bm-filter-stats-card'})
-              .addSpan({'id': 'bm-filter-tile-load', 'innerHTML': '<b>Tiles Loaded:</b> 0 / ???'}).buildElement()
-              .addBr().buildElement()
-              .addSpan({'id': 'bm-filter-tot-correct', 'innerHTML': '<b>Correct Pixels:</b> ???'}).buildElement()
-              .addBr().buildElement()
-              .addSpan({'id': 'bm-filter-tot-total', 'innerHTML': '<b>Total Pixels:</b> ???'}).buildElement()
-              .addBr().buildElement()
-              .addSpan({'id': 'bm-filter-tot-remaining', 'innerHTML': '<b>Complete:</b> ??? (???)'}).buildElement()
-              .addBr().buildElement()
-              .addSpan({'id': 'bm-filter-tot-completed', 'innerHTML': '??? ???'}).buildElement()
-            .buildElement()
-            .addDiv({'class': 'bm-container bm-filter-note'})
-              .addP({'innerHTML': `Press the ${windowedIcon.replace('<svg', '<svg aria-label="Switch to windowed mode"')} button to make this window smaller. Colors with the icon ${this.eyeOpen.replace('<svg', '<svg aria-label="Eye Open"')} will be shown on the canvas. Colors with the icon ${this.eyeClosed.replace('<svg', '<svg aria-label="Eye Closed"')} will not be shown on the canvas. The "Hide All Colors" and "Show All Colors" buttons only apply to colors that display in the list below. The amount of correct pixels is dependent on how many tiles of the template you have loaded since you last opened Wplace.live. If all tiles have been loaded, then the "correct pixel" count is accurate.`}).buildElement()
+          .addDiv({'class': 'bm-container bm-filter-insights'})
+            .addDiv({'class': 'bm-filter-stat-grid'})
+              .addDiv({'class': 'bm-filter-stat-card'})
+                .addSpan({'class': 'bm-filter-stat-label', 'textContent': 'Tiles'}).buildElement()
+                .addSpan({'id': 'bm-filter-tile-load', 'class': 'bm-filter-stat-value', 'textContent': '0 / ???'}).buildElement()
+              .buildElement()
+              .addDiv({'class': 'bm-filter-stat-card'})
+                .addSpan({'class': 'bm-filter-stat-label', 'textContent': 'Correct'}).buildElement()
+                .addSpan({'id': 'bm-filter-tot-correct', 'class': 'bm-filter-stat-value', 'textContent': '???'}).buildElement()
+              .buildElement()
+              .addDiv({'class': 'bm-filter-stat-card'})
+                .addSpan({'class': 'bm-filter-stat-label', 'textContent': 'Total'}).buildElement()
+                .addSpan({'id': 'bm-filter-tot-total', 'class': 'bm-filter-stat-value', 'textContent': '???'}).buildElement()
+              .buildElement()
+              .addDiv({'class': 'bm-filter-stat-card'})
+                .addSpan({'class': 'bm-filter-stat-label', 'textContent': 'Remaining'}).buildElement()
+                .addSpan({'id': 'bm-filter-tot-remaining', 'class': 'bm-filter-stat-value', 'textContent': '???'}).buildElement()
+              .buildElement()
+              .addDiv({'class': 'bm-filter-stat-card bm-filter-stat-card-wide'})
+                .addSpan({'class': 'bm-filter-stat-label', 'textContent': 'Finish At'}).buildElement()
+                .addSpan({'id': 'bm-filter-tot-completed', 'class': 'bm-filter-stat-value', 'textContent': '???'}).buildElement()
+              .buildElement()
             .buildElement()
             .addHr().buildElement()
             .addForm({'class': 'bm-container bm-filter-sort-panel'})
@@ -209,11 +236,11 @@ export default class WindowFilter extends Overlay {
     this.#sortColorList(this.sortPrimary, this.sortSecondary, this.showUnused);
 
     // Displays some template statistics to the user
-    this.updateInnerHTML('#bm-filter-tile-load', `<b>Tiles Loaded:</b> ${localizeNumber(this.tilesLoadedTotal)} / ${localizeNumber(this.tilesTotal)}`);
-    this.updateInnerHTML('#bm-filter-tot-correct', `<b>Correct Pixels:</b> ${localizeNumber(this.allPixelsCorrectTotal)}`);
-    this.updateInnerHTML('#bm-filter-tot-total', `<b>Total Pixels:</b> ${localizeNumber(this.allPixelsTotal)}`);
-    this.updateInnerHTML('#bm-filter-tot-remaining', `<b>Remaining:</b> ${localizeNumber((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0))} (${localizePercent(((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0)) / (this.allPixelsTotal || 1))})`);
-    this.updateInnerHTML('#bm-filter-tot-completed', `<b>Completed at:</b> <time datetime="${this.timeRemaining.toISOString().replace(/\.\d{3}Z$/, 'Z')}">${this.timeRemainingLocalized}</time>`);
+    this.updateInnerHTML('#bm-filter-tile-load', `${localizeNumber(this.tilesLoadedTotal)} / ${localizeNumber(this.tilesTotal)}`);
+    this.updateInnerHTML('#bm-filter-tot-correct', localizeNumber(this.allPixelsCorrectTotal));
+    this.updateInnerHTML('#bm-filter-tot-total', localizeNumber(this.allPixelsTotal));
+    this.updateInnerHTML('#bm-filter-tot-remaining', `${localizeNumber((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0))} (${localizePercent(((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0)) / (this.allPixelsTotal || 1))})`);
+    this.updateInnerHTML('#bm-filter-tot-completed', `<time datetime="${this.timeRemaining.toISOString().replace(/\.\d{3}Z$/, 'Z')}">${this.timeRemainingLocalized}</time>`);
     this.#startAutoRefresh();
   }
 
@@ -606,6 +633,11 @@ export default class WindowFilter extends Overlay {
 
       // Changes the luminance of the hover/focus button effect
       const bgEffectForButtons = (textColorForPaletteColorBackground == 'white') ? 'bm-button-hover-white' : 'bm-button-hover-black';
+      const colorRGB = color.rgb?.map(channel => Number(channel) || 0).join(',');
+      const colorCardText = ((color.id == -2) || (color.id == -1) || (color.id == 0))
+        ? 'white'
+        : textColorForPaletteColorBackground;
+      const colorCardStyle = `--bm-filter-card-bg: rgb(${colorRGB}); --bm-filter-card-fg: ${colorCardText};`;
 
       // Generated by #updateColorList()
       const {
@@ -631,13 +663,15 @@ export default class WindowFilter extends Overlay {
           'data-id': color.id,
           'data-name': color.name,
           'data-premium': +color.premium,
+          'data-state': isColorHidden ? 'hidden' : 'shown',
           'data-correct': !Number.isNaN(parseInt(colorCorrect)) ? colorCorrect : '0',
           'data-total': colorTotal,
           'data-percent': (colorPercent.slice(-1) == '%') ? colorPercent.slice(0, -1) : '0',
           'data-incorrect': colorIncorrect || 0
-        }).addDiv({'class': 'bm-filter-container-rgb', 'style': `background-color: rgb(${color.rgb?.map(channel => Number(channel) || 0).join(',')});${color.premium ? styleBackgroundStar : ''}`})
+        }, (instance, div) => this.#initializeColorBlockToggle(div, color))
+          .addDiv({'class': 'bm-filter-container-rgb', 'style': `background-color: rgb(${color.rgb?.map(channel => Number(channel) || 0).join(',')});${color.premium ? styleBackgroundStar : ''}`})
             .addButton({
-              'class': 'bm-button-trans ' + bgEffectForButtons,
+              'class': 'bm-button-trans bm-filter-color-visibility ' + bgEffectForButtons,
               'data-state': isColorHidden ? 'hidden' : 'shown',
               'aria-label': isColorHidden ? `Show the color ${color.name || ''} on templates.` : `Hide the color ${color.name || ''} on templates.`,
               'innerHTML': isColorHidden ? this.eyeClosed : this.eyeOpen,
@@ -645,26 +679,14 @@ export default class WindowFilter extends Overlay {
               (instance, button) => {
 
                 // When the button is clicked
-                button.onclick = () => {
-                  button.style.textDecoration = 'none';
-                  button.disabled = true;
-                  if (button.dataset['state'] == 'shown') {
-                    button.innerHTML = this.eyeClosed;
-                    button.dataset['state'] = 'hidden';
-                    button.ariaLabel = `Show the color ${color.name || ''} on templates.`;
-                    this.templateManager.setColorFiltered(color.id, true);
-                  } else {
-                    button.innerHTML = this.eyeOpen;
-                    button.dataset['state'] = 'shown';
-                    button.ariaLabel = `Hide the color ${color.name || ''} on templates.`;
-                    this.templateManager.setColorFiltered(color.id, false);
-                  }
-                  button.disabled = false;
-                  button.style.textDecoration = '';
+                button.onclick = event => {
+                  event.stopPropagation();
+                  this.#toggleColorVisibility(button, color);
                 }
 
                 // Disables the "hide color" button if the color is "Transparent" (or no ID exists)
                 if (!color.id) {button.disabled = true;}
+                this.#syncColorToggleLabel(button, color);
               }
             ).buildElement()
             .addSmall({'textContent': `#${color.id.toString().padStart(2, 0)}`, 'style': `color: ${((color.id == -1) || (color.id == 0)) ? 'white' : textColorForPaletteColorBackground}`}).buildElement()
@@ -677,56 +699,49 @@ export default class WindowFilter extends Overlay {
 
         // Add fullscreen mode color DOM to color list
         colorList.addDiv({'class': 'bm-container bm-filter-color bm-flex-between',
+          'style': colorCardStyle,
           'data-id': color.id,
           'data-name': color.name,
           'data-premium': +color.premium,
+          'data-state': isColorHidden ? 'hidden' : 'shown',
           'data-correct': !Number.isNaN(parseInt(colorCorrect)) ? colorCorrect : '0',
           'data-total': colorTotal,
           'data-percent': (colorPercent.slice(-1) == '%') ? colorPercent.slice(0, -1) : '0',
           'data-incorrect': colorIncorrect || 0
-        }).addDiv({'class': 'bm-flex-center', 'style': 'flex-direction: column;'})
-            .addDiv({'class': 'bm-filter-container-rgb', 'style': `background-color: rgb(${color.rgb?.map(channel => Number(channel) || 0).join(',')});`})
+        }, (instance, div) => this.#initializeColorBlockToggle(div, color))
+          .addDiv({'class': 'bm-filter-premium-star', 'aria-hidden': 'true'}).buildElement()
+          .addDiv({'class': 'bm-filter-color-main'})
+            .addDiv({'class': 'bm-filter-container-rgb'})
               .addButton({
-                'class': 'bm-button-trans ' + bgEffectForButtons,
+                'class': 'bm-button-trans bm-filter-color-visibility ' + bgEffectForButtons,
                 'data-state': isColorHidden ? 'hidden' : 'shown',
                 'aria-label': isColorHidden ? `Show the color ${color.name || ''} on templates.` : `Hide the color ${color.name || ''} on templates.`,
                 'innerHTML': isColorHidden ? this.eyeClosed : this.eyeOpen,
-                'style': `color: ${textColorForPaletteColorBackground};`},
+                'style': `color: ${colorCardText};`},
                 (instance, button) => {
 
                   // When the button is clicked
-                  button.onclick = () => {
-                    button.style.textDecoration = 'none';
-                    button.disabled = true;
-                    if (button.dataset['state'] == 'shown') {
-                      button.innerHTML = this.eyeClosed;
-                      button.dataset['state'] = 'hidden';
-                      button.ariaLabel = `Show the color ${color.name || ''} on templates.`;
-                      this.templateManager.setColorFiltered(color.id, true);
-                    } else {
-                      button.innerHTML = this.eyeOpen;
-                      button.dataset['state'] = 'shown';
-                      button.ariaLabel = `Hide the color ${color.name || ''} on templates.`;
-                      this.templateManager.setColorFiltered(color.id, false);
-                    }
-                    button.disabled = false;
-                    button.style.textDecoration = '';
+                  button.onclick = event => {
+                    event.stopPropagation();
+                    this.#toggleColorVisibility(button, color);
                   }
 
                   // Disables the "hide color" button if the color is "Transparent" (or no ID exists)
                   if (!color.id) {button.disabled = true;}
+                  this.#syncColorToggleLabel(button, color);
                 }
               ).buildElement()
             .buildElement()
-            .addSmall({'textContent': (color.id == -2) ? '???????' : colorValueHex}).buildElement()
-          .buildElement()
-          .addDiv({'class': 'bm-flex-between'})
-            .addHeader(2, {'textContent': (color.premium ? '★ ' : '') + color.name}).buildElement()
-            .addDiv({'class': 'bm-flex-between', 'style': 'gap: 1.5ch;'})
-              .addSmall({'textContent': `#${color.id.toString().padStart(2, 0)}`}).buildElement()
-              .addSmall({'class': 'bm-filter-color-pxl-cnt', 'textContent': `${colorCorrectLocalized} / ${colorTotalLocalized}`}).buildElement()
+            .addDiv({'class': 'bm-filter-color-title'})
+              .addSmall({'textContent': `#${color.id.toString().padStart(2, 0)} / ${(color.id == -2) ? 'mixed' : colorValueHex}`}).buildElement()
+              .addHeader(2, {'textContent': color.name}).buildElement()
             .buildElement()
-            .addP({'class': 'bm-filter-color-pxl-desc', 'textContent': `${((typeof colorIncorrect == 'number') && !isNaN(colorIncorrect)) ? colorIncorrect : '???'} incorrect pixel${(colorIncorrect == 1) ? '' : 's'}. Completed: ${colorPercent}`}).buildElement()
+          .buildElement()
+          .addDiv({'class': 'bm-filter-color-meta'})
+            .addDiv({'class': 'bm-filter-color-progress'})
+              .addSpan({'class': 'bm-filter-color-pxl-cnt', 'innerHTML': `${colorCorrectLocalized} /<br>${colorTotalLocalized}`}).buildElement()
+              .addSmall({'class': 'bm-filter-color-pxl-desc', 'innerHTML': `${colorPercent} done<br>${((typeof colorIncorrect == 'number') && !isNaN(colorIncorrect)) ? colorIncorrect : '???'} off`}).buildElement()
+            .buildElement()
           .buildElement()
         .buildElement();
       }
@@ -806,7 +821,7 @@ export default class WindowFilter extends Overlay {
       if (color.classList?.contains('bm-color-hide')) {continue;}
 
       // Gets the button to click
-      const button = color.querySelector('.bm-filter-container-rgb button');
+      const button = color.querySelector('.bm-filter-color-visibility');
       
       // Exits early if the button is in its proper state
       if ((button.dataset['state'] == 'hidden') && !userWantsUnselect) {continue;} // If the button is selected, and the user wants to select all buttons, then skip this one
@@ -814,6 +829,108 @@ export default class WindowFilter extends Overlay {
       
       button.click(); // If the button is not in its proper state, then we click it
     }
+  }
+
+  /** Updates the color toggle labels on the icon and the clickable color block.
+   * @param {HTMLButtonElement} button - The color visibility button
+   * @param {Object} color - Palette color metadata
+   * @since 0.95.0
+   */
+  #syncColorToggleLabel(button, color) {
+    const ariaLabel = (button.dataset['state'] == 'hidden')
+      ? `Show the color ${color.name || ''} on templates.`
+      : `Hide the color ${color.name || ''} on templates.`;
+
+    button.ariaLabel = ariaLabel;
+
+    const colorElement = button.closest('.bm-filter-color');
+    colorElement?.setAttribute('aria-label', ariaLabel);
+    colorElement?.setAttribute('data-state', button.dataset['state']);
+
+  }
+
+  /** Toggles a color from the clickable color block or its icon.
+   * @param {HTMLButtonElement} button - The color visibility button
+   * @param {Object} color - Palette color metadata
+   * @since 0.95.0
+   */
+  #toggleColorVisibility(button, color) {
+    if (!button || button.disabled || !color.id) {return;}
+
+    button.style.textDecoration = 'none';
+    button.disabled = true;
+
+    if (button.dataset['state'] == 'shown') {
+      button.innerHTML = this.eyeClosed;
+      button.dataset['state'] = 'hidden';
+      this.templateManager.setColorFiltered(color.id, true);
+      this.#animateColorToggleIcon(button, 'hide');
+    } else {
+      button.dataset['state'] = 'shown';
+      this.templateManager.setColorFiltered(color.id, false);
+      this.#animateColorToggleIcon(button, 'show');
+    }
+
+    this.#syncColorToggleLabel(button, color);
+    button.disabled = false;
+    button.style.textDecoration = '';
+  }
+
+  /** Animates the eye slash only for direct visibility toggles.
+   * @param {HTMLButtonElement} button - The color visibility button
+   * @param {'hide' | 'show'} direction - Which slash animation to play
+   * @since 0.95.0
+   */
+  #animateColorToggleIcon(button, direction) {
+    if (!button) {return;}
+
+    const animateClass = direction == 'hide' ? 'bm-filter-eye-animate-hide' : 'bm-filter-eye-animate-show';
+    button.classList.remove('bm-filter-eye-animate-hide', 'bm-filter-eye-animate-show');
+
+    // Restart the class-driven SVG stroke animation when the same color is toggled repeatedly.
+    void button.offsetWidth;
+
+    button.classList.add(animateClass);
+
+    let timeoutID = null;
+    const finishAnimation = () => {
+      window.clearTimeout(timeoutID);
+      button.classList.remove(animateClass);
+
+      if ((direction == 'show') && (button.dataset['state'] == 'shown')) {
+        button.innerHTML = this.eyeOpen;
+      }
+    };
+
+    button.addEventListener('animationend', finishAnimation, {once: true});
+    timeoutID = window.setTimeout(finishAnimation, 280);
+  }
+
+  /** Makes a color block toggleable by pointer or keyboard.
+   * @param {HTMLElement} colorElement - The color block element
+   * @param {Object} color - Palette color metadata
+   * @since 0.95.0
+   */
+  #initializeColorBlockToggle(colorElement, color) {
+    if (!colorElement || !color.id) {return;}
+
+    colorElement.classList.add('bm-filter-color-toggle');
+    colorElement.tabIndex = 0;
+    colorElement.setAttribute('role', 'button');
+
+    colorElement.onclick = event => {
+      if (event.target instanceof Element && event.target.closest('button, a, input, select, textarea')) {return;}
+
+      const button = colorElement.querySelector('.bm-filter-color-visibility');
+      this.#toggleColorVisibility(button, color);
+    };
+
+    colorElement.onkeydown = event => {
+      if ((event.key != 'Enter') && (event.key != ' ')) {return;}
+
+      event.preventDefault();
+      colorElement.click();
+    };
   }
 
   /** The information about a specific color on the palette.
@@ -899,11 +1016,11 @@ export default class WindowFilter extends Overlay {
       this.updateInnerHTML('#bm-filter-windowed-color-totals', `${allCorrect}/${allTotal}`, true);
     }
 
-    this.updateInnerHTML('#bm-filter-tile-load', `<b>Tiles Loaded:</b> ${localizeNumber(this.tilesLoadedTotal)} / ${localizeNumber(this.tilesTotal)}`);
-    this.updateInnerHTML('#bm-filter-tot-correct', `<b>Correct Pixels:</b> ${localizeNumber(this.allPixelsCorrectTotal)}`);
-    this.updateInnerHTML('#bm-filter-tot-total', `<b>Total Pixels:</b> ${localizeNumber(this.allPixelsTotal)}`);
-    this.updateInnerHTML('#bm-filter-tot-remaining', `<b>Remaining:</b> ${localizeNumber((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0))} (${localizePercent(((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0)) / (this.allPixelsTotal || 1))})`);
-    this.updateInnerHTML('#bm-filter-tot-completed', `<b>Completed at:</b> <time datetime="${this.timeRemaining.toISOString().replace(/\.\d{3}Z$/, 'Z')}">${this.timeRemainingLocalized}</time>`);
+    this.updateInnerHTML('#bm-filter-tile-load', `${localizeNumber(this.tilesLoadedTotal)} / ${localizeNumber(this.tilesTotal)}`);
+    this.updateInnerHTML('#bm-filter-tot-correct', localizeNumber(this.allPixelsCorrectTotal));
+    this.updateInnerHTML('#bm-filter-tot-total', localizeNumber(this.allPixelsTotal));
+    this.updateInnerHTML('#bm-filter-tot-remaining', `${localizeNumber((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0))} (${localizePercent(((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0)) / (this.allPixelsTotal || 1))})`);
+    this.updateInnerHTML('#bm-filter-tot-completed', `<time datetime="${this.timeRemaining.toISOString().replace(/\.\d{3}Z$/, 'Z')}">${this.timeRemainingLocalized}</time>`);
 
     // Return early if the color list does not exist.
     // We can't update DOM elements that don't exist, so we exit now.
@@ -934,11 +1051,18 @@ export default class WindowFilter extends Overlay {
 
       // Updates the pixel count if it exists
       const pixelCount = document.querySelector(`#${this.windowID} .bm-filter-color[data-id="${colorID}"] .bm-filter-color-pxl-cnt`);
-      if (pixelCount) {pixelCount.textContent = `${colorCorrectLocalized} / ${colorTotalLocalized}`;}
+      if (pixelCount) {
+        const isWindowedPixelCount = !!pixelCount.closest(`#${this.windowID}.bm-windowed`);
+        if (isWindowedPixelCount) {
+          pixelCount.textContent = `${colorCorrectLocalized} / ${colorTotalLocalized}`;
+        } else {
+          pixelCount.innerHTML = `${colorCorrectLocalized} /<br>${colorTotalLocalized}`;
+        }
+      }
 
       // Updates the pixel description if it exists
       const pixelDesc = document.querySelector(`#${this.windowID} .bm-filter-color[data-id="${colorID}"] .bm-filter-color-pxl-desc`);
-      if (pixelDesc) {pixelDesc.textContent = `${((typeof colorIncorrect == 'number') && !isNaN(colorIncorrect)) ? colorIncorrect : '???'} incorrect pixel${(colorIncorrect == 1) ? '' : 's'}. Completed: ${colorPercent}`;}
+      if (pixelDesc) {pixelDesc.innerHTML = `${colorPercent} done<br>${((typeof colorIncorrect == 'number') && !isNaN(colorIncorrect)) ? colorIncorrect : '???'} off`;}
     }
 
     // Since the dataset has changed, we need to sort again
@@ -1005,6 +1129,6 @@ export default class WindowFilter extends Overlay {
 
     // Calculates the date & time the user will complete the templates
     this.timeRemaining = new Date(((this.allPixelsTotal - this.allPixelsCorrectTotal) * 30 * 1000) + Date.now());
-    this.timeRemainingLocalized = localizeDate(this.timeRemaining);
+    this.timeRemainingLocalized = localizeCompactDate(this.timeRemaining);
   }
 }

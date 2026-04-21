@@ -17,7 +17,8 @@ import WindowSettings from "./WindowSettings";
  *   "flags": ["hl-noTrans", "ftr-oWin", "te-noSkip"],
  *   "highlight": [[1,0,-1],[1,-1,0],[2,1,0],[1,0,1]],
  *   "filter": [-2,0,4,5,6,29,63],
- *   "windowFilter": {"x": 60, "y": 75, "width": 300, "height": 420}
+ *   "windowFilter": {"x": 60, "y": 75, "width": 300, "height": 420},
+ *   "windowSettings": {"x": 60, "y": 75}
  * }
  */
 export default class SettingsManager extends WindowSettings {
