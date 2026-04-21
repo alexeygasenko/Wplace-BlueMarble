@@ -1,3 +1,6 @@
+export const minimizeIconExpanded = '<svg class="bm-button-icon bm-button-icon-minimize" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 9.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+export const minimizeIconCollapsed = '<svg class="bm-button-icon bm-button-icon-minimize" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.5 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 /** The overlay builder for the Blue Marble script.
  * @description This class handles the overlay UI for the Blue Marble script.
  * @class Overlay
@@ -1242,7 +1245,7 @@ export default class Overlay {
       const dragbarHeader1Text = dragbarHeader1.textContent;
       button.nextElementSibling.appendChild(dragbarHeader1);
       
-      button.textContent = '▶'; // Swap button icon
+      button.innerHTML = minimizeIconCollapsed; // Swap button icon
       button.dataset['buttonStatus'] = 'collapsed'; // Swap button status tracker
       button.ariaLabel = `Unminimize window "${dragbarHeader1Text}"`; // Screen reader label
     } else {
@@ -1265,7 +1268,7 @@ export default class Overlay {
         windowContent.removeEventListener('transitionend', handler); // Removes the event listener
       });
 
-      button.textContent = '▼'; // Swap button icon
+      button.innerHTML = minimizeIconExpanded; // Swap button icon
       button.dataset['buttonStatus'] = 'expanded'; // Swap button status tracker
       button.ariaLabel = `Minimize window "${dragbarHeader1Text}"`; // Screen reader label
     }

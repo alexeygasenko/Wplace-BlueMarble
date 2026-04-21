@@ -1,4 +1,6 @@
-import Overlay from "./Overlay";
+import Overlay, { minimizeIconExpanded } from "./Overlay";
+
+const closeIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 
 /** The overlay builder for the settings window in Blue Marble.
  * The logic for this window is managed in {@link SettingsManager}
@@ -37,13 +39,13 @@ export default class WindowSettings extends Overlay {
 
     this.window = this.addDiv({'id': this.windowID, 'class': 'bm-window'})
       .addDragbar()
-        .addButton({'class': 'bm-button-circle', 'textContent': '▼', 'aria-label': 'Minimize window "Color Filter"', 'data-button-status': 'expanded'}, (instance, button) => {
+        .addButton({'class': 'bm-button-circle', 'innerHTML': minimizeIconExpanded, 'aria-label': 'Minimize window "Settings"', 'data-button-status': 'expanded'}, (instance, button) => {
           button.onclick = () => instance.handleMinimization(button);
           button.ontouchend = () => {button.click()}; // Needed only to negate weird interaction with dragbar
         }).buildElement()
         .addDiv().buildElement() // Contains the minimized h1 element
         .addDiv({'class': 'bm-flex-center'})
-          .addButton({'class': 'bm-button-circle', 'textContent': '✖', 'aria-label': 'Close window "Color Filter"'}, (instance, button) => {
+          .addButton({'class': 'bm-button-circle', 'innerHTML': closeIcon, 'aria-label': 'Close window "Settings"'}, (instance, button) => {
             button.onclick = () => {document.querySelector(`#${this.windowID}`)?.remove();};
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
           }).buildElement()

@@ -1,7 +1,9 @@
 import ConfettiManager from "./confetttiManager";
-import Overlay from "./Overlay";
+import Overlay, { minimizeIconExpanded } from "./Overlay";
 import { getClipboardData } from "./utils";
 import WindowFilter from "./WindowFilter";
+
+const settingsIcon = '<svg class="bm-button-icon bm-button-icon-settings" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/><circle cx="9" cy="7" r="1.7" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="11" cy="17" r="1.7" fill="currentColor" stroke="none"/></g></svg>';
 
 /** The overlay builder for the main Blue Marble window.
  * @description This class handles the overlay UI for the main window of the Blue Marble userscript.
@@ -43,13 +45,13 @@ export default class WindowMain extends Overlay {
       //   div.parentElement.appendChild(div); // When the window is clicked on, bring to top
       // }
     }).addDragbar()
-        .addButton({'class': 'bm-button-circle', 'textContent': '▼', 'aria-label': 'Minimize window "Blue Marble"', 'data-button-status': 'expanded'}, (instance, button) => {
+        .addButton({'class': 'bm-button-circle', 'innerHTML': minimizeIconExpanded, 'aria-label': 'Minimize window "Blue Marble"', 'data-button-status': 'expanded'}, (instance, button) => {
           button.onclick = () => instance.handleMinimization(button);
           button.ontouchend = () => {button.click();}; // Needed ONLY to negate weird interaction with dragbar
         }).buildElement()
         .addDiv().buildElement() // Contains the minimized h1 element
         .addDiv({'class': 'bm-flex-center'})
-          .addButton({'class': 'bm-button-circle', 'innerHTML': '⚙️', 'title': 'Settings'}, (instance, button) => {
+          .addButton({'class': 'bm-button-circle', 'innerHTML': settingsIcon, 'title': 'Settings', 'aria-label': 'Open settings'}, (instance, button) => {
             button.onclick = () => {
               instance.settingsManager.buildWindow();
             }
@@ -57,6 +59,7 @@ export default class WindowMain extends Overlay {
         .buildElement()
       .buildElement()
       .addDiv({'class': 'bm-window-content'})
+        .addHr().buildElement()
         .addDiv({'class': 'bm-container bm-main-hero'})
           .addImg({'class': 'bm-favicon', 'src': 'https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/assets/Favicon.png'}, (instance, img) => {
             // Adds a birthday hat & confetti to the window if it is Blue Marble's birthday

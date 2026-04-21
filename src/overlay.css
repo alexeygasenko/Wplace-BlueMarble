@@ -353,8 +353,31 @@
 }
 
 .bm-button-circle svg {
+  display: block;
   width: 70%;
   height: 70%;
+  flex: 0 0 auto;
+  margin: auto;
+  color: currentColor;
+  pointer-events: none;
+  transform: translateZ(0);
+  overflow: visible;
+}
+
+.bm-button-circle .bm-button-icon-settings {
+  width: 68%;
+  height: 68%;
+  transform: translateY(0.5px) translateZ(0);
+}
+
+.bm-button-circle .bm-button-icon-minimize {
+  width: 62%;
+  height: 62%;
+  transform: translateY(0.75px) translateZ(0);
+}
+
+#bm-window-filter.bm-windowed .bm-button-circle .bm-button-icon-minimize {
+  transform: translateZ(0);
 }
 
 /* Pin button */
