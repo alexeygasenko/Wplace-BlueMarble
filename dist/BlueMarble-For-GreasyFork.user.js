@@ -2373,13 +2373,13 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       this.windowSaveTimeout = null;
       this.colorRefreshInterval = null;
       this.colorRefreshIntervalMS = 1e4;
-      this.windowMinWidth = 260;
+      this.windowMinWidth = 360;
       this.windowMinHeight = 220;
       this.windowMaxWidth = 1e3;
       this.windowMaxHeight = 1400;
       this.templateManager = executor.apiManager?.templateManager;
-      this.eyeOpen = '<svg viewBox="0 .5 6 3"><path d="M0,2Q3-1 6,2Q3,5 0,2H2A1,1 0 1 0 3,1Q3,2 2,2"/></svg>';
-      this.eyeClosed = '<svg viewBox="0 1 12 6"><mask id="a"><path d="M0,0H12V8L0,2" fill="#fff"/></mask><path d="M0,4Q6-2 12,4Q6,10 0,4H4A2,2 0 1 0 6,2Q6,4 4,4ZM1,2L10,6.5L9.5,7L.5,2.5" mask="url(#a)"/></svg>';
+      this.eyeOpen = '<svg class="bm-filter-eye-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.8 12s3.1-5 8.2-5 8.2 5 8.2 5-3.1 5-8.2 5-8.2-5-8.2-5Z"/><circle cx="12" cy="12" r="2.5"/></svg>';
+      this.eyeClosed = '<svg class="bm-filter-eye-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.6 9.8C6.1 8.3 8.6 7 12 7c5.1 0 8.2 5 8.2 5a15.2 15.2 0 0 1-2.2 2.7"/><path d="M14.1 16.7a8.3 8.3 0 0 1-2.1.3c-5.1 0-8.2-5-8.2-5a14.9 14.9 0 0 1 1.8-2.3"/><path d="M5 5l14 14"/><path d="M10.4 10.7a2.5 2.5 0 0 0 2.9 2.9"/></svg>';
       const { palette, LUT: _ } = this.templateManager.paletteBM;
       this.palette = palette;
       this.tilesLoadedTotal = 0;
@@ -2475,7 +2475,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       this.window = this.addDiv({
         "id": this.windowID,
         "class": "bm-window bm-windowed",
-        "style": `width: 300px; height: min(70vh, 32rem); min-width: ${this.windowMinWidth}px; min-height: ${this.windowMinHeight}px; max-width: min(${this.windowMaxWidth}px, calc(100vw - 16px)); max-height: min(${this.windowMaxHeight}px, calc(100vh - 16px));`
+        "style": `width: 360px; height: min(70vh, 32rem); min-width: ${this.windowMinWidth}px; min-height: ${this.windowMinHeight}px; max-width: min(${this.windowMaxWidth}px, calc(100vw - 16px)); max-height: min(${this.windowMaxHeight}px, calc(100vh - 16px));`
       }).addDragbar().addButton({ "class": "bm-button-circle", "innerHTML": minimizeIconExpanded, "aria-label": 'Minimize window "Color Filter"', "data-button-status": "expanded" }, (instance, button) => {
         button.onclick = () => {
           const windowedColorTotals = document.querySelector("#bm-filter-windowed-color-totals");
@@ -2902,19 +2902,20 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
             "class": "bm-button-trans " + bgEffectForButtons,
             "data-state": isColorHidden ? "hidden" : "shown",
             "aria-label": isColorHidden ? `Show the color ${color.name || ""} on templates.` : `Hide the color ${color.name || ""} on templates.`,
-            "innerHTML": isColorHidden ? this.eyeClosed.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`) : this.eyeOpen.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`)
+            "innerHTML": isColorHidden ? this.eyeClosed : this.eyeOpen,
+            "style": `color: ${textColorForPaletteColorBackground};`
           },
           (instance, button) => {
             button.onclick = () => {
               button.style.textDecoration = "none";
               button.disabled = true;
               if (button.dataset["state"] == "shown") {
-                button.innerHTML = this.eyeClosed.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`);
+                button.innerHTML = this.eyeClosed;
                 button.dataset["state"] = "hidden";
                 button.ariaLabel = `Show the color ${color.name || ""} on templates.`;
                 this.templateManager.setColorFiltered(color.id, true);
               } else {
-                button.innerHTML = this.eyeOpen.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`);
+                button.innerHTML = this.eyeOpen;
                 button.dataset["state"] = "shown";
                 button.ariaLabel = `Hide the color ${color.name || ""} on templates.`;
                 this.templateManager.setColorFiltered(color.id, false);
@@ -2942,19 +2943,20 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
             "class": "bm-button-trans " + bgEffectForButtons,
             "data-state": isColorHidden ? "hidden" : "shown",
             "aria-label": isColorHidden ? `Show the color ${color.name || ""} on templates.` : `Hide the color ${color.name || ""} on templates.`,
-            "innerHTML": isColorHidden ? this.eyeClosed.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`) : this.eyeOpen.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`)
+            "innerHTML": isColorHidden ? this.eyeClosed : this.eyeOpen,
+            "style": `color: ${textColorForPaletteColorBackground};`
           },
           (instance, button) => {
             button.onclick = () => {
               button.style.textDecoration = "none";
               button.disabled = true;
               if (button.dataset["state"] == "shown") {
-                button.innerHTML = this.eyeClosed.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`);
+                button.innerHTML = this.eyeClosed;
                 button.dataset["state"] = "hidden";
                 button.ariaLabel = `Show the color ${color.name || ""} on templates.`;
                 this.templateManager.setColorFiltered(color.id, true);
               } else {
-                button.innerHTML = this.eyeOpen.replace("<svg", `<svg fill="${textColorForPaletteColorBackground}"`);
+                button.innerHTML = this.eyeOpen;
                 button.dataset["state"] = "shown";
                 button.ariaLabel = `Hide the color ${color.name || ""} on templates.`;
                 this.templateManager.setColorFiltered(color.id, false);
@@ -4516,4 +4518,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: 90abdec99d7b
+// Build Hash: f31122a513fd

@@ -583,10 +583,23 @@ input[type=file] {
 }
 
 /* src/WindowFilter.css */
+#bm-window-filter .bm-filter-eye-icon {
+  display: block;
+  width: 1.28em;
+  height: 1.28em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  overflow: visible;
+}
 #bm-window-filter p svg {
-  display: inline;
+  display: inline-block;
   height: 1em;
-  fill: white;
+  width: 1em;
+  color: currentColor;
+  vertical-align: -0.16em;
 }
 #bm-window-filter:not(.bm-windowed) {
   width: min(50rem, calc(100vw - 0.55rem));
@@ -749,16 +762,25 @@ input[type=file] {
   background-color: transparent !important;
 }
 #bm-window-filter .bm-filter-color[data-id="-1"] .bm-filter-container-rgb svg {
-  fill: white !important;
+  color: white !important;
 }
 #bm-window-filter .bm-filter-color[data-id="0"] .bm-filter-container-rgb {
   background-color: transparent !important;
 }
 #bm-window-filter .bm-filter-container-rgb button {
-  padding: 0.26em 0.14ch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.24em;
+  min-width: 2.05rem;
+  min-height: 2.05rem;
+  border-radius: 999px;
+  line-height: 1;
 }
-#bm-window-filter .bm-filter-container-rgb svg {
-  width: 4ch;
+#bm-window-filter .bm-filter-container-rgb .bm-filter-eye-icon {
+  width: 1.55rem;
+  height: 1.55rem;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.18));
 }
 #bm-window-filter .bm-filter-color > .bm-flex-between {
   flex-direction: column;
@@ -781,9 +803,9 @@ input[type=file] {
   --bm-scrollable-max-height: 100%;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  width: 268px;
+  width: 360px;
   height: min(60vh, 22rem);
-  min-width: 228px;
+  min-width: 360px;
   min-height: 180px;
   max-width: min(1000px, calc(100vw - 16px)) !important;
   max-height: min(1400px, calc(100vh - 16px)) !important;
@@ -897,11 +919,12 @@ input[type=file] {
   box-sizing: border-box;
 }
 #bm-window-filter.bm-windowed .bm-filter-container-rgb button {
-  padding: 0.2em 0.1ch;
+  padding: 0.2em;
   flex: 0 0 auto;
 }
-#bm-window-filter.bm-windowed .bm-filter-container-rgb svg {
-  width: 2.7ch;
+#bm-window-filter.bm-windowed .bm-filter-container-rgb .bm-filter-eye-icon {
+  width: 1.36rem;
+  height: 1.36rem;
 }
 #bm-window-filter.bm-windowed .bm-filter-color h2 {
   font-size: 0.78rem;
@@ -1181,4 +1204,4 @@ input[type=file] {
 
 /* src/main.css */
 
-/* Build Hash: ee66c55dba5d */
+/* Build Hash: af601d626afd */
