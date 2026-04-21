@@ -2464,7 +2464,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     }
     return `${month}/${day}/${year} ${hour}:${minute}${period}`;
   }
-  var _WindowFilter_instances, getWindowState_fn2, prefersWindowedMode_fn, setWindowModePreference_fn, syncSortFormControls_fn, closeWindow_fn2, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn2, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, syncColorToggleLabel_fn, toggleColorVisibility_fn, initializeColorBlockToggle_fn, calculatePixelStatistics_fn;
+  var _WindowFilter_instances, getWindowState_fn2, prefersWindowedMode_fn, setWindowModePreference_fn, syncSortFormControls_fn, closeWindow_fn2, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn2, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, syncColorToggleLabel_fn, toggleColorVisibility_fn, animateColorToggleIcon_fn, initializeColorBlockToggle_fn, calculatePixelStatistics_fn;
   var WindowFilter = class extends Overlay {
     /** Constructor for the color filter window
      * @param {*} executor - The executing class
@@ -3157,14 +3157,39 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       button.innerHTML = this.eyeClosed;
       button.dataset["state"] = "hidden";
       this.templateManager.setColorFiltered(color.id, true);
+      __privateMethod(this, _WindowFilter_instances, animateColorToggleIcon_fn).call(this, button, "hide");
     } else {
-      button.innerHTML = this.eyeOpen;
       button.dataset["state"] = "shown";
       this.templateManager.setColorFiltered(color.id, false);
+      __privateMethod(this, _WindowFilter_instances, animateColorToggleIcon_fn).call(this, button, "show");
     }
     __privateMethod(this, _WindowFilter_instances, syncColorToggleLabel_fn).call(this, button, color);
     button.disabled = false;
     button.style.textDecoration = "";
+  };
+  /** Animates the eye slash only for direct visibility toggles.
+   * @param {HTMLButtonElement} button - The color visibility button
+   * @param {'hide' | 'show'} direction - Which slash animation to play
+   * @since 0.95.0
+   */
+  animateColorToggleIcon_fn = function(button, direction) {
+    if (!button) {
+      return;
+    }
+    const animateClass = direction == "hide" ? "bm-filter-eye-animate-hide" : "bm-filter-eye-animate-show";
+    button.classList.remove("bm-filter-eye-animate-hide", "bm-filter-eye-animate-show");
+    void button.offsetWidth;
+    button.classList.add(animateClass);
+    let timeoutID = null;
+    const finishAnimation = () => {
+      window.clearTimeout(timeoutID);
+      button.classList.remove(animateClass);
+      if (direction == "show" && button.dataset["state"] == "shown") {
+        button.innerHTML = this.eyeOpen;
+      }
+    };
+    button.addEventListener("animationend", finishAnimation, { once: true });
+    timeoutID = window.setTimeout(finishAnimation, 280);
   };
   /** Makes a color block toggleable by pointer or keyboard.
    * @param {HTMLElement} colorElement - The color block element
@@ -4681,4 +4706,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: 339f830865b8
+// Build Hash: a40147b07f84

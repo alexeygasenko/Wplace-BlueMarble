@@ -864,15 +864,46 @@ export default class WindowFilter extends Overlay {
       button.innerHTML = this.eyeClosed;
       button.dataset['state'] = 'hidden';
       this.templateManager.setColorFiltered(color.id, true);
+      this.#animateColorToggleIcon(button, 'hide');
     } else {
-      button.innerHTML = this.eyeOpen;
       button.dataset['state'] = 'shown';
       this.templateManager.setColorFiltered(color.id, false);
+      this.#animateColorToggleIcon(button, 'show');
     }
 
     this.#syncColorToggleLabel(button, color);
     button.disabled = false;
     button.style.textDecoration = '';
+  }
+
+  /** Animates the eye slash only for direct visibility toggles.
+   * @param {HTMLButtonElement} button - The color visibility button
+   * @param {'hide' | 'show'} direction - Which slash animation to play
+   * @since 0.95.0
+   */
+  #animateColorToggleIcon(button, direction) {
+    if (!button) {return;}
+
+    const animateClass = direction == 'hide' ? 'bm-filter-eye-animate-hide' : 'bm-filter-eye-animate-show';
+    button.classList.remove('bm-filter-eye-animate-hide', 'bm-filter-eye-animate-show');
+
+    // Restart the class-driven SVG stroke animation when the same color is toggled repeatedly.
+    void button.offsetWidth;
+
+    button.classList.add(animateClass);
+
+    let timeoutID = null;
+    const finishAnimation = () => {
+      window.clearTimeout(timeoutID);
+      button.classList.remove(animateClass);
+
+      if ((direction == 'show') && (button.dataset['state'] == 'shown')) {
+        button.innerHTML = this.eyeOpen;
+      }
+    };
+
+    button.addEventListener('animationend', finishAnimation, {once: true});
+    timeoutID = window.setTimeout(finishAnimation, 280);
   }
 
   /** Makes a color block toggleable by pointer or keyboard.
