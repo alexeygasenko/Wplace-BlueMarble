@@ -1,6 +1,6 @@
 # Blue Marble Enhanced
 
-![Blue Marble 0.94.0 liquid-glass UI showcase](./assets/blue-marble.png)
+![Blue Marble 0.94.0 liquid-glass UI showcase](./docs/assets/blue-marble.png)
 
 This fork is based on [SwingTheVine/Wplace-BlueMarble](https://github.com/SwingTheVine/Wplace-BlueMarble) and focuses on practical improvements for everyday template work on [wplace.live](https://wplace.live/).
 
@@ -42,4 +42,4 @@ This fork keeps the original license and credits. For upstream documentation, co
 
 ## License
 
-Blue Marble is licensed under the Mozilla Public License 2.0. See [LICENSE.txt](../LICENSE.txt).
+Blue Marble is licensed under the Mozilla Public License 2.0. See [LICENSE.txt](./LICENSE.txt).

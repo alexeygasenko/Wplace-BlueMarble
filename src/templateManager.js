@@ -130,6 +130,55 @@ export default class TemplateManager {
    */
   setSettingsManager(settingsManager) {
     this.settingsManager = settingsManager;
+    this.#restoreFilteredColorsFromSettings();
+  }
+
+  /** Restores hidden colors from persisted user settings.
+   * @since 0.92.1
+   */
+  #restoreFilteredColorsFromSettings() {
+    const storedFilter = this.settingsManager?.userSettings?.filter;
+    const filteredColors = Array.isArray(storedFilter) ? storedFilter : [];
+
+    this.shouldFilterColor.clear();
+
+    for (const colorID of filteredColors) {
+      const parsedColorID = Number(colorID);
+      if (!Number.isFinite(parsedColorID)) {continue;}
+      this.shouldFilterColor.set(parsedColorID, true);
+    }
+  }
+
+  /** Persists hidden colors to user settings storage.
+   * @since 0.92.1
+   */
+  #persistFilteredColors() {
+    if (!this.settingsManager) {return;}
+
+    this.settingsManager.userSettings.filter = Array.from(this.shouldFilterColor.keys())
+      .map(colorID => Number(colorID))
+      .filter(colorID => Number.isFinite(colorID))
+      .sort((a, b) => a - b);
+
+    void this.settingsManager.saveUserStorageNow();
+  }
+
+  /** Updates whether a palette color should be hidden on the canvas.
+   * @param {number} colorID
+   * @param {boolean} shouldHide
+   * @since 0.92.1
+   */
+  setColorFiltered(colorID, shouldHide) {
+    const parsedColorID = Number(colorID);
+    if (!Number.isFinite(parsedColorID)) {return;}
+
+    if (shouldHide) {
+      this.shouldFilterColor.set(parsedColorID, true);
+    } else {
+      this.shouldFilterColor.delete(parsedColorID);
+    }
+
+    this.#persistFilteredColors();
   }
 
   /** Creates the JSON object to store templates in
@@ -648,14 +697,14 @@ export default class TemplateManager {
   /** Imports the JSON object, and appends it to any JSON object already loaded
    * @param {string} json - The JSON string to parse
    */
-  importJSON(json) {
+  async importJSON(json) {
 
     console.log(`Importing JSON...`);
     console.log(json);
 
     // If the passed in JSON is a Blue Marble template object...
     if (json?.whoami == 'BlueMarble') {
-      this.#parseBlueMarble(json); // ...parse the template object as Blue Marble
+      await this.#parseBlueMarble(json); // ...parse the template object as Blue Marble
     }
   }
 

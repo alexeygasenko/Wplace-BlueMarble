@@ -1,4 +1,4 @@
-import Overlay from "./Overlay";
+import Overlay, { minimizeIconExpanded } from "./Overlay";
 import { localizeDate } from "./utils";
 
 /** Manages the credits window for Blue Marble.
@@ -54,7 +54,7 @@ export default class WindowCredts extends Overlay {
     // Creates a new credits window
     this.window = this.addDiv({'id': this.windowID, 'class': 'bm-window'}, (instance, div) => {})
       .addDragbar()
-        .addButton({'class': 'bm-button-circle', 'textContent': '▼', 'aria-label': 'Minimize window "Credits"', 'data-button-status': 'expanded'}, (instance, button) => {
+        .addButton({'class': 'bm-button-circle', 'innerHTML': minimizeIconExpanded, 'aria-label': 'Minimize window "Credits"', 'data-button-status': 'expanded'}, (instance, button) => {
           button.onclick = () => instance.handleMinimization(button);
           button.ontouchend = () => {button.click()}; // Needed only to negate weird interaction with dragbar
         }).buildElement()

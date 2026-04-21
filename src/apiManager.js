@@ -54,44 +54,7 @@ export default class ApiManager {
       switch (endpointText) {
 
         case 'me': // Request to retrieve user data
-
-          // If the game can not retrieve the userdata...
-          if (dataJSON['status'] && dataJSON['status']?.toString()[0] != '2') {
-            // The server is probably down (NOT a 2xx status)
-            
-            overlay.handleDisplayError(`You are not logged in or Wplace is offline!\nCould not fetch userdata.`);
-            return; // Kills itself before attempting to display null userdata
-          }
-
-          const nextLevelPixels = Math.ceil(Math.pow(Math.floor(dataJSON['level']) * Math.pow(30, 0.65), (1/0.65)) - dataJSON['pixelsPainted']); // Calculates pixels to the next level
-
-          console.log(dataJSON['id']);
-          if (!!dataJSON['id'] || dataJSON['id'] === 0) {
-            console.log(numberToEncoded(
-              dataJSON['id'],
-              '!#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~'
-            ));
-          }
-          this.templateManager.userID = dataJSON['id'];
-
-          // Obtains the refill timer for charges
-          if (this.chargeRefillTimerID.length != 0) {
-            const chargeRefillTimer = document.querySelector('#' + this.chargeRefillTimerID);
-            
-            // If the refill timer exists...
-            if (chargeRefillTimer) {
-              
-              /** Obtains the information about the user's charges @type {{cooldownMs: number, count: number, max: number}} */
-              const chargeData = dataJSON['charges'];
-  
-              // Date that the user's charges will be refilled
-              chargeRefillTimer.dataset['endDate'] = Date.now() + ((chargeData['max'] - chargeData['count']) * chargeData['cooldownMs']);
-            }
-          }
-
-          // Updates displayed droplet information
-          overlay.updateInnerHTML('bm-user-droplets', `Droplets: <b>${localizeNumber(dataJSON['droplets'])}</b>`); // Updates the text content of the droplets field
-          overlay.updateInnerHTML('bm-user-nextlevel', `Next level in <b>${localizeNumber(nextLevelPixels)}</b> pixel${nextLevelPixels == 1 ? '' : 's'}`); // Updates the text content of the next level field
+          this.applyUserDataToOverlay(overlay, dataJSON);
           break;
 
         case 'pixel': // Request to retrieve pixel data
@@ -193,6 +156,90 @@ export default class ApiManager {
           break;
       }
     });
+  }
+
+  /** Applies user data from the /me endpoint to the current overlay.
+   * @param {Overlay} overlay
+   * @param {Object.<string, any>} dataJSON
+   * @since 0.92.1
+   */
+  applyUserDataToOverlay(overlay, dataJSON) {
+
+    // If the game can not retrieve the userdata...
+    if (dataJSON['status'] && dataJSON['status']?.toString()[0] != '2') {
+      overlay.handleDisplayError(`You are not logged in or Wplace is offline!\nCould not fetch userdata.`);
+      return;
+    }
+
+    const nextLevelPixels = Math.ceil(Math.pow(Math.floor(dataJSON['level']) * Math.pow(30, 0.65), (1 / 0.65)) - dataJSON['pixelsPainted']);
+
+    console.log(dataJSON['id']);
+    if (!!dataJSON['id'] || dataJSON['id'] === 0) {
+      console.log(numberToEncoded(
+        dataJSON['id'],
+        '!#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+      ));
+    }
+    this.templateManager.userID = dataJSON['id'];
+
+    // Obtains the refill timer for charges
+    if (this.chargeRefillTimerID.length != 0) {
+      const chargeRefillTimer = document.querySelector('#' + this.chargeRefillTimerID);
+      
+      // If the refill timer exists...
+      if (chargeRefillTimer) {
+        /** Obtains the information about the user's charges @type {{cooldownMs: number, count: number, max: number}} */
+        const chargeData = dataJSON['charges'];
+
+        // Date that the user's charges will be refilled
+        chargeRefillTimer.dataset['endDate'] = Date.now() + ((chargeData['max'] - chargeData['count']) * chargeData['cooldownMs']);
+      }
+    }
+
+    overlay.updateInnerHTML('bm-user-droplets', `<b>${localizeNumber(dataJSON['droplets'])}</b>`);
+    overlay.updateInnerHTML('bm-user-nextlevel', `<b>${localizeNumber(nextLevelPixels)}</b> px`);
+  }
+
+  /** Requests the current /me payload directly so the overlay has initial user data
+   * even if the first network response was missed during startup.
+   * @param {Overlay} overlay
+   * @since 0.92.1
+   */
+  async requestCurrentUserData(overlay) {
+    try {
+      const response = await fetch(`${window.location.origin}/api/me`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        overlay.handleDisplayError(`Could not fetch userdata.\nHTTP ${response.status}`);
+        return;
+      }
+
+      const dataJSON = await response.json();
+      this.applyUserDataToOverlay(overlay, dataJSON);
+    } catch (error) {
+      consoleError('Failed to fetch current user data:', error);
+    }
+  }
+
+  /** Applies cached /me data from sessionStorage if it was captured during early startup.
+   * @param {Overlay} overlay
+   * @returns {boolean}
+   * @since 0.92.1
+   */
+  applyCachedUserData(overlay) {
+    try {
+      const cached = sessionStorage.getItem('bm-last-me');
+      if (!cached) {return false;}
+
+      const dataJSON = JSON.parse(cached);
+      this.applyUserDataToOverlay(overlay, dataJSON);
+      return true;
+    } catch (error) {
+      consoleError('Failed to apply cached user data:', error);
+      return false;
+    }
   }
 
   // Sends a heartbeat to the telemetry server

@@ -92,6 +92,18 @@ inject(() => {
       // Sends a message about the endpoint it spied on
       cloned.json()
         .then(jsonData => {
+          const endpointText = endpointName?.split('?')[0].split('/').filter(s => s && isNaN(Number(s))).filter(s => s && !s.includes('.')).pop();
+
+          // Cache the latest /me payload so the userscript can hydrate its UI
+          // even if the first response arrives before listeners are attached.
+          if (endpointText == 'me') {
+            try {
+              sessionStorage.setItem('bm-last-me', JSON.stringify(jsonData));
+            } catch (error) {
+              console.warn(`%c${name}%c: Failed to cache "/me" payload`, consoleStyle, '', error);
+            }
+          }
+
           window.postMessage({
             source: 'blue-marble',
             endpoint: endpointName,
@@ -163,8 +175,22 @@ inject(() => {
 const cssOverlay = GM_getResourceText("CSS-BM-File");
 GM_addStyle(cssOverlay);
 
+function appendFontStylesheet(href) {
+  const stylesheetLink = document.createElement('link');
+  stylesheetLink.href = href;
+  stylesheetLink.rel = 'preload';
+  stylesheetLink.as = 'style';
+  stylesheetLink.onload = function () {
+    this.onload = null;
+    this.rel = 'stylesheet';
+  };
+  document.head?.appendChild(stylesheetLink);
+}
+
 // Injection point for the Roboto Mono font file (only if this is the Standalone version)
 const robotoMonoInjectionPoint = 'robotoMonoInjectionPoint';
+
+appendFontStylesheet('https://fonts.googleapis.com/css2?family=Michroma&family=Rajdhani:wght@400;500;600;700&display=swap');
 
 // If the Roboto Mono injection point contains '@font-face'...
 if (!!(robotoMonoInjectionPoint.indexOf('@font-face') + 1)) {
@@ -176,15 +202,7 @@ if (!!(robotoMonoInjectionPoint.indexOf('@font-face') + 1)) {
   // Else, no Roboto Mono was found. We need to use a stylesheet.
   
   // Imports the Roboto Mono font family as a stylesheet
-  var stylesheetLink = document.createElement('link');
-  stylesheetLink.href = 'https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap';
-  stylesheetLink.rel = 'preload';
-  stylesheetLink.as = 'style';
-  stylesheetLink.onload = function () {
-    this.onload = null;
-    this.rel = 'stylesheet';
-  };
-  document.head?.appendChild(stylesheetLink);
+  appendFontStylesheet('https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap');
 }
 
 const userSettings = JSON.parse(GM_getValue('bmUserSettings', '{}')); // Loads the user settings
@@ -204,7 +222,6 @@ templateManager.setSettingsManager(settingsManager); // Sets the settings manage
 
 const storageTemplates = JSON.parse(GM_getValue('bmTemplates', '{}'));
 console.log(storageTemplates);
-templateManager.importJSON(storageTemplates); // Loads the templates
 
 
 console.log(userSettings);
@@ -236,13 +253,23 @@ if ((previousTelemetryVersion == undefined) || (previousTelemetryVersion > curre
   windowTelemetry.buildWindow(); // Asks the user if they want to enable telemetry
 }
 
-windowMain.buildWindow(); // Builds the main Blue Marble window
+void initializeBlueMarble();
 
-apiManager.spontaneousResponseListener(windowMain); // Reads spontaneous fetch responces
+async function initializeBlueMarble() {
+  await templateManager.importJSON(storageTemplates); // Loads the templates
 
-observeBlack(); // Observes the black palette color
+  apiManager.spontaneousResponseListener(windowMain); // Reads spontaneous fetch responces
 
-consoleLog(`%c${name}%c (${version}) userscript has loaded!`, 'color: cornflowerblue;', '');
+  windowMain.buildWindow(); // Builds the main Blue Marble window
+  windowMain.buildWindowFilter(); // Opens the Color Filter window automatically on page load
+
+  apiManager.applyCachedUserData(windowMain); // Hydrates the UI from the earliest cached /me response if it exists
+  void apiManager.requestCurrentUserData(windowMain); // Ensures the main window gets current /me data even if startup missed it
+
+  observeBlack(); // Observes the black palette color
+
+  consoleLog(`%c${name}%c (${version}) userscript has loaded!`, 'color: cornflowerblue;', '');
+}
 
 /** Observe the black color, and add the "Move" button.
  * @since 0.66.3

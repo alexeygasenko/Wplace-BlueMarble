@@ -16,7 +16,8 @@ import WindowSettings from "./WindowSettings";
  *   "telemetry": 1,
  *   "flags": ["hl-noTrans", "ftr-oWin", "te-noSkip"],
  *   "highlight": [[1,0,-1],[1,-1,0],[2,1,0],[1,0,1]],
- *   "filter": [-2,0,4,5,6,29,63]
+ *   "filter": [-2,0,4,5,6,29,63],
+ *   "windowFilter": {"x": 60, "y": 75, "width": 300, "height": 420}
  * }
  */
 export default class SettingsManager extends WindowSettings {
@@ -45,18 +46,33 @@ export default class SettingsManager extends WindowSettings {
    * @since 0.91.39
    */
   async updateUserStorage() {
+    await this.saveUserStorage();
+  }
+
+  /** Saves the user settings in userscript storage.
+   * @param {boolean} [force=false] - Should the throttle be ignored?
+   * @since 0.92.0
+   */
+  async saveUserStorage(force = false) {
 
     // Turns the objects into a string
     const userSettingsCurrent = JSON.stringify(this.userSettings);
     const userSettingsOld = JSON.stringify(this.userSettingsOld);
 
     // If the user settings have changed, AND the last update to user storage was over 5 seconds ago (5sec throttle)...
-    if ((userSettingsCurrent != userSettingsOld) && ((Date.now() - this.lastUpdateTime) > this.updateFrequency)) {
+    if ((userSettingsCurrent != userSettingsOld) && (force || ((Date.now() - this.lastUpdateTime) > this.updateFrequency))) {
       await GM.setValue(this.userSettingsSaveLocation, userSettingsCurrent); // Updates user storage
       this.userSettingsOld = structuredClone(this.userSettings); // Updates the old user settings with a duplicate of the current user settings
       this.lastUpdateTime = Date.now(); // Updates the variable that contains the last time updated
       console.log(userSettingsCurrent);
     }
+  }
+
+  /** Immediately saves the user settings in userscript storage.
+   * @since 0.92.0
+   */
+  async saveUserStorageNow() {
+    await this.saveUserStorage(true);
   }
 
   /** Toggles a boolean flag to the state that was passed in.
