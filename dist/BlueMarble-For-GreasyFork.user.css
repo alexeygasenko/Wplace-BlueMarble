@@ -626,7 +626,7 @@ input[type=file] {
 }
 #bm-window-filter .bm-filter-stat-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(8.7rem, 1.28fr);
   gap: 0.24rem;
 }
 #bm-window-filter .bm-filter-stat-card,
@@ -642,14 +642,14 @@ input[type=file] {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 #bm-window-filter .bm-filter-stat-card {
-  min-height: 2.7rem;
+  min-height: 2.28rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.08rem;
-  padding: 0.34rem 0.45rem;
+  gap: 0.04rem;
+  padding: 0.24rem 0.42rem;
   color: rgba(18, 35, 63, 0.96);
-  line-height: 1.22;
+  line-height: 1.12;
 }
 #bm-window-filter .bm-filter-stat-label {
   color: rgba(49, 71, 105, 0.82);
@@ -662,13 +662,15 @@ input[type=file] {
   display: inline-block;
   min-width: 0;
   color: rgba(15, 31, 56, 0.96);
-  font-size: 1.04em;
+  font-size: 1em;
   font-weight: 700;
   overflow-wrap: anywhere;
 }
 #bm-window-filter .bm-filter-stat-card time {
   font-family: var(--bm-font-mono);
+  font-size: 0.9em;
   letter-spacing: 0;
+  white-space: nowrap;
 }
 #bm-window-filter .bm-filter-sort-panel {
   padding: 0.38rem 0.48rem;
@@ -865,19 +867,20 @@ input[type=file] {
 }
 #bm-window-filter:not(.bm-windowed) .bm-filter-color-meta {
   align-items: flex-end;
-  justify-content: space-between;
-  gap: 0.42rem;
+  justify-content: flex-start;
+  gap: 0.36rem;
   text-align: right;
 }
 #bm-window-filter:not(.bm-windowed) .bm-filter-color-progress {
   align-items: flex-end;
-  gap: 0.08rem;
+  gap: 0.18rem;
 }
 #bm-window-filter:not(.bm-windowed) .bm-filter-color .bm-filter-color-pxl-cnt {
   font-family: var(--bm-font-display);
   font-size: 1rem;
   font-weight: 700;
   line-height: 1.15;
+  min-height: 2.3em;
   overflow-wrap: anywhere;
 }
 #bm-window-filter .bm-filter-color-toggle:focus-visible {
@@ -1402,4 +1405,4 @@ input[type=file] {
 
 /* src/main.css */
 
-/* Build Hash: 893c29fe0ffa */
+/* Build Hash: 79650aaae24f */

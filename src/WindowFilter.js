@@ -1,10 +1,29 @@
 import ConfettiManager from "./confetttiManager";
 import Overlay, { minimizeIconExpanded } from "./Overlay";
-import { calculateRelativeLuminance, localizeDate, localizeNumber, localizePercent, rgbToHex } from "./utils";
+import { calculateRelativeLuminance, localizeNumber, localizePercent, rgbToHex } from "./utils";
 
 const closeIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const fullscreenIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 4.5H4.5v4M15.5 4.5h4v4M19.5 15.5v4h-4M8.5 19.5h-4v-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
 const windowedIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 7.5V10H7.5M16.5 10H14V7.5M14 16.5V14h2.5M7.5 14H10v2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function localizeCompactDate(date) {
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = String(date.getFullYear()).slice(-2);
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  const uses12HourClock = new Intl.DateTimeFormat(undefined, {hour: 'numeric'}).resolvedOptions().hour12;
+
+  let hour = date.getHours();
+  let period = '';
+  if (uses12HourClock) {
+    period = hour >= 12 ? ' PM' : ' AM';
+    hour = hour % 12 || 12;
+  } else {
+    hour = String(hour).padStart(2, '0');
+  }
+
+  return `${month}/${day}/${year} ${hour}:${minute}${period}`;
+}
 
 /** The overlay builder for the color filter Blue Marble window.
  * @description This class handles the overlay UI for the color filter window of the Blue Marble userscript.
@@ -720,7 +739,7 @@ export default class WindowFilter extends Overlay {
           .buildElement()
           .addDiv({'class': 'bm-filter-color-meta'})
             .addDiv({'class': 'bm-filter-color-progress'})
-              .addSpan({'class': 'bm-filter-color-pxl-cnt', 'textContent': `${colorCorrectLocalized} / ${colorTotalLocalized}`}).buildElement()
+              .addSpan({'class': 'bm-filter-color-pxl-cnt', 'innerHTML': `${colorCorrectLocalized} /<br>${colorTotalLocalized}`}).buildElement()
               .addSmall({'class': 'bm-filter-color-pxl-desc', 'innerHTML': `${colorPercent} done<br>${((typeof colorIncorrect == 'number') && !isNaN(colorIncorrect)) ? colorIncorrect : '???'} off`}).buildElement()
             .buildElement()
           .buildElement()
@@ -1001,7 +1020,14 @@ export default class WindowFilter extends Overlay {
 
       // Updates the pixel count if it exists
       const pixelCount = document.querySelector(`#${this.windowID} .bm-filter-color[data-id="${colorID}"] .bm-filter-color-pxl-cnt`);
-      if (pixelCount) {pixelCount.textContent = `${colorCorrectLocalized} / ${colorTotalLocalized}`;}
+      if (pixelCount) {
+        const isWindowedPixelCount = !!pixelCount.closest(`#${this.windowID}.bm-windowed`);
+        if (isWindowedPixelCount) {
+          pixelCount.textContent = `${colorCorrectLocalized} / ${colorTotalLocalized}`;
+        } else {
+          pixelCount.innerHTML = `${colorCorrectLocalized} /<br>${colorTotalLocalized}`;
+        }
+      }
 
       // Updates the pixel description if it exists
       const pixelDesc = document.querySelector(`#${this.windowID} .bm-filter-color[data-id="${colorID}"] .bm-filter-color-pxl-desc`);
@@ -1072,6 +1098,6 @@ export default class WindowFilter extends Overlay {
 
     // Calculates the date & time the user will complete the templates
     this.timeRemaining = new Date(((this.allPixelsTotal - this.allPixelsCorrectTotal) * 30 * 1000) + Date.now());
-    this.timeRemainingLocalized = localizeDate(this.timeRemaining);
+    this.timeRemainingLocalized = localizeCompactDate(this.timeRemaining);
   }
 }

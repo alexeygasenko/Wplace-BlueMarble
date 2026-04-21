@@ -2448,6 +2448,22 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
   var closeIcon2 = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
   var fullscreenIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 4.5H4.5v4M15.5 4.5h4v4M19.5 15.5v4h-4M8.5 19.5h-4v-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
   var windowedIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 7.5V10H7.5M16.5 10H14V7.5M14 16.5V14h2.5M7.5 14H10v2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function localizeCompactDate(date) {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const year = String(date.getFullYear()).slice(-2);
+    const minute = String(date.getMinutes()).padStart(2, "0");
+    const uses12HourClock = new Intl.DateTimeFormat(void 0, { hour: "numeric" }).resolvedOptions().hour12;
+    let hour = date.getHours();
+    let period = "";
+    if (uses12HourClock) {
+      period = hour >= 12 ? " PM" : " AM";
+      hour = hour % 12 || 12;
+    } else {
+      hour = String(hour).padStart(2, "0");
+    }
+    return `${month}/${day}/${year} ${hour}:${minute}${period}`;
+  }
   var _WindowFilter_instances, getWindowState_fn2, prefersWindowedMode_fn, setWindowModePreference_fn, syncSortFormControls_fn, closeWindow_fn2, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn2, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, syncColorToggleLabel_fn, toggleColorVisibility_fn, initializeColorBlockToggle_fn, calculatePixelStatistics_fn;
   var WindowFilter = class extends Overlay {
     /** Constructor for the color filter window
@@ -2691,7 +2707,12 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         color.dataset["incorrect"] = colorIncorrect || 0;
         const pixelCount = document.querySelector(`#${this.windowID} .bm-filter-color[data-id="${colorID}"] .bm-filter-color-pxl-cnt`);
         if (pixelCount) {
-          pixelCount.textContent = `${colorCorrectLocalized} / ${colorTotalLocalized}`;
+          const isWindowedPixelCount = !!pixelCount.closest(`#${this.windowID}.bm-windowed`);
+          if (isWindowedPixelCount) {
+            pixelCount.textContent = `${colorCorrectLocalized} / ${colorTotalLocalized}`;
+          } else {
+            pixelCount.innerHTML = `${colorCorrectLocalized} /<br>${colorTotalLocalized}`;
+          }
         }
         const pixelDesc = document.querySelector(`#${this.windowID} .bm-filter-color[data-id="${colorID}"] .bm-filter-color-pxl-desc`);
         if (pixelDesc) {
@@ -3047,7 +3068,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
             }
             __privateMethod(this, _WindowFilter_instances, syncColorToggleLabel_fn).call(this, button, color);
           }
-        ).buildElement().buildElement().addDiv({ "class": "bm-filter-color-title" }).addSmall({ "textContent": `#${color.id.toString().padStart(2, 0)} / ${color.id == -2 ? "mixed" : colorValueHex}` }).buildElement().addHeader(2, { "textContent": color.name }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-filter-color-meta" }).addDiv({ "class": "bm-filter-color-progress" }).addSpan({ "class": "bm-filter-color-pxl-cnt", "textContent": `${colorCorrectLocalized} / ${colorTotalLocalized}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-desc", "innerHTML": `${colorPercent} done<br>${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} off` }).buildElement().buildElement().buildElement().buildElement();
+        ).buildElement().buildElement().addDiv({ "class": "bm-filter-color-title" }).addSmall({ "textContent": `#${color.id.toString().padStart(2, 0)} / ${color.id == -2 ? "mixed" : colorValueHex}` }).buildElement().addHeader(2, { "textContent": color.name }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-filter-color-meta" }).addDiv({ "class": "bm-filter-color-progress" }).addSpan({ "class": "bm-filter-color-pxl-cnt", "innerHTML": `${colorCorrectLocalized} /<br>${colorTotalLocalized}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-desc", "innerHTML": `${colorPercent} done<br>${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} off` }).buildElement().buildElement().buildElement().buildElement();
       }
     }
     colorList.buildOverlay(parentElement);
@@ -3209,7 +3230,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       confettiManager.createConfetti(document.querySelector(`#${this.windowID}`));
     }
     this.timeRemaining = new Date((this.allPixelsTotal - this.allPixelsCorrectTotal) * 30 * 1e3 + Date.now());
-    this.timeRemainingLocalized = localizeDate(this.timeRemaining);
+    this.timeRemainingLocalized = localizeCompactDate(this.timeRemaining);
   };
 
   // src/WindowMain.js
@@ -4660,4 +4681,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: a2ac3a13a36f
+// Build Hash: 339f830865b8
