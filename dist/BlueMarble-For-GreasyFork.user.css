@@ -1225,8 +1225,22 @@ input[type=file] {
 #bm-window-main .bm-main-hero {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   padding: 0.48rem 0.58rem;
+  text-align: center;
+}
+#bm-window-main .bm-main-hero .bm-favicon,
+#bm-window-main .bm-main-hero h1 {
+  position: relative;
+  z-index: 1;
+}
+#bm-window-main .bm-main-hero .bm-favicon {
+  margin-right: 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 #bm-window-main .bm-main-hero h1 {
   margin: 0;
@@ -1282,8 +1296,9 @@ input[type=file] {
 }
 #bm-window-main .bm-main-stat-card time {
   white-space: nowrap;
-  font-family: var(--bm-font-mono);
-  letter-spacing: 0.06em;
+  font-family: inherit;
+  font-size: 1.3em;
+  letter-spacing: inherit;
 }
 #bm-window-main .bm-main-shell {
   padding: 0.48rem;
@@ -1431,4 +1446,4 @@ input[type=file] {
 
 /* src/main.css */
 
-/* Build Hash: 25440fe32125 */
+/* Build Hash: 1839ba740765 */
