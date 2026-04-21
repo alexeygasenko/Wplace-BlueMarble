@@ -15,27 +15,81 @@
 
 /* The Blue Marble windows */
 .bm-window {
+  --bm-surface-strong: rgba(9, 20, 42, 0.5);
+  --bm-surface-soft: rgba(24, 41, 74, 0.28);
+  --bm-surface-glass: rgba(255, 255, 255, 0.1);
+  --bm-surface-glass-strong: rgba(255, 255, 255, 0.18);
+  --bm-border-soft: rgba(255, 255, 255, 0.18);
+  --bm-border-strong: rgba(163, 228, 255, 0.34);
+  --bm-text-primary: rgba(17, 36, 66, 0.96);
+  --bm-text-secondary: rgba(36, 57, 90, 0.84);
+  --bm-accent-start: #baf6ff;
+  --bm-accent-end: #81b6ff;
+  --bm-accent-shadow: rgba(132, 182, 255, 0.22);
+  --bm-font-body: "Rajdhani", "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  --bm-font-display: "Michroma", "Orbitron", "Segoe UI", sans-serif;
+  --bm-font-mono: "Roboto Mono", "Rajdhani", "Courier New", monospace;
   position: fixed;
-  background-color: rgba(21, 48, 99, 0.9);
-  color: white;
-  padding: 10px;
-  border-radius: 8px;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.24), transparent 18%),
+    radial-gradient(circle at 86% 8%, rgba(186, 246, 255, 0.22), transparent 24%),
+    radial-gradient(circle at 82% 84%, rgba(129, 182, 255, 0.18), transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06) 22%, rgba(105, 145, 212, 0.08) 54%, rgba(9, 20, 42, 0.18));
+  color: var(--bm-text-primary);
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid var(--bm-border-soft);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
   z-index: 9000;
-  transition: all 0.3s ease, transform 0s;
+  transition:
+    background 320ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    opacity 220ms ease,
+    transform 0s,
+    width 220ms ease,
+    max-width 220ms ease,
+    max-height 220ms ease;
   top: 75px;
   left: 60px;
   width: auto;
   max-height: fit-content;
   max-width: calc(100% - 135px);
-  /* Font stack is as follows:
-   * Highest Priority (Roboto Mono)
-   * Windows fallback (Courier New)
-   * macOS fallback (Monaco)
-   * Linux fallback (DejaVu Sans Mono)
-   * Any possible monospace font (monospace)
-   * Last resort (Arial) */
-  font-family: 'Roboto Mono', 'Courier New', 'Monaco', 'DejaVu Sans Mono', monospace, 'Arial';
-  letter-spacing: 0.05em;
+  backdrop-filter: blur(26px) saturate(1.25);
+  font-family: var(--bm-font-body);
+  letter-spacing: 0.04em;
+}
+
+.bm-window::before,
+.bm-window::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bm-window::before {
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.12) 24%, rgba(186, 246, 255, 0.22) 58%, rgba(129, 182, 255, 0.3));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.85;
+}
+
+.bm-window::after {
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 24%),
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.22), transparent 22%),
+    radial-gradient(circle at 88% 16%, rgba(186, 246, 255, 0.18), transparent 18%);
+  opacity: 1;
 }
 
 /* The drag bar */
@@ -43,12 +97,19 @@
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 0.5ch;
-  /* For background circles, width & height should be odd, cx & cy should be half of width & height, and r should be less than or equal to cx & cy */
-  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="5" height="5"><circle cx="3" cy="3" r="1.5" fill="CornflowerBlue"/></svg>') repeat;
+  gap: 0.28ch;
+  padding: 0.18rem 0.24rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background:
+    radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.22) 0, transparent 42%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
   cursor: grab;
   width: 100%;
   height: fit-content;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 6px 18px rgba(0, 0, 0, 0.1);
 }
 
 /* When a window is being dragged */
@@ -73,37 +134,42 @@
 /* The Blue Marble Favicon */
 .bm-favicon {
   display: inline-block;
-  height: 2.5em;
-  margin-right: 1ch;
+  height: 2.2em;
+  margin-right: 0.45ch;
+  padding: 0.2rem;
+  border-radius: 12px;
   vertical-align: middle;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 8px 18px rgba(0, 0, 0, 0.12);
 }
 
 /* Header 1 */
 .bm-window h1 {
   display: inline-block;
-  font-size: x-large;
-  font-weight: bold;
+  font-size: 1rem;
+  font-weight: 700;
   vertical-align: middle;
+  font-family: var(--bm-font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(16, 33, 60, 0.96);
 }
 
 /* Header 1 when inside dragbar */
 /* Or, when the custom class is used */
 .bm-dragbar h1,
 .bm-dragbar-text {
-  font-size: 1.2em;
+  font-size: 0.78rem;
   user-select: none;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  text-shadow:
-    3px  0px rgba(21, 48, 99, 0.5),
-   -3px  0px rgba(21, 48, 99, 0.5),
-    0px  3px rgba(21, 48, 99, 0.5),
-    0px -3px rgba(21, 48, 99, 0.5),
-    3px  3px rgba(21, 48, 99, 0.5),
-   -3px  3px rgba(21, 48, 99, 0.5),
-    3px -3px rgba(21, 48, 99, 0.5),
-   -3px -3px rgba(21, 48, 99, 0.5);
+  font-family: var(--bm-font-display);
+  letter-spacing: 0.14em;
+  color: rgba(18, 37, 66, 0.95);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 /* Container for Header 1 when inside dragbar */
@@ -114,9 +180,12 @@
 /* Header 2 */
 .bm-window h2 {
   display: inline-block;
-  font-size: larger;
+  font-size: 0.88rem;
   font-weight: 700;
   vertical-align: middle;
+  font-family: var(--bm-font-display);
+  letter-spacing: 0.1em;
+  color: rgba(18, 35, 64, 0.96);
 }
 
 /* Header 3 */
@@ -124,6 +193,24 @@
   display: inline-block;
   font-size: large;
   font-weight: 700;
+  font-family: var(--bm-font-display);
+  letter-spacing: 0.08em;
+  color: rgba(18, 35, 64, 0.96);
+}
+
+/* Paragraphs */
+.bm-window p {
+  color: var(--bm-text-secondary);
+  line-height: 1.5;
+  letter-spacing: 0.035em;
+}
+
+/* Horizontal dividers */
+.bm-window hr {
+  border: none;
+  height: 1px;
+  margin: 0.32rem 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
 }
 
 /* Container with a vertically centered header 1-6 */
@@ -135,42 +222,139 @@
 
 /* Containers for "sections" of elements */
 .bm-container {
-  margin: 0.5em 0;
+  margin: 0.24em 0;
+}
+
+/* Shared form controls */
+.bm-window input,
+.bm-window select,
+.bm-window textarea,
+.bm-window button {
+  font: inherit;
 }
 
 /* All window buttons */
 .bm-window button {
-  background-color: #144eb9;
-  border-radius: 1em;
-  padding: 0 0.75ch;
+  appearance: none;
+  color: var(--bm-text-primary);
+  font-family: var(--bm-font-display);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(164, 208, 255, 0.14));
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 0.28em 0.62em;
+  min-height: 1.78em;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 8px 20px rgba(0, 0, 0, 0.1);
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
 }
 
 /* All window buttons when hovered/focused */
-.bm-window button:hover, .bm-window button:focus-visible {
-  background-color: #1061e5;
+.bm-window button:hover,
+.bm-window button:focus-visible {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(186, 246, 255, 0.18));
+  border-color: rgba(230, 245, 255, 0.36);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 10px 22px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
 }
 
-/* All window buttons when pressed (plus disabled color) */
-.bm-window button:active,
-.bm-window button:disabled {
-  background-color: #2e97ff;
+/* Focus ring */
+.bm-window button:focus-visible,
+.bm-window input:focus-visible,
+.bm-window select:focus-visible,
+.bm-window textarea:focus-visible {
+  outline: none;
+  border-color: rgba(116, 231, 255, 0.62);
+  box-shadow:
+    0 0 0 3px rgba(116, 231, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* All window buttons when pressed */
+.bm-window button:active {
+  transform: translateY(0) scale(0.98);
+  filter: brightness(0.98);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 16px rgba(18, 36, 78, 0.24);
 }
 
 /* All window buttons when disabled */
-.bm-window button:disabled, .bm-window button:disabled {
-  text-decoration: line-through;
+.bm-window button:disabled {
+  opacity: 0.56;
   cursor: not-allowed;
+  text-decoration: none;
+  transform: none;
+  filter: saturate(0.72);
+  box-shadow: none;
+}
+
+/* Button variants */
+.bm-window button.bm-button-primary {
+  color: #07203b;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.42), rgba(186, 246, 255, 0.34));
+  border-color: rgba(239, 248, 255, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.44),
+    0 10px 22px rgba(129, 182, 255, 0.14);
+}
+
+.bm-window button.bm-button-primary:hover,
+.bm-window button.bm-button-primary:focus-visible {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.52), rgba(204, 250, 255, 0.36));
+}
+
+.bm-window button.bm-button-secondary {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.bm-window button.bm-button-secondary:hover,
+.bm-window button.bm-button-secondary:focus-visible {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(186, 246, 255, 0.12));
 }
 
 /* Icon buttons (single character text content buttons) */
 .bm-button-circle {
-  border: white 1px solid;
-  height: 1.5em;
-  width: 1.5em;
-  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  inline-size: 1.62rem;
+  block-size: 1.62rem;
+  min-height: 1.62rem !important;
+  min-width: 1.62rem;
+  margin-top: 0;
   text-align: center;
-  line-height: 1em;
-  padding: 0 !important; /* Overrides the padding in ".bm-window button" */
+  line-height: 1;
+  padding: 0 !important;
+  aspect-ratio: 1 / 1;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.1)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 8px 18px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden;
+  flex: 0 0 auto;
+  font-size: 0.74rem;
+}
+
+.bm-button-circle svg {
+  width: 70%;
+  height: 70%;
 }
 
 /* Pin button */
@@ -187,39 +371,52 @@
 
 /* Transparent buttons */
 .bm-window button.bm-button-trans {
-  background-color: unset;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
 }
 
 /* Transparent buttons on dark backgrounds when hovered */
 .bm-button-trans.bm-button-hover-white:hover,
 .bm-button-trans.bm-button-hover-white:focus {
-  background-color: rgba(255, 255, 255, 0.17);
+  background-color: rgba(255, 255, 255, 0.18) !important;
 }
 
 /* Transparent buttons on dark backgrounds when pressed */
 .bm-button-trans.bm-button-hover-white:active {
-  background-color: rgba(255, 255, 255, 0.22);
+  background-color: rgba(255, 255, 255, 0.24) !important;
 }
 
 /* Transparent buttons on light backgrounds when hovered */
 .bm-button-trans.bm-button-hover-black:hover,
 .bm-button-trans.bm-button-hover-black:focus {
-  background-color: rgba(0, 0, 0, 0.17);
+  background-color: rgba(0, 0, 0, 0.14) !important;
 }
 
 /* Transparent buttons on light backgrounds when pressed */
 .bm-button-trans.bm-button-hover-black:active {
-  background-color: rgba(0, 0, 0, 0.22);
+  background-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Shared inputs */
+.bm-window input[type="number"],
+.bm-window select,
+.bm-window textarea {
+  color: var(--bm-text-primary);
+  font-family: var(--bm-font-body);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 /* Tile (x, y) & Pixel (x, y) input fields */
 input[type="number"].bm-input-coords {
   appearance: auto;
   -moz-appearance: textfield;
-  width: 5.5ch;
+  width: 5.9ch;
   margin-left: 1ch;
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 0 0.5ch;
+  padding: 0.2em 0.35ch;
   font-size: small;
 }
 
@@ -255,10 +452,7 @@ input[type="file"] {
 
 /* Dropdown selection & dropdown (::picker) menus */
 .bm-window select {
-  color: white;
-  background-color: #144eb9;
-  border-radius: 1em;
-  padding: 0 0.5ch;
+  padding: 0.22em 0.45ch;
 }
 
 /* Checkbox container (the label element) */
@@ -266,11 +460,14 @@ input[type="file"] {
   display: flex;
   width: fit-content;
   gap: 1ch;
+  align-items: center;
+  color: var(--bm-text-secondary);
 }
 
 /* Checkbox */
 .bm-window input[type="checkbox"] {
   width: 1em;
+  accent-color: #74e7ff;
 }
 
 /* Window content container */
@@ -283,21 +480,31 @@ input[type="file"] {
 /* Text areas */
 .bm-window textarea {
   font-size: small;
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 0 0.5ch;
-  height: 5.25em;
+  padding: 0.38em 0.52em;
+  height: 4em;
   width: 100%;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.bm-window textarea::placeholder,
+.bm-window input::placeholder {
+  color: rgba(47, 68, 102, 0.6);
 }
 
 /* Anchor/Links with no children */
 .bm-window a:not(:has(*)) {
+  color: rgba(21, 88, 164, 0.94);
   text-decoration: underline;
+  text-decoration-color: rgba(21, 88, 164, 0.35);
 }
 
 /* Small elements */
 .bm-window small {
   font-size: x-small;
-  color: lightgray;
+  font-family: var(--bm-font-display);
+  letter-spacing: 0.12em;
+  color: var(--bm-text-secondary);
 }
 
 /* List items of unordered lists */
@@ -310,6 +517,25 @@ input[type="file"] {
 .bm-window .bm-container.bm-scrollable {
   max-height: var(--bm-scrollable-max-height, calc(80vh - 150px));
   overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(146, 221, 255, 0.42) rgba(255, 255, 255, 0.05);
+}
+
+.bm-window .bm-container.bm-scrollable::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.bm-window .bm-container.bm-scrollable::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(116, 231, 255, 0.48), rgba(83, 141, 255, 0.4));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.bm-window .bm-container.bm-scrollable::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
 }
 
 /* Flex children space between */
@@ -318,7 +544,7 @@ input[type="file"] {
   align-content: center;
   justify-content: space-between;
   align-items: center;
-  gap: 0.5ch;
+  gap: 0.35ch;
 }
 
 /* Flex children space center */
@@ -327,7 +553,7 @@ input[type="file"] {
   align-content: center;
   justify-content: center;
   align-items: center;
-  gap: 0.5ch;
+  gap: 0.35ch;
 }
 
 /* ASCII Art */
@@ -344,9 +570,8 @@ input[type="file"] {
 /* Containers for "sections" of elements in windowed mode */
 /* Does not apply to the main window */
 .bm-windowed .bm-container:not(#bm-window-main .bm-container) {
-  margin-top: 0.25em;
-  margin-bottom: 0.25em;
-  /* Do not use 'margin' shorthand, as it will override left/right margin */
+  margin-top: 0.18em;
+  margin-bottom: 0.18em;
 }
 
 /* Header 1 in windowed mode */

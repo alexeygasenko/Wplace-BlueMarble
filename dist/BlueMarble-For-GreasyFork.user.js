@@ -2300,65 +2300,8 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
   };
   customElements.define("confetti-piece", BlueMarbleConfettiPiece);
 
-  // src/WindowCredits.js
-  var WindowCredts = class extends Overlay {
-    /** Constructor for the Credits window
-     * @param {string} name - The name of the userscript
-     * @param {string} version - The version of the userscript
-     * @since 0.90.9
-     * @see {@link Overlay#constructor} for examples
-     */
-    constructor(name2, version2) {
-      super(name2, version2);
-      this.window = null;
-      this.windowID = "bm-window-credits";
-      this.windowParent = document.body;
-    }
-    /** Spawns a Credits window.
-     * If another credits window already exists, we DON'T spawn another!
-     * Parent/child relationships in the DOM structure below are indicated by indentation.
-     * @since 0.90.9
-     */
-    buildWindow() {
-      const ascii = `
-\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2557     \u2588\u2588\u2557   \u2588\u2588\u2557\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557
-\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2551     \u2588\u2588\u2551   \u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255D
-\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255D\u2588\u2588\u2551     \u2588\u2588\u2551   \u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2557  
-\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2551     \u2588\u2588\u2551   \u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u255D  
-\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255D\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557\u255A\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255D\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557
-\u255A\u2550\u2550\u2550\u2550\u2550\u255D \u255A\u2550\u2550\u2550\u2550\u2550\u2550\u255D \u255A\u2550\u2550\u2550\u2550\u2550\u255D \u255A\u2550\u2550\u2550\u2550\u2550\u2550\u255D
-
-\u2588\u2588\u2588\u2557   \u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2557     \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557
-\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2551     \u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255D
-\u2588\u2588\u2554\u2588\u2588\u2588\u2588\u2554\u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255D\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255D\u2588\u2588\u2551     \u2588\u2588\u2588\u2588\u2588\u2557  
-\u2588\u2588\u2551\u255A\u2588\u2588\u2554\u255D\u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2551     \u2588\u2588\u2554\u2550\u2550\u255D  
-\u2588\u2588\u2551 \u255A\u2550\u255D \u2588\u2588\u2551\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255D\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557
-\u255A\u2550\u255D     \u255A\u2550\u255D\u255A\u2550\u255D  \u255A\u2550\u255D\u255A\u2550\u255D  \u255A\u2550\u255D\u255A\u2550\u2550\u2550\u2550\u2550\u255D \u255A\u2550\u2550\u2550\u2550\u2550\u2550\u255D\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u255D
-`;
-      if (document.querySelector(`#${this.windowID}`)) {
-        document.querySelector(`#${this.windowID}`).remove();
-        return;
-      }
-      this.window = this.addDiv({ "id": this.windowID, "class": "bm-window" }, (instance, div) => {
-      }).addDragbar().addButton({ "class": "bm-button-circle", "textContent": "\u25BC", "aria-label": 'Minimize window "Credits"', "data-button-status": "expanded" }, (instance, button) => {
-        button.onclick = () => instance.handleMinimization(button);
-        button.ontouchend = () => {
-          button.click();
-        };
-      }).buildElement().addDiv().buildElement().addButton({ "class": "bm-button-circle", "textContent": "\u2716", "aria-label": 'Close window "Credits"' }, (instance, button) => {
-        button.onclick = () => {
-          document.querySelector(`#${this.windowID}`)?.remove();
-        };
-        button.ontouchend = () => {
-          button.click();
-        };
-      }).buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically" }).addHeader(1, { "textContent": "Credits" }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-scrollable" }).addSpan({ "role": "img", "aria-label": this.name }).addSpan({ "innerHTML": ascii, "class": "bm-ascii", "aria-hidden": "true" }).buildElement().buildElement().addBr().buildElement().addHr().buildElement().addBr().buildElement().addSpan({ "textContent": '"Blue Marble" userscript is made by SwingTheVine.' }).buildElement().addBr().buildElement().addSpan({ "innerHTML": 'The <a href="https://bluemarble.lol/" target="_blank" rel="noopener noreferrer">Blue Marble Website</a> is made by <a href="https://github.com/crqch" target="_blank" rel="noopener noreferrer">crqch</a>.' }).buildElement().addBr().buildElement().addSpan({ "textContent": `The Blue Marble Website used until ${localizeDate(new Date(1756069320 * 1e3))} was made by Camille Daguin.` }).buildElement().addBr().buildElement().addSpan({ "textContent": 'The favicon "Blue Marble" is owned by NASA. (The image of the Earth is owned by NASA)' }).buildElement().addBr().buildElement().addSpan({ "textContent": "Special Thanks:" }).buildElement().addUl().addLi({ "textContent": "Espresso, Meqa, and Robot for moderating SwingTheVine's community." }).buildElement().addLi({ "innerHTML": 'nof, <a href="https://github.com/TouchedByDarkness" target="_blank" rel="noopener noreferrer">darkness</a> for creating similar userscripts!' }).buildElement().addLi({ "innerHTML": '<a href="https://wondapon.net/" target="_blank" rel="noopener noreferrer">Wonda</a> for the Blue Marble banner image!' }).buildElement().addLi({ "innerHTML": '<a href="https://github.com/BullStein" target="_blank" rel="noopener noreferrer">BullStein</a>, <a href="https://github.com/allanf181" target="_blank" rel="noopener noreferrer">allanf181</a> for being early beta testers!' }).buildElement().addLi({ "innerHTML": 'guidu_ and <a href="https://github.com/Nick-machado" target="_blank" rel="noopener noreferrer">Nick-machado</a> for the original "Minimize" Button code!' }).buildElement().addLi({ "innerHTML": 'Nomad and <a href="https://www.youtube.com/@gustav_vv" target="_blank" rel="noopener noreferrer">Gustav</a> for the tutorials!' }).buildElement().addLi({ "innerHTML": '<a href="https://github.com/cfpwastaken" target="_blank" rel="noopener noreferrer">cfp</a> for creating the template overlay that Blue Marble was based on!' }).buildElement().addLi({ "innerHTML": '<a href="https://forcenetwork.cloud/" target="_blank" rel="noopener noreferrer">Force Network</a> for hosting the <a href="https://github.com/SwingTheVine/Wplace-TelemetryServer" target="_blank" rel="noopener noreferrer">telemetry server</a>!' }).buildElement().addLi({ "innerHTML": '<a href="https://thebluecorner.net" target="_blank" rel="noopener noreferrer">TheBlueCorner</a> for getting me interested in online pixel canvases!' }).buildElement().buildElement().addBr().buildElement().addSpan({ "innerHTML": '<a href="https://ko-fi.com/swingthevine" target="_blank" rel="noopener noreferrer">Donators</a>:' }).buildElement().addUl().addLi({ "textContent": "Soultree" }).buildElement().addLi({ "textContent": "Espresso" }).buildElement().addLi({ "textContent": "BEST FAN" }).buildElement().addLi({ "textContent": "FuchsDresden" }).buildElement().addLi({ "textContent": "Jack" }).buildElement().addLi({ "textContent": "raiken_au" }).buildElement().addLi({ "textContent": "Jacob" }).buildElement().addLi({ "textContent": "StupidOne" }).buildElement().addLi({ "textContent": "2 Anonymous Supporters" }).buildElement().buildElement().buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
-      this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
-    }
-  };
-
   // src/WindowFilter.js
-  var _WindowFilter_instances, getWindowState_fn, prefersWindowedMode_fn, setWindowModePreference_fn, syncSortFormControls_fn, closeWindow_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, calculatePixelStatistics_fn;
+  var _WindowFilter_instances, getWindowState_fn, prefersWindowedMode_fn, setWindowModePreference_fn, syncSortFormControls_fn, closeWindow_fn, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, calculatePixelStatistics_fn;
   var WindowFilter = class extends Overlay {
     /** Constructor for the color filter window
      * @param {*} executor - The executing class
@@ -2378,6 +2321,8 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       this.windowResizeObserver = null;
       this.windowViewportResizeHandler = null;
       this.windowSaveTimeout = null;
+      this.colorRefreshInterval = null;
+      this.colorRefreshIntervalMS = 1e4;
       this.windowMinWidth = 260;
       this.windowMinHeight = 220;
       this.windowMaxWidth = 1e3;
@@ -2439,17 +2384,11 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically" }).addHeader(1, { "textContent": "Color Filter" }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-flex-between bm-center-vertically", "style": "gap: 1.5ch;" }).addButton({ "textContent": "Hide All Colors" }, (instance, button) => {
+      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically bm-filter-header" }).addHeader(1, { "textContent": "Color Filter" }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-flex-between bm-center-vertically bm-filter-toolbar", "style": "gap: 1.5ch;" }).addButton({ "class": "bm-button-secondary", "textContent": "Hide All Colors" }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, false);
-      }).buildElement().addButton({ "textContent": "Refresh Data" }, (instance, button) => {
-        button.onclick = () => {
-          button.disabled = true;
-          this.updateColorList();
-          button.disabled = false;
-        };
-      }).buildElement().addButton({ "textContent": "Show All Colors" }, (instance, button) => {
+      }).buildElement().addButton({ "class": "bm-button-secondary", "textContent": "Show All Colors" }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, true);
-      }).buildElement().buildElement().addDiv({ "class": "bm-container bm-scrollable" }).addDiv({ "class": "bm-container", "style": "margin-left: 2.5ch; margin-right: 2.5ch;" }).addDiv({ "class": "bm-container" }).addSpan({ "id": "bm-filter-tile-load", "innerHTML": "<b>Tiles Loaded:</b> 0 / ???" }).buildElement().addBr().buildElement().addSpan({ "id": "bm-filter-tot-correct", "innerHTML": "<b>Correct Pixels:</b> ???" }).buildElement().addBr().buildElement().addSpan({ "id": "bm-filter-tot-total", "innerHTML": "<b>Total Pixels:</b> ???" }).buildElement().addBr().buildElement().addSpan({ "id": "bm-filter-tot-remaining", "innerHTML": "<b>Complete:</b> ??? (???)" }).buildElement().addBr().buildElement().addSpan({ "id": "bm-filter-tot-completed", "innerHTML": "??? ???" }).buildElement().buildElement().addDiv({ "class": "bm-container" }).addP({ "innerHTML": `Press the \u{1F5D7} button to make this window smaller. Colors with the icon ${this.eyeOpen.replace("<svg", '<svg aria-label="Eye Open"')} will be shown on the canvas. Colors with the icon ${this.eyeClosed.replace("<svg", '<svg aria-label="Eye Closed"')} will not be shown on the canvas. The "Hide All Colors" and "Show All Colors" buttons only apply to colors that display in the list below. The amount of correct pixels is dependent on how many tiles of the template you have loaded since you last opened Wplace.live. If all tiles have been loaded, then the "correct pixel" count is accurate.` }).buildElement().buildElement().addHr().buildElement().addForm({ "class": "bm-container" }).addFieldset().addLegend({ "textContent": "Sort Options:", "style": "font-weight: 700;" }).buildElement().addDiv({ "class": "bm-container" }).addSelect({ "id": "bm-filter-sort-primary", "name": "sortPrimary", "textContent": "I want to view " }).addOption({ "value": "id", "textContent": "color IDs" }).buildElement().addOption({ "value": "name", "textContent": "color names" }).buildElement().addOption({ "value": "premium", "textContent": "premium colors" }).buildElement().addOption({ "value": "percent", "textContent": "percentage" }).buildElement().addOption({ "value": "correct", "textContent": "correct pixels" }).buildElement().addOption({ "value": "incorrect", "textContent": "incorrect pixels" }).buildElement().addOption({ "value": "total", "textContent": "total pixels" }).buildElement().buildElement().addSelect({ "id": "bm-filter-sort-secondary", "name": "sortSecondary", "textContent": " in " }).addOption({ "value": "ascending", "textContent": "ascending" }).buildElement().addOption({ "value": "descending", "textContent": "descending" }).buildElement().buildElement().addSpan({ "textContent": " order." }).buildElement().buildElement().addDiv({ "class": "bm-container" }).addCheckbox({ "id": "bm-filter-show-unused", "name": "showUnused", "textContent": "Show unused colors" }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-container" }).addButton({ "textContent": "Sort Colors", "type": "submit" }, (instance, button) => {
+      }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-scrollable bm-filter-scrollable" }).addDiv({ "class": "bm-container bm-filter-insights", "style": "margin-left: 2.5ch; margin-right: 2.5ch;" }).addDiv({ "class": "bm-container bm-filter-stats-card" }).addSpan({ "id": "bm-filter-tile-load", "innerHTML": "<b>Tiles Loaded:</b> 0 / ???" }).buildElement().addBr().buildElement().addSpan({ "id": "bm-filter-tot-correct", "innerHTML": "<b>Correct Pixels:</b> ???" }).buildElement().addBr().buildElement().addSpan({ "id": "bm-filter-tot-total", "innerHTML": "<b>Total Pixels:</b> ???" }).buildElement().addBr().buildElement().addSpan({ "id": "bm-filter-tot-remaining", "innerHTML": "<b>Complete:</b> ??? (???)" }).buildElement().addBr().buildElement().addSpan({ "id": "bm-filter-tot-completed", "innerHTML": "??? ???" }).buildElement().buildElement().addDiv({ "class": "bm-container bm-filter-note" }).addP({ "innerHTML": `Press the \u{1F5D7} button to make this window smaller. Colors with the icon ${this.eyeOpen.replace("<svg", '<svg aria-label="Eye Open"')} will be shown on the canvas. Colors with the icon ${this.eyeClosed.replace("<svg", '<svg aria-label="Eye Closed"')} will not be shown on the canvas. The "Hide All Colors" and "Show All Colors" buttons only apply to colors that display in the list below. The amount of correct pixels is dependent on how many tiles of the template you have loaded since you last opened Wplace.live. If all tiles have been loaded, then the "correct pixel" count is accurate.` }).buildElement().buildElement().addHr().buildElement().addForm({ "class": "bm-container bm-filter-sort-panel" }).addFieldset().addLegend({ "textContent": "Sort Options:", "style": "font-weight: 700;" }).buildElement().addDiv({ "class": "bm-container" }).addSelect({ "id": "bm-filter-sort-primary", "name": "sortPrimary", "textContent": "I want to view " }).addOption({ "value": "id", "textContent": "color IDs" }).buildElement().addOption({ "value": "name", "textContent": "color names" }).buildElement().addOption({ "value": "premium", "textContent": "premium colors" }).buildElement().addOption({ "value": "percent", "textContent": "percentage" }).buildElement().addOption({ "value": "correct", "textContent": "correct pixels" }).buildElement().addOption({ "value": "incorrect", "textContent": "incorrect pixels" }).buildElement().addOption({ "value": "total", "textContent": "total pixels" }).buildElement().buildElement().addSelect({ "id": "bm-filter-sort-secondary", "name": "sortSecondary", "textContent": " in " }).addOption({ "value": "ascending", "textContent": "ascending" }).buildElement().addOption({ "value": "descending", "textContent": "descending" }).buildElement().buildElement().addSpan({ "textContent": " order." }).buildElement().buildElement().addDiv({ "class": "bm-container" }).addCheckbox({ "id": "bm-filter-show-unused", "name": "showUnused", "textContent": "Show unused colors" }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-container bm-filter-sort-actions" }).addButton({ "class": "bm-button-primary", "textContent": "Sort Colors", "type": "submit" }, (instance, button) => {
         button.onclick = (event) => {
           event.preventDefault();
           const formData = new FormData(document.querySelector(`#${this.windowID} form`));
@@ -2471,6 +2410,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       this.updateInnerHTML("#bm-filter-tot-total", `<b>Total Pixels:</b> ${localizeNumber(this.allPixelsTotal)}`);
       this.updateInnerHTML("#bm-filter-tot-remaining", `<b>Remaining:</b> ${localizeNumber((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0))} (${localizePercent(((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0)) / (this.allPixelsTotal || 1))})`);
       this.updateInnerHTML("#bm-filter-tot-completed", `<b>Completed at:</b> <time datetime="${this.timeRemaining.toISOString().replace(/\.\d{3}Z$/, "Z")}">${this.timeRemainingLocalized}</time>`);
+      __privateMethod(this, _WindowFilter_instances, startAutoRefresh_fn).call(this);
     }
     /** Spawns a windowed Color Filter window.
      * If another color filter window already exists, we DON'T spawn another!
@@ -2511,17 +2451,11 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically" }).addHeader(1, { "textContent": "Color Filter" }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-flex-between bm-center-vertically", "style": "gap: 1.5ch;" }).addButton({ "textContent": "None" }, (instance, button) => {
+      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically bm-filter-header" }).addHeader(1, { "textContent": "Color Filter" }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-flex-between bm-center-vertically bm-filter-toolbar", "style": "gap: 1.5ch;" }).addButton({ "class": "bm-button-secondary", "textContent": "None" }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, false);
-      }).buildElement().addButton({ "textContent": "Refresh" }, (instance, button) => {
-        button.onclick = () => {
-          button.disabled = true;
-          this.updateColorList();
-          button.disabled = false;
-        };
-      }).buildElement().addButton({ "textContent": "All" }, (instance, button) => {
+      }).buildElement().addButton({ "class": "bm-button-secondary", "textContent": "All" }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, true);
-      }).buildElement().buildElement().addDiv({ "class": "bm-container bm-scrollable" }).buildElement().buildElement().addDiv({
+      }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-scrollable bm-filter-scrollable" }).buildElement().buildElement().addDiv({
         "class": "bm-resize-corner",
         "title": "Resize Color Filter window",
         "aria-label": "Resize Color Filter window",
@@ -2534,6 +2468,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       __privateMethod(this, _WindowFilter_instances, buildColorList_fn).call(this, scrollableContainer);
       __privateMethod(this, _WindowFilter_instances, syncSortFormControls_fn).call(this);
       __privateMethod(this, _WindowFilter_instances, sortColorList_fn).call(this, this.sortPrimary, this.sortSecondary, this.showUnused);
+      __privateMethod(this, _WindowFilter_instances, startAutoRefresh_fn).call(this);
     }
     /** The information about a specific color on the palette.
      * @typedef {Object} ColorData
@@ -2584,6 +2519,11 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         const allTotal = this.allPixelsTotal.toString().length > 7 ? this.allPixelsTotal.toString().slice(0, 2) + "\u2026" + this.allPixelsTotal.toString().slice(-3) : this.allPixelsTotal.toString();
         this.updateInnerHTML("#bm-filter-windowed-color-totals", `${allCorrect}/${allTotal}`, true);
       }
+      this.updateInnerHTML("#bm-filter-tile-load", `<b>Tiles Loaded:</b> ${localizeNumber(this.tilesLoadedTotal)} / ${localizeNumber(this.tilesTotal)}`);
+      this.updateInnerHTML("#bm-filter-tot-correct", `<b>Correct Pixels:</b> ${localizeNumber(this.allPixelsCorrectTotal)}`);
+      this.updateInnerHTML("#bm-filter-tot-total", `<b>Total Pixels:</b> ${localizeNumber(this.allPixelsTotal)}`);
+      this.updateInnerHTML("#bm-filter-tot-remaining", `<b>Remaining:</b> ${localizeNumber((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0))} (${localizePercent(((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0)) / (this.allPixelsTotal || 1))})`);
+      this.updateInnerHTML("#bm-filter-tot-completed", `<b>Completed at:</b> <time datetime="${this.timeRemaining.toISOString().replace(/\.\d{3}Z$/, "Z")}">${this.timeRemainingLocalized}</time>`);
       if (!colorList) {
         return colorStatistics;
       }
@@ -2682,8 +2622,32 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     if (windowElement?.classList.contains("bm-windowed")) {
       __privateMethod(this, _WindowFilter_instances, saveWindowState_fn).call(this, windowElement);
     }
+    __privateMethod(this, _WindowFilter_instances, stopAutoRefresh_fn).call(this);
     __privateMethod(this, _WindowFilter_instances, cleanupWindowPersistence_fn).call(this);
     windowElement?.remove();
+  };
+  /** Starts the automatic Color Filter statistics refresh loop.
+   * @since 0.92.1
+   */
+  startAutoRefresh_fn = function() {
+    __privateMethod(this, _WindowFilter_instances, stopAutoRefresh_fn).call(this);
+    this.colorRefreshInterval = setInterval(() => {
+      if (!document.querySelector(`#${this.windowID}`)) {
+        __privateMethod(this, _WindowFilter_instances, stopAutoRefresh_fn).call(this);
+        return;
+      }
+      this.updateColorList();
+    }, this.colorRefreshIntervalMS);
+  };
+  /** Stops the automatic Color Filter statistics refresh loop.
+   * @since 0.92.1
+   */
+  stopAutoRefresh_fn = function() {
+    if (!this.colorRefreshInterval) {
+      return;
+    }
+    clearInterval(this.colorRefreshInterval);
+    this.colorRefreshInterval = null;
   };
   /** Disconnects live observers used for window persistence.
    * @since 0.92.0
@@ -3051,6 +3015,164 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     this.timeRemainingLocalized = localizeDate(this.timeRemaining);
   };
 
+  // src/WindowMain.js
+  var _WindowMain_instances, coordinateInputPaste_fn;
+  var WindowMain = class extends Overlay {
+    /** Constructor for the main Blue Marble window
+     * @param {string} name - The name of the userscript
+     * @param {string} version - The version of the userscript
+     * @since 0.88.326
+     * @see {@link Overlay#constructor}
+     */
+    constructor(name2, version2) {
+      super(name2, version2);
+      __privateAdd(this, _WindowMain_instances);
+      this.window = null;
+      this.windowID = "bm-window-main";
+      this.windowParent = document.body;
+    }
+    /** Creates the main Blue Marble window.
+     * Parent/child relationships in the DOM structure below are indicated by indentation.
+     * @since 0.58.3
+     */
+    buildWindow() {
+      if (document.querySelector(`#${this.windowID}`)) {
+        this.handleDisplayError("Main window already exists!");
+        return;
+      }
+      this.window = this.addDiv({ "id": this.windowID, "class": "bm-window bm-windowed", "style": "top: 10px; left: unset; right: 75px;" }, (instance, div) => {
+      }).addDragbar().addButton({ "class": "bm-button-circle", "textContent": "\u25BC", "aria-label": 'Minimize window "Blue Marble"', "data-button-status": "expanded" }, (instance, button) => {
+        button.onclick = () => instance.handleMinimization(button);
+        button.ontouchend = () => {
+          button.click();
+        };
+      }).buildElement().addDiv().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": "\u2699\uFE0F", "title": "Settings" }, (instance, button) => {
+        button.onclick = () => {
+          instance.settingsManager.buildWindow();
+        };
+      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-main-hero" }).addImg({ "class": "bm-favicon", "src": "https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/assets/Favicon.png" }, (instance, img) => {
+        const date = /* @__PURE__ */ new Date();
+        const dayOfTheYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 1)) / (1e3 * 60 * 60 * 24)) + 1;
+        if (dayOfTheYear == 204) {
+          img.parentNode.style.position = "relative";
+          img.parentNode.innerHTML = img.parentNode.innerHTML + `<svg viewBox="0 0 9 7" width="2em" height="2em" style="position: absolute; top: -.75em; left: 3.25ch;"><path d="M0,3L9,0L2,7" fill="#0af"/><path d="M0,3A.4,.4 0 1 1 1,5" fill="#a00"/><path d="M1.5,6A1,1 0 0 1 3,6L2,7" fill="#a0f"/><path d="M4,5A.6,.6 0 1 1 5,4" fill="#0a0"/><path d="M6,3A.8,.8 0 1 1 7,2" fill="#fa0"/><path d="M4.5,1.5A1,1 0 0 1 3,2" fill="#aa0"/></svg>`;
+          img.onload = () => {
+            const confettiManager = new ConfettiManager();
+            confettiManager.createConfetti(document.querySelector(`#${this.windowID}`));
+          };
+        }
+      }).buildElement().addHeader(1, { "textContent": this.name }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-main-stats" }).addDiv({ "class": "bm-main-stat-card bm-main-stat-card-value" }).addSpan({ "class": "bm-main-stat-label", "textContent": "Droplets" }).buildElement().addSpan({ "id": "bm-user-droplets", "class": "bm-main-stat-value", "textContent": "0" }).buildElement().buildElement().addDiv({ "class": "bm-main-stat-card bm-main-stat-card-value" }).addSpan({ "class": "bm-main-stat-label", "textContent": "Next Level" }).buildElement().addSpan({ "id": "bm-user-nextlevel", "class": "bm-main-stat-value", "textContent": "0 px" }).buildElement().buildElement().addDiv({ "class": "bm-main-stat-card bm-main-stat-card-timer" }).addSpan({ "class": "bm-main-stat-label", "textContent": "Charges" }).buildElement().addTimer(Date.now(), 1e3, { "class": "bm-main-stat-value", "style": "font-weight: 700;" }, (instance, timer) => {
+        instance.apiManager.chargeRefillTimerID = timer.id;
+      }).buildElement().buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-main-shell" }).addDiv({ "class": "bm-container bm-main-coords" }).addButton(
+        { "class": "bm-button-circle bm-button-pin", "style": "margin-top: 0;", "innerHTML": '<svg viewBox="0 0 4 6"><path d="M.5,3.4A2,2 0 1 1 3.5,3.4L2,6"/><circle cx="2" cy="2" r=".7" fill="#fff"/></svg>' },
+        (instance, button) => {
+          button.onclick = () => {
+            const coords2 = instance.apiManager?.coordsTilePixel;
+            if (!coords2?.[0]) {
+              instance.handleDisplayError("Coordinates are malformed! Did you try clicking on the canvas first?");
+              return;
+            }
+            instance.updateInnerHTML("bm-input-tx", coords2?.[0] || "");
+            instance.updateInnerHTML("bm-input-ty", coords2?.[1] || "");
+            instance.updateInnerHTML("bm-input-px", coords2?.[2] || "");
+            instance.updateInnerHTML("bm-input-py", coords2?.[3] || "");
+          };
+        }
+      ).buildElement().addInput({ "type": "number", "id": "bm-input-tx", "class": "bm-input-coords", "placeholder": "Tl X", "min": 0, "max": 2047, "step": 1, "required": true }, (instance, input) => {
+        input.addEventListener("paste", (event) => __privateMethod(this, _WindowMain_instances, coordinateInputPaste_fn).call(this, instance, input, event));
+      }).buildElement().addInput({ "type": "number", "id": "bm-input-ty", "class": "bm-input-coords", "placeholder": "Tl Y", "min": 0, "max": 2047, "step": 1, "required": true }, (instance, input) => {
+        input.addEventListener("paste", (event) => __privateMethod(this, _WindowMain_instances, coordinateInputPaste_fn).call(this, instance, input, event));
+      }).buildElement().addInput({ "type": "number", "id": "bm-input-px", "class": "bm-input-coords", "placeholder": "Px X", "min": 0, "max": 2047, "step": 1, "required": true }, (instance, input) => {
+        input.addEventListener("paste", (event) => __privateMethod(this, _WindowMain_instances, coordinateInputPaste_fn).call(this, instance, input, event));
+      }).buildElement().addInput({ "type": "number", "id": "bm-input-py", "class": "bm-input-coords", "placeholder": "Px Y", "min": 0, "max": 2047, "step": 1, "required": true }, (instance, input) => {
+        input.addEventListener("paste", (event) => __privateMethod(this, _WindowMain_instances, coordinateInputPaste_fn).call(this, instance, input, event));
+      }).buildElement().buildElement().addDiv({ "class": "bm-container bm-main-upload" }).addInputFile({ "class": "bm-input-file", "textContent": "Upload Template", "accept": "image/png, image/jpeg, image/webp, image/bmp, image/gif" }).buildElement().buildElement().addDiv({ "class": "bm-container bm-flex-between bm-main-actions" }).addButton({ "class": "bm-button-secondary", "textContent": "Disable", "data-button-status": "shown" }, (instance, button) => {
+        button.onclick = () => {
+          button.disabled = true;
+          if (button.dataset["buttonStatus"] == "shown") {
+            instance.apiManager?.templateManager?.setTemplatesShouldBeDrawn(false);
+            button.dataset["buttonStatus"] = "hidden";
+            button.textContent = "Enable";
+            instance.handleDisplayStatus(`Disabled templates!`);
+          } else {
+            instance.apiManager?.templateManager?.setTemplatesShouldBeDrawn(true);
+            button.dataset["buttonStatus"] = "shown";
+            button.textContent = "Disable";
+            instance.handleDisplayStatus(`Enabled templates!`);
+          }
+          button.disabled = false;
+        };
+      }).buildElement().addButton({ "class": "bm-button-primary", "textContent": "Create" }, (instance, button) => {
+        button.onclick = () => {
+          const input = document.querySelector(`#${this.windowID} .bm-input-file`);
+          const coordTlX = document.querySelector("#bm-input-tx");
+          if (!coordTlX.checkValidity()) {
+            coordTlX.reportValidity();
+            instance.handleDisplayError("Coordinates are malformed! Did you try clicking on the canvas first?");
+            return;
+          }
+          const coordTlY = document.querySelector("#bm-input-ty");
+          if (!coordTlY.checkValidity()) {
+            coordTlY.reportValidity();
+            instance.handleDisplayError("Coordinates are malformed! Did you try clicking on the canvas first?");
+            return;
+          }
+          const coordPxX = document.querySelector("#bm-input-px");
+          if (!coordPxX.checkValidity()) {
+            coordPxX.reportValidity();
+            instance.handleDisplayError("Coordinates are malformed! Did you try clicking on the canvas first?");
+            return;
+          }
+          const coordPxY = document.querySelector("#bm-input-py");
+          if (!coordPxY.checkValidity()) {
+            coordPxY.reportValidity();
+            instance.handleDisplayError("Coordinates are malformed! Did you try clicking on the canvas first?");
+            return;
+          }
+          if (!input?.files[0]) {
+            instance.handleDisplayError(`No file selected!`);
+            return;
+          }
+          instance?.apiManager?.templateManager.createTemplate(input.files[0], input.files[0]?.name.replace(/\.[^/.]+$/, ""), [Number(coordTlX.value), Number(coordTlY.value), Number(coordPxX.value), Number(coordPxY.value)]);
+          instance.handleDisplayStatus(`Drew to canvas!`);
+        };
+      }).buildElement().addButton({ "class": "bm-button-secondary", "textContent": "Filter" }, (instance, button) => {
+        button.onclick = () => this.buildWindowFilter();
+      }).buildElement().buildElement().addDiv({ "class": "bm-container bm-main-status" }).addTextarea({ "id": this.outputStatusId, "placeholder": `Status: Sleeping...
+Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
+      this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
+    }
+    /** Displays a new color filter window.
+     * This is a helper function that creates a new class instance.
+     * This might cause a memory leak. I pray that this is not the case...
+     * @since 0.88.330
+     */
+    buildWindowFilter() {
+      const windowFilter = new WindowFilter(this);
+      windowFilter.buildPreferredWindow();
+    }
+  };
+  _WindowMain_instances = new WeakSet();
+  coordinateInputPaste_fn = async function(instance, input, event) {
+    event.preventDefault();
+    const data = await getClipboardData(event);
+    const coords2 = data.split(/[^a-zA-Z0-9]+/).filter((index) => index).map(Number).filter(
+      (number) => !isNaN(number)
+      // Removes NaN `[4]`
+    );
+    if (coords2.length == 2 && input.id == "bm-input-px") {
+      instance.updateInnerHTML("bm-input-px", coords2?.[0] || "");
+      instance.updateInnerHTML("bm-input-py", coords2?.[1] || "");
+    } else if (coords2.length == 1) {
+      instance.updateInnerHTML(input.id, coords2?.[0] || "");
+    } else {
+      instance.updateInnerHTML("bm-input-tx", coords2?.[0] || "");
+      instance.updateInnerHTML("bm-input-ty", coords2?.[1] || "");
+      instance.updateInnerHTML("bm-input-px", coords2?.[2] || "");
+      instance.updateInnerHTML("bm-input-py", coords2?.[3] || "");
+    }
+  };
+
   // src/WindowWizard.js
   var _WindowWizard_instances, displaySchemaHealth_fn, displayTemplateList_fn, convertSchema_1_x_x_To_2_x_x_fn;
   var _WindowWizard = class _WindowWizard extends Overlay {
@@ -3215,187 +3337,6 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     }
   };
   var WindowWizard = _WindowWizard;
-
-  // src/WindowMain.js
-  var _WindowMain_instances, coordinateInputPaste_fn;
-  var WindowMain = class extends Overlay {
-    /** Constructor for the main Blue Marble window
-     * @param {string} name - The name of the userscript
-     * @param {string} version - The version of the userscript
-     * @since 0.88.326
-     * @see {@link Overlay#constructor}
-     */
-    constructor(name2, version2) {
-      super(name2, version2);
-      __privateAdd(this, _WindowMain_instances);
-      this.window = null;
-      this.windowID = "bm-window-main";
-      this.windowParent = document.body;
-    }
-    /** Creates the main Blue Marble window.
-     * Parent/child relationships in the DOM structure below are indicated by indentation.
-     * @since 0.58.3
-     */
-    buildWindow() {
-      if (document.querySelector(`#${this.windowID}`)) {
-        this.handleDisplayError("Main window already exists!");
-        return;
-      }
-      this.window = this.addDiv({ "id": this.windowID, "class": "bm-window bm-windowed", "style": "top: 10px; left: unset; right: 75px;" }, (instance, div) => {
-      }).addDragbar().addButton({ "class": "bm-button-circle", "textContent": "\u25BC", "aria-label": 'Minimize window "Blue Marble"', "data-button-status": "expanded" }, (instance, button) => {
-        button.onclick = () => instance.handleMinimization(button);
-        button.ontouchend = () => {
-          button.click();
-        };
-      }).buildElement().addDiv().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container" }).addImg({ "class": "bm-favicon", "src": "https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/assets/Favicon.png" }, (instance, img) => {
-        const date = /* @__PURE__ */ new Date();
-        const dayOfTheYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 1)) / (1e3 * 60 * 60 * 24)) + 1;
-        if (dayOfTheYear == 204) {
-          img.parentNode.style.position = "relative";
-          img.parentNode.innerHTML = img.parentNode.innerHTML + `<svg viewBox="0 0 9 7" width="2em" height="2em" style="position: absolute; top: -.75em; left: 3.25ch;"><path d="M0,3L9,0L2,7" fill="#0af"/><path d="M0,3A.4,.4 0 1 1 1,5" fill="#a00"/><path d="M1.5,6A1,1 0 0 1 3,6L2,7" fill="#a0f"/><path d="M4,5A.6,.6 0 1 1 5,4" fill="#0a0"/><path d="M6,3A.8,.8 0 1 1 7,2" fill="#fa0"/><path d="M4.5,1.5A1,1 0 0 1 3,2" fill="#aa0"/></svg>`;
-          img.onload = () => {
-            const confettiManager = new ConfettiManager();
-            confettiManager.createConfetti(document.querySelector(`#${this.windowID}`));
-          };
-        }
-      }).buildElement().addHeader(1, { "textContent": this.name }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container" }).addSpan({ "id": "bm-user-droplets", "textContent": "Droplets:" }).buildElement().addBr().buildElement().addSpan({ "id": "bm-user-nextlevel", "textContent": "Next level in..." }).buildElement().addBr().buildElement().addSpan({ "textContent": "Charges: " }).addTimer(Date.now(), 1e3, { "style": "font-weight: 700;" }, (instance, timer) => {
-        instance.apiManager.chargeRefillTimerID = timer.id;
-      }).buildElement().buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container" }).addDiv({ "class": "bm-container" }).addButton(
-        { "class": "bm-button-circle bm-button-pin", "style": "margin-top: 0;", "innerHTML": '<svg viewBox="0 0 4 6"><path d="M.5,3.4A2,2 0 1 1 3.5,3.4L2,6"/><circle cx="2" cy="2" r=".7" fill="#fff"/></svg>' },
-        (instance, button) => {
-          button.onclick = () => {
-            const coords2 = instance.apiManager?.coordsTilePixel;
-            if (!coords2?.[0]) {
-              instance.handleDisplayError("Coordinates are malformed! Did you try clicking on the canvas first?");
-              return;
-            }
-            instance.updateInnerHTML("bm-input-tx", coords2?.[0] || "");
-            instance.updateInnerHTML("bm-input-ty", coords2?.[1] || "");
-            instance.updateInnerHTML("bm-input-px", coords2?.[2] || "");
-            instance.updateInnerHTML("bm-input-py", coords2?.[3] || "");
-          };
-        }
-      ).buildElement().addInput({ "type": "number", "id": "bm-input-tx", "class": "bm-input-coords", "placeholder": "Tl X", "min": 0, "max": 2047, "step": 1, "required": true }, (instance, input) => {
-        input.addEventListener("paste", (event) => __privateMethod(this, _WindowMain_instances, coordinateInputPaste_fn).call(this, instance, input, event));
-      }).buildElement().addInput({ "type": "number", "id": "bm-input-ty", "class": "bm-input-coords", "placeholder": "Tl Y", "min": 0, "max": 2047, "step": 1, "required": true }, (instance, input) => {
-        input.addEventListener("paste", (event) => __privateMethod(this, _WindowMain_instances, coordinateInputPaste_fn).call(this, instance, input, event));
-      }).buildElement().addInput({ "type": "number", "id": "bm-input-px", "class": "bm-input-coords", "placeholder": "Px X", "min": 0, "max": 2047, "step": 1, "required": true }, (instance, input) => {
-        input.addEventListener("paste", (event) => __privateMethod(this, _WindowMain_instances, coordinateInputPaste_fn).call(this, instance, input, event));
-      }).buildElement().addInput({ "type": "number", "id": "bm-input-py", "class": "bm-input-coords", "placeholder": "Px Y", "min": 0, "max": 2047, "step": 1, "required": true }, (instance, input) => {
-        input.addEventListener("paste", (event) => __privateMethod(this, _WindowMain_instances, coordinateInputPaste_fn).call(this, instance, input, event));
-      }).buildElement().buildElement().addDiv({ "class": "bm-container" }).addInputFile({ "class": "bm-input-file", "textContent": "Upload Template", "accept": "image/png, image/jpeg, image/webp, image/bmp, image/gif" }).buildElement().buildElement().addDiv({ "class": "bm-container bm-flex-between" }).addButton({ "textContent": "Disable", "data-button-status": "shown" }, (instance, button) => {
-        button.onclick = () => {
-          button.disabled = true;
-          if (button.dataset["buttonStatus"] == "shown") {
-            instance.apiManager?.templateManager?.setTemplatesShouldBeDrawn(false);
-            button.dataset["buttonStatus"] = "hidden";
-            button.textContent = "Enable";
-            instance.handleDisplayStatus(`Disabled templates!`);
-          } else {
-            instance.apiManager?.templateManager?.setTemplatesShouldBeDrawn(true);
-            button.dataset["buttonStatus"] = "shown";
-            button.textContent = "Disable";
-            instance.handleDisplayStatus(`Enabled templates!`);
-          }
-          button.disabled = false;
-        };
-      }).buildElement().addButton({ "textContent": "Create" }, (instance, button) => {
-        button.onclick = () => {
-          const input = document.querySelector(`#${this.windowID} .bm-input-file`);
-          const coordTlX = document.querySelector("#bm-input-tx");
-          if (!coordTlX.checkValidity()) {
-            coordTlX.reportValidity();
-            instance.handleDisplayError("Coordinates are malformed! Did you try clicking on the canvas first?");
-            return;
-          }
-          const coordTlY = document.querySelector("#bm-input-ty");
-          if (!coordTlY.checkValidity()) {
-            coordTlY.reportValidity();
-            instance.handleDisplayError("Coordinates are malformed! Did you try clicking on the canvas first?");
-            return;
-          }
-          const coordPxX = document.querySelector("#bm-input-px");
-          if (!coordPxX.checkValidity()) {
-            coordPxX.reportValidity();
-            instance.handleDisplayError("Coordinates are malformed! Did you try clicking on the canvas first?");
-            return;
-          }
-          const coordPxY = document.querySelector("#bm-input-py");
-          if (!coordPxY.checkValidity()) {
-            coordPxY.reportValidity();
-            instance.handleDisplayError("Coordinates are malformed! Did you try clicking on the canvas first?");
-            return;
-          }
-          if (!input?.files[0]) {
-            instance.handleDisplayError(`No file selected!`);
-            return;
-          }
-          instance?.apiManager?.templateManager.createTemplate(input.files[0], input.files[0]?.name.replace(/\.[^/.]+$/, ""), [Number(coordTlX.value), Number(coordTlY.value), Number(coordPxX.value), Number(coordPxY.value)]);
-          instance.handleDisplayStatus(`Drew to canvas!`);
-        };
-      }).buildElement().addButton({ "textContent": "Filter" }, (instance, button) => {
-        button.onclick = () => this.buildWindowFilter();
-      }).buildElement().buildElement().addDiv({ "class": "bm-container" }).addTextarea({ "id": this.outputStatusId, "placeholder": `Status: Sleeping...
-Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().addDiv({ "class": "bm-container bm-flex-between", "style": "margin-bottom: 0; flex-direction: column;" }).addDiv({ "class": "bm-flex-between" }).addButton({ "class": "bm-button-circle", "innerHTML": "\u2699\uFE0F", "title": "Settings" }, (instance, button) => {
-        button.onclick = () => {
-          instance.settingsManager.buildWindow();
-        };
-      }).buildElement().addButton({ "class": "bm-button-circle", "innerHTML": "\u{1F9D9}", "title": "Template Wizard" }, (instance, button) => {
-        button.onclick = () => {
-          const templateManager2 = instance.apiManager?.templateManager;
-          const wizard = new WindowWizard(this.name, this.version, templateManager2?.schemaVersion, templateManager2);
-          wizard.buildWindow();
-        };
-      }).buildElement().addButton({ "class": "bm-button-circle", "innerHTML": "\u{1F3A8}", "title": "Template Color Converter" }, (instance, button) => {
-        button.onclick = () => {
-          window.open("https://pepoafonso.github.io/color_converter_wplace/", "_blank", "noopener noreferrer");
-        };
-      }).buildElement().addButton({ "class": "bm-button-circle", "innerHTML": "\u{1F310}", "title": "Official Blue Marble Website" }, (instance, button) => {
-        button.onclick = () => {
-          window.open("https://bluemarble.lol/", "_blank", "noopener noreferrer");
-        };
-      }).buildElement().addButton({ "class": "bm-button-circle", "title": "Donate to SwingTheVine", "innerHTML": '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="#fff" style="width:80%; margin:auto;"><path d="M249.8 75c89.8 0 113 1.1 146.3 4.4 78.1 7.8 123.6 56 123.6 125.2l0 8.9c0 64.3-47.1 116.9-110.8 122.4-5 16.6-12.8 33.2-23.3 49.9-24.4 37.7-73.1 85.3-162.9 85.3l-17.7 0c-73.1 0-129.7-31.6-163.5-89.2-29.9-50.4-33.8-106.4-33.8-181.2 0-73.7 44.4-113.6 96.4-120.2 39.3-5 88.1-5.5 145.7-5.5zm0 41.6c-60.4 0-103.6 .5-136.3 5.5-46 6.7-64.3 32.7-64.3 79.2l.2 25.7c1.2 57.3 7.1 97.1 27.5 134.5 26.6 49.3 74.8 68.2 129.7 68.2l17.2 0c72 0 107-34.9 126.3-65.4 9.4-15.5 17.7-32.7 22.2-54.3l3.3-13.8 19.9 0c44.3 0 82.6-36 82.6-82l0-8.3c0-51.5-32.2-78.7-88.1-85.3-31.6-2.8-50.4-3.9-140.2-3.9zM267 169.2c38.2 0 64.8 31.6 64.8 67 0 32.7-18.3 61-42.1 83.1-15 15-39.3 30.5-55.9 40.5-4.4 2.8-10 4.4-16.7 4.4-5.5 0-10.5-1.7-15.5-4.4-16.6-10-41-25.5-56.5-40.5-21.8-20.8-39.2-46.9-41.3-77l-.2-6.1c0-35.5 25.5-67 64.3-67 22.7 0 38.8 11.6 49.3 27.7 11.6-16.1 27.2-27.7 49.9-27.7zm122.5-3.9c28.3 0 43.8 16.6 43.8 43.2s-15.5 42.7-43.8 42.7c-8.9 0-13.8-5-13.8-11.7l0-62.6c0-6.7 5-11.6 13.8-11.6z"/></svg>' }, (instance, button) => {
-        button.onclick = () => {
-          window.open("https://ko-fi.com/swingthevine", "_blank", "noopener noreferrer");
-        };
-      }).buildElement().addButton({ "class": "bm-button-circle", "innerHTML": "\u{1F91D}", "title": "Credits" }, (instance, button) => {
-        button.onclick = () => {
-          const credits = new WindowCredts(this.name, this.version);
-          credits.buildWindow();
-        };
-      }).buildElement().buildElement().addSmall({ "textContent": "Made by SwingTheVine", "style": "margin-top: auto;" }).buildElement().buildElement().buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
-      this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
-    }
-    /** Displays a new color filter window.
-     * This is a helper function that creates a new class instance.
-     * This might cause a memory leak. I pray that this is not the case...
-     * @since 0.88.330
-     */
-    buildWindowFilter() {
-      const windowFilter = new WindowFilter(this);
-      windowFilter.buildPreferredWindow();
-    }
-  };
-  _WindowMain_instances = new WeakSet();
-  coordinateInputPaste_fn = async function(instance, input, event) {
-    event.preventDefault();
-    const data = await getClipboardData(event);
-    const coords2 = data.split(/[^a-zA-Z0-9]+/).filter((index) => index).map(Number).filter(
-      (number) => !isNaN(number)
-      // Removes NaN `[4]`
-    );
-    if (coords2.length == 2 && input.id == "bm-input-px") {
-      instance.updateInnerHTML("bm-input-px", coords2?.[0] || "");
-      instance.updateInnerHTML("bm-input-py", coords2?.[1] || "");
-    } else if (coords2.length == 1) {
-      instance.updateInnerHTML(input.id, coords2?.[0] || "");
-    } else {
-      instance.updateInnerHTML("bm-input-tx", coords2?.[0] || "");
-      instance.updateInnerHTML("bm-input-ty", coords2?.[1] || "");
-      instance.updateInnerHTML("bm-input-px", coords2?.[2] || "");
-      instance.updateInnerHTML("bm-input-py", coords2?.[3] || "");
-    }
-  };
 
   // src/templateManager.js
   var _TemplateManager_instances, restoreFilteredColorsFromSettings_fn, persistFilteredColors_fn, loadTemplate_fn, storeTemplates_fn, parseBlueMarble_fn, parseOSU_fn, calculateCorrectPixelsOnTile_And_FilterTile_fn;
@@ -4063,29 +4004,7 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
         console.log(`%cBlue Marble%c: Recieved message about "%s"`, "color: cornflowerblue;", "", endpointText);
         switch (endpointText) {
           case "me":
-            if (dataJSON["status"] && dataJSON["status"]?.toString()[0] != "2") {
-              overlay.handleDisplayError(`You are not logged in or Wplace is offline!
-Could not fetch userdata.`);
-              return;
-            }
-            const nextLevelPixels = Math.ceil(Math.pow(Math.floor(dataJSON["level"]) * Math.pow(30, 0.65), 1 / 0.65) - dataJSON["pixelsPainted"]);
-            console.log(dataJSON["id"]);
-            if (!!dataJSON["id"] || dataJSON["id"] === 0) {
-              console.log(numberToEncoded(
-                dataJSON["id"],
-                "!#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~"
-              ));
-            }
-            this.templateManager.userID = dataJSON["id"];
-            if (this.chargeRefillTimerID.length != 0) {
-              const chargeRefillTimer = document.querySelector("#" + this.chargeRefillTimerID);
-              if (chargeRefillTimer) {
-                const chargeData = dataJSON["charges"];
-                chargeRefillTimer.dataset["endDate"] = Date.now() + (chargeData["max"] - chargeData["count"]) * chargeData["cooldownMs"];
-              }
-            }
-            overlay.updateInnerHTML("bm-user-droplets", `Droplets: <b>${localizeNumber(dataJSON["droplets"])}</b>`);
-            overlay.updateInnerHTML("bm-user-nextlevel", `Next level in <b>${localizeNumber(nextLevelPixels)}</b> pixel${nextLevelPixels == 1 ? "" : "s"}`);
+            this.applyUserDataToOverlay(overlay, dataJSON);
             break;
           case "pixel":
             const coordsTile = data["endpoint"].split("?")[0].split("/").filter((s) => s && !isNaN(Number(s)));
@@ -4148,6 +4067,76 @@ Did you try clicking the canvas first?`);
             break;
         }
       });
+    }
+    /** Applies user data from the /me endpoint to the current overlay.
+     * @param {Overlay} overlay
+     * @param {Object.<string, any>} dataJSON
+     * @since 0.92.1
+     */
+    applyUserDataToOverlay(overlay, dataJSON) {
+      if (dataJSON["status"] && dataJSON["status"]?.toString()[0] != "2") {
+        overlay.handleDisplayError(`You are not logged in or Wplace is offline!
+Could not fetch userdata.`);
+        return;
+      }
+      const nextLevelPixels = Math.ceil(Math.pow(Math.floor(dataJSON["level"]) * Math.pow(30, 0.65), 1 / 0.65) - dataJSON["pixelsPainted"]);
+      console.log(dataJSON["id"]);
+      if (!!dataJSON["id"] || dataJSON["id"] === 0) {
+        console.log(numberToEncoded(
+          dataJSON["id"],
+          "!#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+        ));
+      }
+      this.templateManager.userID = dataJSON["id"];
+      if (this.chargeRefillTimerID.length != 0) {
+        const chargeRefillTimer = document.querySelector("#" + this.chargeRefillTimerID);
+        if (chargeRefillTimer) {
+          const chargeData = dataJSON["charges"];
+          chargeRefillTimer.dataset["endDate"] = Date.now() + (chargeData["max"] - chargeData["count"]) * chargeData["cooldownMs"];
+        }
+      }
+      overlay.updateInnerHTML("bm-user-droplets", `<b>${localizeNumber(dataJSON["droplets"])}</b>`);
+      overlay.updateInnerHTML("bm-user-nextlevel", `<b>${localizeNumber(nextLevelPixels)}</b> px`);
+    }
+    /** Requests the current /me payload directly so the overlay has initial user data
+     * even if the first network response was missed during startup.
+     * @param {Overlay} overlay
+     * @since 0.92.1
+     */
+    async requestCurrentUserData(overlay) {
+      try {
+        const response = await fetch(`${window.location.origin}/api/me`, {
+          credentials: "include"
+        });
+        if (!response.ok) {
+          overlay.handleDisplayError(`Could not fetch userdata.
+HTTP ${response.status}`);
+          return;
+        }
+        const dataJSON = await response.json();
+        this.applyUserDataToOverlay(overlay, dataJSON);
+      } catch (error) {
+        consoleError("Failed to fetch current user data:", error);
+      }
+    }
+    /** Applies cached /me data from sessionStorage if it was captured during early startup.
+     * @param {Overlay} overlay
+     * @returns {boolean}
+     * @since 0.92.1
+     */
+    applyCachedUserData(overlay) {
+      try {
+        const cached = sessionStorage.getItem("bm-last-me");
+        if (!cached) {
+          return false;
+        }
+        const dataJSON = JSON.parse(cached);
+        this.applyUserDataToOverlay(overlay, dataJSON);
+        return true;
+      } catch (error) {
+        consoleError("Failed to apply cached user data:", error);
+        return false;
+      }
     }
     // Sends a heartbeat to the telemetry server
     async sendHeartbeat(version2) {
@@ -4329,6 +4318,14 @@ Did you try clicking the canvas first?`);
       if (contentType.includes("application/json")) {
         console.log(`%c${name2}%c: Sending JSON message about endpoint "${endpointName}"`, consoleStyle2, "");
         cloned.json().then((jsonData) => {
+          const endpointText = endpointName?.split("?")[0].split("/").filter((s) => s && isNaN(Number(s))).filter((s) => s && !s.includes(".")).pop();
+          if (endpointText == "me") {
+            try {
+              sessionStorage.setItem("bm-last-me", JSON.stringify(jsonData));
+            } catch (error) {
+              console.warn(`%c${name2}%c: Failed to cache "/me" payload`, consoleStyle2, "", error);
+            }
+          }
           window.postMessage({
             source: "blue-marble",
             endpoint: endpointName,
@@ -4375,13 +4372,9 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   });
   var cssOverlay = GM_getResourceText("CSS-BM-File");
   GM_addStyle(cssOverlay);
-  var robotoMonoInjectionPoint = "robotoMonoInjectionPoint";
-  if (!!(robotoMonoInjectionPoint.indexOf("@font-face") + 1)) {
-    console.log(`Loading Roboto Mono as a file...`);
-    GM_addStyle(robotoMonoInjectionPoint);
-  } else {
-    stylesheetLink = document.createElement("link");
-    stylesheetLink.href = "https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap";
+  function appendFontStylesheet(href) {
+    const stylesheetLink = document.createElement("link");
+    stylesheetLink.href = href;
     stylesheetLink.rel = "preload";
     stylesheetLink.as = "style";
     stylesheetLink.onload = function() {
@@ -4390,7 +4383,14 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
     };
     document.head?.appendChild(stylesheetLink);
   }
-  var stylesheetLink;
+  var robotoMonoInjectionPoint = "robotoMonoInjectionPoint";
+  appendFontStylesheet("https://fonts.googleapis.com/css2?family=Michroma&family=Rajdhani:wght@400;500;600;700&display=swap");
+  if (!!(robotoMonoInjectionPoint.indexOf("@font-face") + 1)) {
+    console.log(`Loading Roboto Mono as a file...`);
+    GM_addStyle(robotoMonoInjectionPoint);
+  } else {
+    appendFontStylesheet("https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap");
+  }
   var userSettings = JSON.parse(GM_getValue("bmUserSettings", "{}"));
   var observers = new Observers();
   var windowMain = new WindowMain(name, version);
@@ -4424,9 +4424,11 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   void initializeBlueMarble();
   async function initializeBlueMarble() {
     await templateManager.importJSON(storageTemplates);
+    apiManager.spontaneousResponseListener(windowMain);
     windowMain.buildWindow();
     windowMain.buildWindowFilter();
-    apiManager.spontaneousResponseListener(windowMain);
+    apiManager.applyCachedUserData(windowMain);
+    void apiManager.requestCurrentUserData(windowMain);
     observeBlack();
     consoleLog(`%c${name}%c (${version}) userscript has loaded!`, "color: cornflowerblue;", "");
   }
@@ -4460,4 +4462,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: 94db4c70d9af
+// Build Hash: afe38147b547

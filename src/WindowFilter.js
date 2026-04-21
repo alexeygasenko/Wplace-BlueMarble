@@ -27,6 +27,8 @@ export default class WindowFilter extends Overlay {
     this.windowResizeObserver = null; // Resize observer for the windowed mode
     this.windowViewportResizeHandler = null; // Resize handler for viewport changes
     this.windowSaveTimeout = null; // Debounce timer for resize persistence
+    this.colorRefreshInterval = null; // Auto-refresh timer for live color statistics
+    this.colorRefreshIntervalMS = 10000; // Refresh Color Filter statistics every 10 seconds
     this.windowMinWidth = 260; // Minimum width for the windowed filter
     this.windowMinHeight = 220; // Minimum height for the windowed filter
     this.windowMaxWidth = 1000; // Maximum width for the windowed filter
@@ -113,28 +115,22 @@ export default class WindowFilter extends Overlay {
         .buildElement()
       .buildElement()
       .addDiv({'class': 'bm-window-content'})
-        .addDiv({'class': 'bm-container bm-center-vertically'})
+        .addDiv({'class': 'bm-container bm-center-vertically bm-filter-header'})
           .addHeader(1, {'textContent': 'Color Filter'}).buildElement()
         .buildElement()
         .addHr().buildElement()
-        .addDiv({'class': 'bm-container bm-flex-between bm-center-vertically', 'style': 'gap: 1.5ch;'})
-          .addButton({'textContent': 'Hide All Colors'}, (instance, button) => {
+        .addDiv({'class': 'bm-container bm-flex-between bm-center-vertically bm-filter-toolbar', 'style': 'gap: 1.5ch;'})
+          .addButton({'class': 'bm-button-secondary', 'textContent': 'Hide All Colors'}, (instance, button) => {
             button.onclick = () => this.#selectColorList(false);
           }).buildElement()
-          .addButton({'textContent': 'Refresh Data'}, (instance, button) => {
-            button.onclick = () => {
-              button.disabled = true;
-              this.updateColorList();
-              button.disabled = false;
-            };
-          }).buildElement()
-          .addButton({'textContent': 'Show All Colors'}, (instance, button) => {
+          .addButton({'class': 'bm-button-secondary', 'textContent': 'Show All Colors'}, (instance, button) => {
             button.onclick = () => this.#selectColorList(true);
           }).buildElement()
         .buildElement()
-        .addDiv({'class': 'bm-container bm-scrollable'})
-          .addDiv({'class': 'bm-container', 'style': 'margin-left: 2.5ch; margin-right: 2.5ch;'})
-            .addDiv({'class': 'bm-container'})
+        .addHr().buildElement()
+        .addDiv({'class': 'bm-container bm-scrollable bm-filter-scrollable'})
+          .addDiv({'class': 'bm-container bm-filter-insights', 'style': 'margin-left: 2.5ch; margin-right: 2.5ch;'})
+            .addDiv({'class': 'bm-container bm-filter-stats-card'})
               .addSpan({'id': 'bm-filter-tile-load', 'innerHTML': '<b>Tiles Loaded:</b> 0 / ???'}).buildElement()
               .addBr().buildElement()
               .addSpan({'id': 'bm-filter-tot-correct', 'innerHTML': '<b>Correct Pixels:</b> ???'}).buildElement()
@@ -145,11 +141,11 @@ export default class WindowFilter extends Overlay {
               .addBr().buildElement()
               .addSpan({'id': 'bm-filter-tot-completed', 'innerHTML': '??? ???'}).buildElement()
             .buildElement()
-            .addDiv({'class': 'bm-container'})
+            .addDiv({'class': 'bm-container bm-filter-note'})
               .addP({'innerHTML': `Press the 🗗 button to make this window smaller. Colors with the icon ${this.eyeOpen.replace('<svg', '<svg aria-label="Eye Open"')} will be shown on the canvas. Colors with the icon ${this.eyeClosed.replace('<svg', '<svg aria-label="Eye Closed"')} will not be shown on the canvas. The "Hide All Colors" and "Show All Colors" buttons only apply to colors that display in the list below. The amount of correct pixels is dependent on how many tiles of the template you have loaded since you last opened Wplace.live. If all tiles have been loaded, then the "correct pixel" count is accurate.`}).buildElement()
             .buildElement()
             .addHr().buildElement()
-            .addForm({'class': 'bm-container'})
+            .addForm({'class': 'bm-container bm-filter-sort-panel'})
               .addFieldset()
                 .addLegend({'textContent': 'Sort Options:', 'style': 'font-weight: 700;'}).buildElement()
                 .addDiv({'class': 'bm-container'})
@@ -172,8 +168,8 @@ export default class WindowFilter extends Overlay {
                   .addCheckbox({'id': 'bm-filter-show-unused', 'name': 'showUnused', 'textContent': 'Show unused colors'}).buildElement()
                 .buildElement()
               .buildElement()
-              .addDiv({'class': 'bm-container'})
-                .addButton({'textContent': 'Sort Colors', 'type': 'submit'}, (instance, button) => {
+              .addDiv({'class': 'bm-container bm-filter-sort-actions'})
+                .addButton({'class': 'bm-button-primary', 'textContent': 'Sort Colors', 'type': 'submit'}, (instance, button) => {
                   button.onclick = (event) => {
                     event.preventDefault(); // Stop default form submission
 
@@ -214,6 +210,7 @@ export default class WindowFilter extends Overlay {
     this.updateInnerHTML('#bm-filter-tot-total', `<b>Total Pixels:</b> ${localizeNumber(this.allPixelsTotal)}`);
     this.updateInnerHTML('#bm-filter-tot-remaining', `<b>Remaining:</b> ${localizeNumber((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0))} (${localizePercent(((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0)) / (this.allPixelsTotal || 1))})`);
     this.updateInnerHTML('#bm-filter-tot-completed', `<b>Completed at:</b> <time datetime="${this.timeRemaining.toISOString().replace(/\.\d{3}Z$/, 'Z')}">${this.timeRemainingLocalized}</time>`);
+    this.#startAutoRefresh();
   }
 
   /** Spawns a windowed Color Filter window.
@@ -266,26 +263,20 @@ export default class WindowFilter extends Overlay {
         .buildElement()
       .buildElement()
       .addDiv({'class': 'bm-window-content'})
-        .addDiv({'class': 'bm-container bm-center-vertically'})
+        .addDiv({'class': 'bm-container bm-center-vertically bm-filter-header'})
           .addHeader(1, {'textContent': 'Color Filter'}).buildElement()
         .buildElement()
         .addHr().buildElement()
-        .addDiv({'class': 'bm-container bm-flex-between bm-center-vertically', 'style': 'gap: 1.5ch;'})
-          .addButton({'textContent': 'None'}, (instance, button) => {
+        .addDiv({'class': 'bm-container bm-flex-between bm-center-vertically bm-filter-toolbar', 'style': 'gap: 1.5ch;'})
+          .addButton({'class': 'bm-button-secondary', 'textContent': 'None'}, (instance, button) => {
             button.onclick = () => this.#selectColorList(false);
           }).buildElement()
-          .addButton({'textContent': 'Refresh'}, (instance, button) => {
-            button.onclick = () => {
-              button.disabled = true;
-              this.updateColorList();
-              button.disabled = false;
-            };
-          }).buildElement()
-          .addButton({'textContent': 'All'}, (instance, button) => {
+          .addButton({'class': 'bm-button-secondary', 'textContent': 'All'}, (instance, button) => {
             button.onclick = () => this.#selectColorList(true);
           }).buildElement()
         .buildElement()
-        .addDiv({'class': 'bm-container bm-scrollable'})
+        .addHr().buildElement()
+        .addDiv({'class': 'bm-container bm-scrollable bm-filter-scrollable'})
           // Color list will appear here
         .buildElement()
       .buildElement()
@@ -308,6 +299,7 @@ export default class WindowFilter extends Overlay {
     this.#buildColorList(scrollableContainer);
     this.#syncSortFormControls();
     this.#sortColorList(this.sortPrimary, this.sortSecondary, this.showUnused);
+    this.#startAutoRefresh();
   }
 
   /** Retrieves the persisted window state object.
@@ -373,8 +365,32 @@ export default class WindowFilter extends Overlay {
     if (windowElement?.classList.contains('bm-windowed')) {
       this.#saveWindowState(windowElement);
     }
+    this.#stopAutoRefresh();
     this.#cleanupWindowPersistence();
     windowElement?.remove();
+  }
+
+  /** Starts the automatic Color Filter statistics refresh loop.
+   * @since 0.92.1
+   */
+  #startAutoRefresh() {
+    this.#stopAutoRefresh();
+    this.colorRefreshInterval = setInterval(() => {
+      if (!document.querySelector(`#${this.windowID}`)) {
+        this.#stopAutoRefresh();
+        return;
+      }
+      this.updateColorList();
+    }, this.colorRefreshIntervalMS);
+  }
+
+  /** Stops the automatic Color Filter statistics refresh loop.
+   * @since 0.92.1
+   */
+  #stopAutoRefresh() {
+    if (!this.colorRefreshInterval) {return;}
+    clearInterval(this.colorRefreshInterval);
+    this.colorRefreshInterval = null;
   }
 
   /** Disconnects live observers used for window persistence.
@@ -875,6 +891,12 @@ export default class WindowFilter extends Overlay {
       // Updates the display with XSS protection enabled (because why not)
       this.updateInnerHTML('#bm-filter-windowed-color-totals', `${allCorrect}/${allTotal}`, true);
     }
+
+    this.updateInnerHTML('#bm-filter-tile-load', `<b>Tiles Loaded:</b> ${localizeNumber(this.tilesLoadedTotal)} / ${localizeNumber(this.tilesTotal)}`);
+    this.updateInnerHTML('#bm-filter-tot-correct', `<b>Correct Pixels:</b> ${localizeNumber(this.allPixelsCorrectTotal)}`);
+    this.updateInnerHTML('#bm-filter-tot-total', `<b>Total Pixels:</b> ${localizeNumber(this.allPixelsTotal)}`);
+    this.updateInnerHTML('#bm-filter-tot-remaining', `<b>Remaining:</b> ${localizeNumber((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0))} (${localizePercent(((this.allPixelsTotal || 0) - (this.allPixelsCorrectTotal || 0)) / (this.allPixelsTotal || 1))})`);
+    this.updateInnerHTML('#bm-filter-tot-completed', `<b>Completed at:</b> <time datetime="${this.timeRemaining.toISOString().replace(/\.\d{3}Z$/, 'Z')}">${this.timeRemainingLocalized}</time>`);
 
     // Return early if the color list does not exist.
     // We can't update DOM elements that don't exist, so we exit now.

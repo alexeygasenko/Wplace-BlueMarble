@@ -1,9 +1,7 @@
 import ConfettiManager from "./confetttiManager";
 import Overlay from "./Overlay";
 import { getClipboardData } from "./utils";
-import WindowCredts from "./WindowCredits";
 import WindowFilter from "./WindowFilter";
-import WindowWizard from "./WindowWizard";
 
 /** The overlay builder for the main Blue Marble window.
  * @description This class handles the overlay UI for the main window of the Blue Marble userscript.
@@ -50,9 +48,16 @@ export default class WindowMain extends Overlay {
           button.ontouchend = () => {button.click();}; // Needed ONLY to negate weird interaction with dragbar
         }).buildElement()
         .addDiv().buildElement() // Contains the minimized h1 element
+        .addDiv({'class': 'bm-flex-center'})
+          .addButton({'class': 'bm-button-circle', 'innerHTML': '⚙️', 'title': 'Settings'}, (instance, button) => {
+            button.onclick = () => {
+              instance.settingsManager.buildWindow();
+            }
+          }).buildElement()
+        .buildElement()
       .buildElement()
       .addDiv({'class': 'bm-window-content'})
-        .addDiv({'class': 'bm-container'})
+        .addDiv({'class': 'bm-container bm-main-hero'})
           .addImg({'class': 'bm-favicon', 'src': 'https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/assets/Favicon.png'}, (instance, img) => {
             // Adds a birthday hat & confetti to the window if it is Blue Marble's birthday
             const date = new Date();
@@ -69,20 +74,25 @@ export default class WindowMain extends Overlay {
           .addHeader(1, {'textContent': this.name}).buildElement()
         .buildElement()
         .addHr().buildElement()
-        .addDiv({'class': 'bm-container'})
-          .addSpan({'id': 'bm-user-droplets', 'textContent': 'Droplets:'}).buildElement()
-          .addBr().buildElement()
-          .addSpan({'id': 'bm-user-nextlevel', 'textContent': 'Next level in...'}).buildElement()
-          .addBr().buildElement()
-          .addSpan({'textContent': 'Charges: '})
-            .addTimer(Date.now(), 1000, {'style': 'font-weight: 700;'}, (instance, timer) => {
+        .addDiv({'class': 'bm-container bm-main-stats'})
+          .addDiv({'class': 'bm-main-stat-card bm-main-stat-card-value'})
+            .addSpan({'class': 'bm-main-stat-label', 'textContent': 'Droplets'}).buildElement()
+            .addSpan({'id': 'bm-user-droplets', 'class': 'bm-main-stat-value', 'textContent': '0'}).buildElement()
+          .buildElement()
+          .addDiv({'class': 'bm-main-stat-card bm-main-stat-card-value'})
+            .addSpan({'class': 'bm-main-stat-label', 'textContent': 'Next Level'}).buildElement()
+            .addSpan({'id': 'bm-user-nextlevel', 'class': 'bm-main-stat-value', 'textContent': '0 px'}).buildElement()
+          .buildElement()
+          .addDiv({'class': 'bm-main-stat-card bm-main-stat-card-timer'})
+            .addSpan({'class': 'bm-main-stat-label', 'textContent': 'Charges'}).buildElement()
+            .addTimer(Date.now(), 1000, {'class': 'bm-main-stat-value', 'style': 'font-weight: 700;'}, (instance, timer) => {
               instance.apiManager.chargeRefillTimerID = timer.id; // Store the timer ID in apiManager so we can update the timer automatically
             }).buildElement()
           .buildElement()
         .buildElement()
         .addHr().buildElement()
-        .addDiv({'class': 'bm-container'})
-          .addDiv({'class': 'bm-container'})
+        .addDiv({'class': 'bm-container bm-main-shell'})
+          .addDiv({'class': 'bm-container bm-main-coords'})
             .addButton({'class': 'bm-button-circle bm-button-pin', 'style': 'margin-top: 0;', 'innerHTML': '<svg viewBox="0 0 4 6"><path d="M.5,3.4A2,2 0 1 1 3.5,3.4L2,6"/><circle cx="2" cy="2" r=".7" fill="#fff"/></svg>'},
               (instance, button) => {
                 button.onclick = () => {
@@ -111,11 +121,11 @@ export default class WindowMain extends Overlay {
               input.addEventListener("paste", event => this.#coordinateInputPaste(instance, input, event));
             }).buildElement()
           .buildElement()
-          .addDiv({'class': 'bm-container'})
+          .addDiv({'class': 'bm-container bm-main-upload'})
             .addInputFile({'class': 'bm-input-file', 'textContent': 'Upload Template', 'accept': 'image/png, image/jpeg, image/webp, image/bmp, image/gif'}).buildElement()
           .buildElement()
-          .addDiv({'class': 'bm-container bm-flex-between'})
-            .addButton({'textContent': 'Disable', 'data-button-status': 'shown'}, (instance, button) => {
+          .addDiv({'class': 'bm-container bm-flex-between bm-main-actions'})
+            .addButton({'class': 'bm-button-secondary', 'textContent': 'Disable', 'data-button-status': 'shown'}, (instance, button) => {
               button.onclick = () => {
                 button.disabled = true; // Disables the button until the transition ends
                 if (button.dataset['buttonStatus'] == 'shown') { // If templates are currently being 'shown' then hide them
@@ -132,7 +142,7 @@ export default class WindowMain extends Overlay {
                 button.disabled = false; // Enables the button
               }
             }).buildElement()
-            .addButton({'textContent': 'Create'}, (instance, button) => {
+            .addButton({'class': 'bm-button-primary', 'textContent': 'Create'}, (instance, button) => {
               button.onclick = () => {
                 const input = document.querySelector(`#${this.windowID} .bm-input-file`);
 
@@ -153,51 +163,12 @@ export default class WindowMain extends Overlay {
                 instance.handleDisplayStatus(`Drew to canvas!`);
               }
             }).buildElement()
-            .addButton({'textContent': 'Filter'}, (instance, button) => {
+            .addButton({'class': 'bm-button-secondary', 'textContent': 'Filter'}, (instance, button) => {
               button.onclick = () => this.buildWindowFilter();
             }).buildElement()
           .buildElement()
-          .addDiv({'class': 'bm-container'})
+          .addDiv({'class': 'bm-container bm-main-status'})
             .addTextarea({'id': this.outputStatusId, 'placeholder': `Status: Sleeping...\nVersion: ${this.version}`, 'readOnly': true}).buildElement()
-          .buildElement()
-          .addDiv({'class': 'bm-container bm-flex-between', 'style': 'margin-bottom: 0; flex-direction: column;'})
-            .addDiv({'class': 'bm-flex-between'})
-              // .addButton({'class': 'bm-button-circle', 'innerHTML': '🖌'}).buildElement()
-              .addButton({'class': 'bm-button-circle', 'innerHTML': '⚙️', 'title': 'Settings'}, (instance, button) => {
-                button.onclick = () => {
-                  instance.settingsManager.buildWindow();
-                }
-              }).buildElement()
-              .addButton({'class': 'bm-button-circle', 'innerHTML': '🧙', 'title': 'Template Wizard'}, (instance, button) => {
-                button.onclick = () => {
-                  const templateManager = instance.apiManager?.templateManager;
-                  const wizard = new WindowWizard(this.name, this.version, templateManager?.schemaVersion, templateManager);
-                  wizard.buildWindow();
-                }
-              }).buildElement()
-              .addButton({'class': 'bm-button-circle', 'innerHTML': '🎨', 'title': 'Template Color Converter'}, (instance, button) => {
-                button.onclick = () => {
-                  window.open('https://pepoafonso.github.io/color_converter_wplace/', '_blank', 'noopener noreferrer');
-                }
-              }).buildElement()
-              .addButton({'class': 'bm-button-circle', 'innerHTML': '🌐', 'title': 'Official Blue Marble Website'}, (instance, button) => {
-                button.onclick = () => {
-                  window.open('https://bluemarble.lol/', '_blank', 'noopener noreferrer');
-                }
-              }).buildElement()
-              .addButton({'class': 'bm-button-circle', 'title': 'Donate to SwingTheVine', 'innerHTML': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="#fff" style="width:80%; margin:auto;"><path d="M249.8 75c89.8 0 113 1.1 146.3 4.4 78.1 7.8 123.6 56 123.6 125.2l0 8.9c0 64.3-47.1 116.9-110.8 122.4-5 16.6-12.8 33.2-23.3 49.9-24.4 37.7-73.1 85.3-162.9 85.3l-17.7 0c-73.1 0-129.7-31.6-163.5-89.2-29.9-50.4-33.8-106.4-33.8-181.2 0-73.7 44.4-113.6 96.4-120.2 39.3-5 88.1-5.5 145.7-5.5zm0 41.6c-60.4 0-103.6 .5-136.3 5.5-46 6.7-64.3 32.7-64.3 79.2l.2 25.7c1.2 57.3 7.1 97.1 27.5 134.5 26.6 49.3 74.8 68.2 129.7 68.2l17.2 0c72 0 107-34.9 126.3-65.4 9.4-15.5 17.7-32.7 22.2-54.3l3.3-13.8 19.9 0c44.3 0 82.6-36 82.6-82l0-8.3c0-51.5-32.2-78.7-88.1-85.3-31.6-2.8-50.4-3.9-140.2-3.9zM267 169.2c38.2 0 64.8 31.6 64.8 67 0 32.7-18.3 61-42.1 83.1-15 15-39.3 30.5-55.9 40.5-4.4 2.8-10 4.4-16.7 4.4-5.5 0-10.5-1.7-15.5-4.4-16.6-10-41-25.5-56.5-40.5-21.8-20.8-39.2-46.9-41.3-77l-.2-6.1c0-35.5 25.5-67 64.3-67 22.7 0 38.8 11.6 49.3 27.7 11.6-16.1 27.2-27.7 49.9-27.7zm122.5-3.9c28.3 0 43.8 16.6 43.8 43.2s-15.5 42.7-43.8 42.7c-8.9 0-13.8-5-13.8-11.7l0-62.6c0-6.7 5-11.6 13.8-11.6z"/></svg>'}, (instance, button) => {
-                button.onclick = () => {
-                  window.open('https://ko-fi.com/swingthevine', '_blank', 'noopener noreferrer');
-                }
-              }).buildElement()
-              .addButton({'class': 'bm-button-circle', 'innerHTML': '🤝', 'title': 'Credits'}, (instance, button) => {
-                button.onclick = () => {
-                  const credits = new WindowCredts(this.name, this.version);
-                  credits.buildWindow();
-                }
-              }).buildElement()
-            .buildElement()
-            .addSmall({'textContent': 'Made by SwingTheVine', 'style': 'margin-top: auto;'}).buildElement()
           .buildElement()
         .buildElement()
       .buildElement()
