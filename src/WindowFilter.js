@@ -494,6 +494,7 @@ export default class WindowFilter extends Overlay {
   #saveWindowState(windowElement) {
     const windowState = this.#getWindowState();
     if (!windowState || !windowElement?.isConnected || !windowElement.classList.contains('bm-windowed')) {return;}
+    if (windowElement.querySelector('.bm-dragbar button[data-button-status="collapsed"]')) {return;}
 
     const rect = windowElement.getBoundingClientRect();
     const width = this.#clampWindowDimension(rect.width, this.windowMinWidth, Math.min(this.windowMaxWidth, window.innerWidth - 16));

@@ -1220,8 +1220,50 @@ export default class Overlay {
 
     const window = button.closest('.bm-window'); // Get the window
     const dragbar = button.closest('.bm-dragbar'); // Get the dragbar
-    const header = window.querySelector('h1'); // Get the header
-    const windowContent = window.querySelector('.bm-window-content'); // Get the window content container
+    const header = window?.querySelector('h1'); // Get the header
+    const windowContent = window?.querySelector('.bm-window-content'); // Get the window content container
+
+    if (!window || !dragbar || !windowContent) {
+      button.disabled = false;
+      button.style.textDecoration = '';
+      return;
+    }
+
+    const finishMinimizeTransition = (callback) => {
+      let isFinished = false;
+      let fallbackTimer;
+
+      const finish = () => {
+        if (isFinished) {return;}
+        isFinished = true;
+        clearTimeout(fallbackTimer);
+        windowContent.removeEventListener('transitionend', handler);
+        callback();
+        button.disabled = false;
+        button.style.textDecoration = '';
+      };
+
+      const handler = event => {
+        if (event.target != windowContent || event.propertyName != 'height') {return;}
+        finish();
+      };
+
+      windowContent.addEventListener('transitionend', handler);
+      fallbackTimer = setTimeout(finish, 360);
+    };
+
+    const getCollapsedHeight = () => {
+      const windowStyle = getComputedStyle(window);
+      const toPixels = value => parseFloat(value) || 0;
+      const extraHeight = windowStyle.boxSizing == 'border-box'
+        ? toPixels(windowStyle.paddingTop) +
+          toPixels(windowStyle.paddingBottom) +
+          toPixels(windowStyle.borderTopWidth) +
+          toPixels(windowStyle.borderBottomWidth)
+        : 0;
+
+      return Math.ceil(dragbar.getBoundingClientRect().height + extraHeight + 2);
+    };
 
     window.parentElement.append(window); // Moves the window to the top
 
@@ -1230,18 +1272,25 @@ export default class Overlay {
       // ...we want to close it
       
       // Logic for the transition animation to collapse the window
+      window.dataset['widthBeforeMinimize'] = window.style.width;
+      window.dataset['heightBeforeMinimize'] = window.style.height;
+      window.dataset['minHeightBeforeMinimize'] = window.style.minHeight;
       windowContent.style.height = windowContent.scrollHeight + 'px';
-      window.style.width = window.scrollWidth + 'px'; // So the width of the window does not change due to the lack of content
-      windowContent.style.height = '0'; // Set the height to 0px
-      windowContent.addEventListener('transitionend', function handler() { // Add an event listener to cleanup once the minimize transition is complete
+      void windowContent.offsetHeight; // Force layout so the height transition always has a real start value
+      if (!window.style.width) {
+        window.style.width = window.scrollWidth + 'px'; // So the width of the window does not change due to the lack of content
+      }
+      finishMinimizeTransition(() => {
         windowContent.style.display = 'none'; // Changes "display" to "none" for screen readers
-        button.disabled = false; // Enables the button
-        button.style.textDecoration = ''; // Resets the text decoration to default
-        windowContent.removeEventListener('transitionend', handler); // Removes the event listener
       });
+      windowContent.style.height = '0'; // Set the height to 0px
+      if (window.style.height || window.classList.contains('bm-windowed')) {
+        window.style.minHeight = '0px';
+        window.style.height = getCollapsedHeight() + 'px';
+      }
       
       // Makes a clone of the h1 element inside the window, and adds it to the dragbar
-      const dragbarHeader1 = header.cloneNode(true);
+      const dragbarHeader1 = header?.cloneNode(true) ?? document.createElement('h1');
       const dragbarHeader1Text = dragbarHeader1.textContent;
       button.nextElementSibling.appendChild(dragbarHeader1);
       
@@ -1259,14 +1308,17 @@ export default class Overlay {
       // Logic for the transition animation to expand the window
       windowContent.style.display = ''; // Resets display to default
       windowContent.style.height = '0'; // Sets the height to 0
-      window.style.width = ''; // Resets the window width to default
-      windowContent.style.height = windowContent.scrollHeight + 'px'; // Change the height back to normal
-      windowContent.addEventListener('transitionend', function handler() { // Add an event listener to cleanup once the minimize transition is complete
+      window.style.width = window.dataset['widthBeforeMinimize'] ?? ''; // Restores width to the pre-minimized value
+      window.style.minHeight = window.dataset['minHeightBeforeMinimize'] ?? ''; // Restores resizable windows
+      window.style.height = window.dataset['heightBeforeMinimize'] ?? ''; // Restores height to the pre-minimized value
+      void windowContent.offsetHeight; // Force layout before expanding from 0px
+      finishMinimizeTransition(() => {
         windowContent.style.height = ''; // Changes the height back to default
-        button.disabled = false; // Enables the button
-        button.style.textDecoration = ''; // Resets the text decoration to default
-        windowContent.removeEventListener('transitionend', handler); // Removes the event listener
+        delete window.dataset['widthBeforeMinimize'];
+        delete window.dataset['heightBeforeMinimize'];
+        delete window.dataset['minHeightBeforeMinimize'];
       });
+      windowContent.style.height = windowContent.scrollHeight + 'px'; // Change the height back to normal
 
       button.innerHTML = minimizeIconExpanded; // Swap button icon
       button.dataset['buttonStatus'] = 'expanded'; // Swap button status tracker

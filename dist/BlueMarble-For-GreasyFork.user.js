@@ -1323,20 +1323,61 @@
       button.style.textDecoration = "none";
       const window2 = button.closest(".bm-window");
       const dragbar = button.closest(".bm-dragbar");
-      const header = window2.querySelector("h1");
-      const windowContent = window2.querySelector(".bm-window-content");
-      window2.parentElement.append(window2);
-      if (button.dataset["buttonStatus"] == "expanded") {
-        windowContent.style.height = windowContent.scrollHeight + "px";
-        window2.style.width = window2.scrollWidth + "px";
-        windowContent.style.height = "0";
-        windowContent.addEventListener("transitionend", function handler() {
-          windowContent.style.display = "none";
+      const header = window2?.querySelector("h1");
+      const windowContent = window2?.querySelector(".bm-window-content");
+      if (!window2 || !dragbar || !windowContent) {
+        button.disabled = false;
+        button.style.textDecoration = "";
+        return;
+      }
+      const finishMinimizeTransition = (callback) => {
+        let isFinished = false;
+        let fallbackTimer;
+        const finish = () => {
+          if (isFinished) {
+            return;
+          }
+          isFinished = true;
+          clearTimeout(fallbackTimer);
+          windowContent.removeEventListener("transitionend", handler);
+          callback();
           button.disabled = false;
           button.style.textDecoration = "";
-          windowContent.removeEventListener("transitionend", handler);
+        };
+        const handler = (event) => {
+          if (event.target != windowContent || event.propertyName != "height") {
+            return;
+          }
+          finish();
+        };
+        windowContent.addEventListener("transitionend", handler);
+        fallbackTimer = setTimeout(finish, 360);
+      };
+      const getCollapsedHeight = () => {
+        const windowStyle = getComputedStyle(window2);
+        const toPixels = (value) => parseFloat(value) || 0;
+        const extraHeight = windowStyle.boxSizing == "border-box" ? toPixels(windowStyle.paddingTop) + toPixels(windowStyle.paddingBottom) + toPixels(windowStyle.borderTopWidth) + toPixels(windowStyle.borderBottomWidth) : 0;
+        return Math.ceil(dragbar.getBoundingClientRect().height + extraHeight + 2);
+      };
+      window2.parentElement.append(window2);
+      if (button.dataset["buttonStatus"] == "expanded") {
+        window2.dataset["widthBeforeMinimize"] = window2.style.width;
+        window2.dataset["heightBeforeMinimize"] = window2.style.height;
+        window2.dataset["minHeightBeforeMinimize"] = window2.style.minHeight;
+        windowContent.style.height = windowContent.scrollHeight + "px";
+        void windowContent.offsetHeight;
+        if (!window2.style.width) {
+          window2.style.width = window2.scrollWidth + "px";
+        }
+        finishMinimizeTransition(() => {
+          windowContent.style.display = "none";
         });
-        const dragbarHeader1 = header.cloneNode(true);
+        windowContent.style.height = "0";
+        if (window2.style.height || window2.classList.contains("bm-windowed")) {
+          window2.style.minHeight = "0px";
+          window2.style.height = getCollapsedHeight() + "px";
+        }
+        const dragbarHeader1 = header?.cloneNode(true) ?? document.createElement("h1");
         const dragbarHeader1Text = dragbarHeader1.textContent;
         button.nextElementSibling.appendChild(dragbarHeader1);
         button.innerHTML = minimizeIconCollapsed;
@@ -1348,14 +1389,17 @@
         dragbarHeader1.remove();
         windowContent.style.display = "";
         windowContent.style.height = "0";
-        window2.style.width = "";
-        windowContent.style.height = windowContent.scrollHeight + "px";
-        windowContent.addEventListener("transitionend", function handler() {
+        window2.style.width = window2.dataset["widthBeforeMinimize"] ?? "";
+        window2.style.minHeight = window2.dataset["minHeightBeforeMinimize"] ?? "";
+        window2.style.height = window2.dataset["heightBeforeMinimize"] ?? "";
+        void windowContent.offsetHeight;
+        finishMinimizeTransition(() => {
           windowContent.style.height = "";
-          button.disabled = false;
-          button.style.textDecoration = "";
-          windowContent.removeEventListener("transitionend", handler);
+          delete window2.dataset["widthBeforeMinimize"];
+          delete window2.dataset["heightBeforeMinimize"];
+          delete window2.dataset["minHeightBeforeMinimize"];
         });
+        windowContent.style.height = windowContent.scrollHeight + "px";
         button.innerHTML = minimizeIconExpanded;
         button.dataset["buttonStatus"] = "expanded";
         button.ariaLabel = `Minimize window "${dragbarHeader1Text}"`;
@@ -2748,6 +2792,9 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
   saveWindowState_fn = function(windowElement) {
     const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn).call(this);
     if (!windowState || !windowElement?.isConnected || !windowElement.classList.contains("bm-windowed")) {
+      return;
+    }
+    if (windowElement.querySelector('.bm-dragbar button[data-button-status="collapsed"]')) {
       return;
     }
     const rect = windowElement.getBoundingClientRect();
@@ -4469,4 +4516,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: 6b3fa566393f
+// Build Hash: 90abdec99d7b
