@@ -1718,7 +1718,7 @@
 
   // src/WindowSettings.js
   var closeIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
-  var _WindowSettings_instances, errorOverrideFailure_fn;
+  var _WindowSettings_instances, getWindowState_fn, closeWindow_fn, clampWindowPosition_fn, restoreWindowPosition_fn, saveWindowPosition_fn, initializeWindowPositionPersistence_fn, errorOverrideFailure_fn;
   var WindowSettings = class extends Overlay {
     /** Constructor for the Settings window
      * @param {string} name - The name of the userscript
@@ -1732,6 +1732,7 @@
       this.window = null;
       this.windowID = "bm-window-settings";
       this.windowParent = document.body;
+      this.windowStateKey = "windowSettings";
     }
     /** Spawns a Settings window.
      * If another settings window already exists, we DON'T spawn another!
@@ -1740,7 +1741,7 @@
      */
     buildWindow() {
       if (document.querySelector(`#${this.windowID}`)) {
-        document.querySelector(`#${this.windowID}`).remove();
+        __privateMethod(this, _WindowSettings_instances, closeWindow_fn).call(this);
         return;
       }
       this.window = this.addDiv({ "id": this.windowID, "class": "bm-window" }).addDragbar().addButton({ "class": "bm-button-circle", "innerHTML": minimizeIconExpanded, "aria-label": 'Minimize window "Settings"', "data-button-status": "expanded" }, (instance, button) => {
@@ -1749,9 +1750,7 @@
           button.click();
         };
       }).buildElement().addDiv().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": closeIcon, "aria-label": 'Close window "Settings"' }, (instance, button) => {
-        button.onclick = () => {
-          document.querySelector(`#${this.windowID}`)?.remove();
-        };
+        button.onclick = () => __privateMethod(this, _WindowSettings_instances, closeWindow_fn).call(this);
         button.ontouchend = () => {
           button.click();
         };
@@ -1759,7 +1758,7 @@
         this.buildHighlight();
         this.buildTemplate();
       }).buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
-      this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
+      __privateMethod(this, _WindowSettings_instances, initializeWindowPositionPersistence_fn).call(this);
     }
     /** Builds the highlight section of the window.
      * This should be overriden by {@link SettingsManager}
@@ -1777,6 +1776,104 @@
     }
   };
   _WindowSettings_instances = new WeakSet();
+  /** Retrieves the persisted settings window state object.
+   * @returns {Object | null}
+   * @since 0.95.0
+   */
+  getWindowState_fn = function() {
+    var _a, _b;
+    if (!this.userSettings) {
+      return null;
+    }
+    (_a = this.userSettings)[_b = this.windowStateKey] ?? (_a[_b] = {});
+    return this.userSettings[this.windowStateKey];
+  };
+  /** Immediately closes the settings window and saves its position.
+   * @since 0.95.0
+   */
+  closeWindow_fn = function() {
+    const windowElement = document.querySelector(`#${this.windowID}`);
+    __privateMethod(this, _WindowSettings_instances, saveWindowPosition_fn).call(this, windowElement);
+    windowElement?.remove();
+  };
+  /** Returns a viewport-safe position for the settings window.
+   * @param {HTMLElement} windowElement
+   * @param {number} x
+   * @param {number} y
+   * @returns {{x: number, y: number}}
+   * @since 0.95.0
+   */
+  clampWindowPosition_fn = function(windowElement, x, y) {
+    const margin = 8;
+    const maxX = Math.max(margin, window.innerWidth - windowElement.offsetWidth - margin);
+    const maxY = Math.max(margin, window.innerHeight - windowElement.offsetHeight - margin);
+    return {
+      x: Math.min(Math.max(Math.round(Number(x) || margin), margin), maxX),
+      y: Math.min(Math.max(Math.round(Number(y) || margin), margin), maxY)
+    };
+  };
+  /** Restores the persisted position for the settings window.
+   * @param {HTMLElement} windowElement
+   * @since 0.95.0
+   */
+  restoreWindowPosition_fn = function(windowElement) {
+    const windowState = __privateMethod(this, _WindowSettings_instances, getWindowState_fn).call(this);
+    if (!windowState || !windowElement) {
+      return;
+    }
+    requestAnimationFrame(() => {
+      if (!windowElement.isConnected) {
+        return;
+      }
+      const x = Number(windowState.x);
+      const y = Number(windowState.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return;
+      }
+      const clampedPosition = __privateMethod(this, _WindowSettings_instances, clampWindowPosition_fn).call(this, windowElement, x, y);
+      windowElement.style.left = "0px";
+      windowElement.style.top = "0px";
+      windowElement.style.right = "";
+      windowElement.style.transform = `translate(${clampedPosition.x}px, ${clampedPosition.y}px)`;
+      if (clampedPosition.x != x || clampedPosition.y != y) {
+        windowState.x = clampedPosition.x;
+        windowState.y = clampedPosition.y;
+        void this.saveUserStorageNow?.();
+      }
+    });
+  };
+  /** Saves the current position of the settings window.
+   * @param {HTMLElement} windowElement
+   * @since 0.95.0
+   */
+  saveWindowPosition_fn = function(windowElement) {
+    const windowState = __privateMethod(this, _WindowSettings_instances, getWindowState_fn).call(this);
+    if (!windowState || !windowElement?.isConnected) {
+      return;
+    }
+    const rect = windowElement.getBoundingClientRect();
+    const clampedPosition = __privateMethod(this, _WindowSettings_instances, clampWindowPosition_fn).call(this, windowElement, rect.left, rect.top);
+    windowElement.style.left = "0px";
+    windowElement.style.top = "0px";
+    windowElement.style.right = "";
+    windowElement.style.transform = `translate(${clampedPosition.x}px, ${clampedPosition.y}px)`;
+    windowState.x = clampedPosition.x;
+    windowState.y = clampedPosition.y;
+    void this.saveUserStorageNow?.();
+  };
+  /** Enables position persistence for the settings window.
+   * @since 0.95.0
+   */
+  initializeWindowPositionPersistence_fn = function() {
+    const windowElement = document.querySelector(`#${this.windowID}.bm-window`);
+    if (!windowElement) {
+      return;
+    }
+    __privateMethod(this, _WindowSettings_instances, restoreWindowPosition_fn).call(this, windowElement);
+    this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`, {
+      onEnd: ({ element }) => __privateMethod(this, _WindowSettings_instances, saveWindowPosition_fn).call(this, element)
+    });
+  };
   /** Displays an error when a settings category fails to load.
    * @param {string} name - The name of the category
    * @since 0.91.11
@@ -2351,7 +2448,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
   var closeIcon2 = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
   var fullscreenIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 4.5H4.5v4M15.5 4.5h4v4M19.5 15.5v4h-4M8.5 19.5h-4v-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
   var windowedIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 7.5V10H7.5M16.5 10H14V7.5M14 16.5V14h2.5M7.5 14H10v2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var _WindowFilter_instances, getWindowState_fn, prefersWindowedMode_fn, setWindowModePreference_fn, syncSortFormControls_fn, closeWindow_fn, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, calculatePixelStatistics_fn;
+  var _WindowFilter_instances, getWindowState_fn2, prefersWindowedMode_fn, setWindowModePreference_fn, syncSortFormControls_fn, closeWindow_fn2, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn2, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, syncColorToggleLabel_fn, toggleColorVisibility_fn, initializeColorBlockToggle_fn, calculatePixelStatistics_fn;
   var WindowFilter = class extends Overlay {
     /** Constructor for the color filter window
      * @param {*} executor - The executing class
@@ -2411,7 +2508,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
      */
     buildWindow() {
       if (document.querySelector(`#${this.windowID}`)) {
-        __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
+        __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
         return;
       }
       this.window = this.addDiv({ "id": this.windowID, "class": "bm-window" }, (instance, div) => {
@@ -2423,14 +2520,14 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       }).buildElement().addDiv().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": windowedIcon, "aria-label": 'Switch to windowed mode for "Color Filter"' }, (instance, button) => {
         button.onclick = () => {
           __privateMethod(this, _WindowFilter_instances, setWindowModePreference_fn).call(this, true);
-          __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
+          __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
           this.buildWindowed();
         };
         button.ontouchend = () => {
           button.click();
         };
       }).buildElement().addButton({ "class": "bm-button-circle", "innerHTML": closeIcon2, "aria-label": 'Close window "Color Filter"' }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
+        button.onclick = () => __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
         button.ontouchend = () => {
           button.click();
         };
@@ -2469,7 +2566,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
      */
     buildWindowed() {
       if (document.querySelector(`#${this.windowID}`)) {
-        __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
+        __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
         return;
       }
       this.window = this.addDiv({
@@ -2490,14 +2587,14 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       }).buildElement().addDiv().addSpan({ "id": "bm-filter-windowed-color-totals", "class": "bm-dragbar-text", "style": "font-weight: 700;" }).buildElement().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": fullscreenIcon, "aria-label": 'Switch to fullscreen mode for "Color Filter"' }, (instance, button) => {
         button.onclick = () => {
           __privateMethod(this, _WindowFilter_instances, setWindowModePreference_fn).call(this, false);
-          __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
+          __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
           this.buildWindow();
         };
         button.ontouchend = () => {
           button.click();
         };
       }).buildElement().addButton({ "class": "bm-button-circle", "innerHTML": closeIcon2, "aria-label": 'Close window "Color Filter"' }, (instance, button) => {
-        button.onclick = () => __privateMethod(this, _WindowFilter_instances, closeWindow_fn).call(this);
+        button.onclick = () => __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
         button.ontouchend = () => {
           button.click();
         };
@@ -2609,7 +2706,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
    * @returns {Object | null}
    * @since 0.92.0
    */
-  getWindowState_fn = function() {
+  getWindowState_fn2 = function() {
     var _a, _b;
     if (!this.settingsManager) {
       return null;
@@ -2623,7 +2720,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
    * @since 0.92.1
    */
   prefersWindowedMode_fn = function() {
-    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn).call(this);
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this);
     if (windowState?.mode == "windowed") {
       return true;
     }
@@ -2637,7 +2734,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
    * @since 0.92.0
    */
   setWindowModePreference_fn = function(shouldBeWindowed) {
-    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn).call(this);
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this);
     if (windowState) {
       windowState.mode = shouldBeWindowed ? "windowed" : "fullscreen";
     }
@@ -2667,7 +2764,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
   /** Immediately closes the filter window and cleans up persistence observers.
    * @since 0.92.0
    */
-  closeWindow_fn = function() {
+  closeWindow_fn2 = function() {
     const windowElement = document.querySelector(`#${this.windowID}`);
     if (windowElement?.classList.contains("bm-windowed")) {
       __privateMethod(this, _WindowFilter_instances, saveWindowState_fn).call(this, windowElement);
@@ -2734,7 +2831,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
    * @returns {{x: number, y: number}}
    * @since 0.92.0
    */
-  clampWindowPosition_fn = function(windowElement, x, y) {
+  clampWindowPosition_fn2 = function(windowElement, x, y) {
     const margin = 8;
     const maxX = Math.max(margin, window.innerWidth - windowElement.offsetWidth - margin);
     const maxY = Math.max(margin, window.innerHeight - windowElement.offsetHeight - margin);
@@ -2748,7 +2845,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
    * @since 0.92.0
    */
   restoreWindowState_fn = function(windowElement) {
-    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn).call(this);
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this);
     if (!windowState || !windowElement) {
       return;
     }
@@ -2773,7 +2870,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       if (!Number.isFinite(x) || !Number.isFinite(y)) {
         return;
       }
-      const clampedPosition = __privateMethod(this, _WindowFilter_instances, clampWindowPosition_fn).call(this, windowElement, x, y);
+      const clampedPosition = __privateMethod(this, _WindowFilter_instances, clampWindowPosition_fn2).call(this, windowElement, x, y);
       windowElement.style.left = "0px";
       windowElement.style.top = "0px";
       windowElement.style.right = "";
@@ -2790,7 +2887,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
    * @since 0.92.0
    */
   saveWindowState_fn = function(windowElement) {
-    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn).call(this);
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this);
     if (!windowState || !windowElement?.isConnected || !windowElement.classList.contains("bm-windowed")) {
       return;
     }
@@ -2806,7 +2903,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     if (Math.round(rect.height) != height) {
       windowElement.style.height = `${height}px`;
     }
-    const clampedPosition = __privateMethod(this, _WindowFilter_instances, clampWindowPosition_fn).call(this, windowElement, rect.left, rect.top);
+    const clampedPosition = __privateMethod(this, _WindowFilter_instances, clampWindowPosition_fn2).call(this, windowElement, rect.left, rect.top);
     windowElement.style.left = "0px";
     windowElement.style.top = "0px";
     windowElement.style.right = "";
@@ -2897,7 +2994,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
           "data-total": colorTotal,
           "data-percent": colorPercent.slice(-1) == "%" ? colorPercent.slice(0, -1) : "0",
           "data-incorrect": colorIncorrect || 0
-        }).addDiv({ "class": "bm-filter-container-rgb", "style": `background-color: rgb(${color.rgb?.map((channel) => Number(channel) || 0).join(",")});${color.premium ? styleBackgroundStar : ""}` }).addButton(
+        }, (instance, div) => __privateMethod(this, _WindowFilter_instances, initializeColorBlockToggle_fn).call(this, div, color)).addDiv({ "class": "bm-filter-container-rgb", "style": `background-color: rgb(${color.rgb?.map((channel) => Number(channel) || 0).join(",")});${color.premium ? styleBackgroundStar : ""}` }).addButton(
           {
             "class": "bm-button-trans " + bgEffectForButtons,
             "data-state": isColorHidden ? "hidden" : "shown",
@@ -2906,26 +3003,14 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
             "style": `color: ${textColorForPaletteColorBackground};`
           },
           (instance, button) => {
-            button.onclick = () => {
-              button.style.textDecoration = "none";
-              button.disabled = true;
-              if (button.dataset["state"] == "shown") {
-                button.innerHTML = this.eyeClosed;
-                button.dataset["state"] = "hidden";
-                button.ariaLabel = `Show the color ${color.name || ""} on templates.`;
-                this.templateManager.setColorFiltered(color.id, true);
-              } else {
-                button.innerHTML = this.eyeOpen;
-                button.dataset["state"] = "shown";
-                button.ariaLabel = `Hide the color ${color.name || ""} on templates.`;
-                this.templateManager.setColorFiltered(color.id, false);
-              }
-              button.disabled = false;
-              button.style.textDecoration = "";
+            button.onclick = (event) => {
+              event.stopPropagation();
+              __privateMethod(this, _WindowFilter_instances, toggleColorVisibility_fn).call(this, button, color);
             };
             if (!color.id) {
               button.disabled = true;
             }
+            __privateMethod(this, _WindowFilter_instances, syncColorToggleLabel_fn).call(this, button, color);
           }
         ).buildElement().addSmall({ "textContent": `#${color.id.toString().padStart(2, 0)}`, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}` }).buildElement().addHeader(2, { "textContent": color.name, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-cnt", "textContent": `${colorCorrectLocalized} / ${colorTotalLocalized}`, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}; flex: 1 1 auto; text-align: right;` }).buildElement().buildElement().buildElement();
       } else {
@@ -2938,7 +3023,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
           "data-total": colorTotal,
           "data-percent": colorPercent.slice(-1) == "%" ? colorPercent.slice(0, -1) : "0",
           "data-incorrect": colorIncorrect || 0
-        }).addDiv({ "class": "bm-flex-center", "style": "flex-direction: column;" }).addDiv({ "class": "bm-filter-container-rgb", "style": `background-color: rgb(${color.rgb?.map((channel) => Number(channel) || 0).join(",")});` }).addButton(
+        }, (instance, div) => __privateMethod(this, _WindowFilter_instances, initializeColorBlockToggle_fn).call(this, div, color)).addDiv({ "class": "bm-flex-center", "style": "flex-direction: column;" }).addDiv({ "class": "bm-filter-container-rgb", "style": `background-color: rgb(${color.rgb?.map((channel) => Number(channel) || 0).join(",")});` }).addButton(
           {
             "class": "bm-button-trans " + bgEffectForButtons,
             "data-state": isColorHidden ? "hidden" : "shown",
@@ -2947,26 +3032,14 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
             "style": `color: ${textColorForPaletteColorBackground};`
           },
           (instance, button) => {
-            button.onclick = () => {
-              button.style.textDecoration = "none";
-              button.disabled = true;
-              if (button.dataset["state"] == "shown") {
-                button.innerHTML = this.eyeClosed;
-                button.dataset["state"] = "hidden";
-                button.ariaLabel = `Show the color ${color.name || ""} on templates.`;
-                this.templateManager.setColorFiltered(color.id, true);
-              } else {
-                button.innerHTML = this.eyeOpen;
-                button.dataset["state"] = "shown";
-                button.ariaLabel = `Hide the color ${color.name || ""} on templates.`;
-                this.templateManager.setColorFiltered(color.id, false);
-              }
-              button.disabled = false;
-              button.style.textDecoration = "";
+            button.onclick = (event) => {
+              event.stopPropagation();
+              __privateMethod(this, _WindowFilter_instances, toggleColorVisibility_fn).call(this, button, color);
             };
             if (!color.id) {
               button.disabled = true;
             }
+            __privateMethod(this, _WindowFilter_instances, syncColorToggleLabel_fn).call(this, button, color);
           }
         ).buildElement().buildElement().addSmall({ "textContent": color.id == -2 ? "???????" : colorValueHex }).buildElement().buildElement().addDiv({ "class": "bm-flex-between" }).addHeader(2, { "textContent": (color.premium ? "\u2605 " : "") + color.name }).buildElement().addDiv({ "class": "bm-flex-between", "style": "gap: 1.5ch;" }).addSmall({ "textContent": `#${color.id.toString().padStart(2, 0)}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-cnt", "textContent": `${colorCorrectLocalized} / ${colorTotalLocalized}` }).buildElement().buildElement().addP({ "class": "bm-filter-color-pxl-desc", "textContent": `${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} incorrect pixel${colorIncorrect == 1 ? "" : "s"}. Completed: ${colorPercent}` }).buildElement().buildElement().buildElement();
       }
@@ -3029,6 +3102,67 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       }
       button.click();
     }
+  };
+  /** Updates the color toggle labels on the icon and the clickable color block.
+   * @param {HTMLButtonElement} button - The color visibility button
+   * @param {Object} color - Palette color metadata
+   * @since 0.95.0
+   */
+  syncColorToggleLabel_fn = function(button, color) {
+    const ariaLabel = button.dataset["state"] == "hidden" ? `Show the color ${color.name || ""} on templates.` : `Hide the color ${color.name || ""} on templates.`;
+    button.ariaLabel = ariaLabel;
+    button.closest(".bm-filter-color")?.setAttribute("aria-label", ariaLabel);
+  };
+  /** Toggles a color from the clickable color block or its icon.
+   * @param {HTMLButtonElement} button - The color visibility button
+   * @param {Object} color - Palette color metadata
+   * @since 0.95.0
+   */
+  toggleColorVisibility_fn = function(button, color) {
+    if (!button || button.disabled || !color.id) {
+      return;
+    }
+    button.style.textDecoration = "none";
+    button.disabled = true;
+    if (button.dataset["state"] == "shown") {
+      button.innerHTML = this.eyeClosed;
+      button.dataset["state"] = "hidden";
+      this.templateManager.setColorFiltered(color.id, true);
+    } else {
+      button.innerHTML = this.eyeOpen;
+      button.dataset["state"] = "shown";
+      this.templateManager.setColorFiltered(color.id, false);
+    }
+    __privateMethod(this, _WindowFilter_instances, syncColorToggleLabel_fn).call(this, button, color);
+    button.disabled = false;
+    button.style.textDecoration = "";
+  };
+  /** Makes a color block toggleable by pointer or keyboard.
+   * @param {HTMLElement} colorElement - The color block element
+   * @param {Object} color - Palette color metadata
+   * @since 0.95.0
+   */
+  initializeColorBlockToggle_fn = function(colorElement, color) {
+    if (!colorElement || !color.id) {
+      return;
+    }
+    colorElement.classList.add("bm-filter-color-toggle");
+    colorElement.tabIndex = 0;
+    colorElement.setAttribute("role", "button");
+    colorElement.onclick = (event) => {
+      if (event.target instanceof Element && event.target.closest("button, a, input, select, textarea")) {
+        return;
+      }
+      const button = colorElement.querySelector(".bm-filter-container-rgb button");
+      __privateMethod(this, _WindowFilter_instances, toggleColorVisibility_fn).call(this, button, color);
+    };
+    colorElement.onkeydown = (event) => {
+      if (event.key != "Enter" && event.key != " ") {
+        return;
+      }
+      event.preventDefault();
+      colorElement.click();
+    };
   };
   /** Calculates all pixel statistics used in the color filter.
    * @since 0.90.34
@@ -4518,4 +4652,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: f31122a513fd
+// Build Hash: f552d070dbe3

@@ -22,6 +22,7 @@ export default class WindowSettings extends Overlay {
     this.window = null; // Contains the *window* DOM tree
     this.windowID = 'bm-window-settings'; // The ID attribute for this window
     this.windowParent = document.body; // The parent of the window DOM tree
+    this.windowStateKey = 'windowSettings'; // User setting key for the persisted window position
   }
 
   /** Spawns a Settings window.
@@ -33,7 +34,7 @@ export default class WindowSettings extends Overlay {
 
     // If a settings window already exists, close it
     if (document.querySelector(`#${this.windowID}`)) {
-      document.querySelector(`#${this.windowID}`).remove();
+      this.#closeWindow();
       return;
     }
 
@@ -46,7 +47,7 @@ export default class WindowSettings extends Overlay {
         .addDiv().buildElement() // Contains the minimized h1 element
         .addDiv({'class': 'bm-flex-center'})
           .addButton({'class': 'bm-button-circle', 'innerHTML': closeIcon, 'aria-label': 'Close window "Settings"'}, (instance, button) => {
-            button.onclick = () => {document.querySelector(`#${this.windowID}`)?.remove();};
+            button.onclick = () => this.#closeWindow();
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
           }).buildElement()
         .buildElement()
@@ -65,8 +66,107 @@ export default class WindowSettings extends Overlay {
       .buildElement()
     .buildElement().buildOverlay(this.windowParent);
 
-    // Creates dragging capability on the drag bar for dragging the window
-    this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
+    this.#initializeWindowPositionPersistence();
+  }
+
+  /** Retrieves the persisted settings window state object.
+   * @returns {Object | null}
+   * @since 0.95.0
+   */
+  #getWindowState() {
+    if (!this.userSettings) {return null;}
+    this.userSettings[this.windowStateKey] ??= {};
+    return this.userSettings[this.windowStateKey];
+  }
+
+  /** Immediately closes the settings window and saves its position.
+   * @since 0.95.0
+   */
+  #closeWindow() {
+    const windowElement = document.querySelector(`#${this.windowID}`);
+    this.#saveWindowPosition(windowElement);
+    windowElement?.remove();
+  }
+
+  /** Returns a viewport-safe position for the settings window.
+   * @param {HTMLElement} windowElement
+   * @param {number} x
+   * @param {number} y
+   * @returns {{x: number, y: number}}
+   * @since 0.95.0
+   */
+  #clampWindowPosition(windowElement, x, y) {
+    const margin = 8;
+    const maxX = Math.max(margin, window.innerWidth - windowElement.offsetWidth - margin);
+    const maxY = Math.max(margin, window.innerHeight - windowElement.offsetHeight - margin);
+    return {
+      x: Math.min(Math.max(Math.round(Number(x) || margin), margin), maxX),
+      y: Math.min(Math.max(Math.round(Number(y) || margin), margin), maxY)
+    };
+  }
+
+  /** Restores the persisted position for the settings window.
+   * @param {HTMLElement} windowElement
+   * @since 0.95.0
+   */
+  #restoreWindowPosition(windowElement) {
+    const windowState = this.#getWindowState();
+    if (!windowState || !windowElement) {return;}
+
+    requestAnimationFrame(() => {
+      if (!windowElement.isConnected) {return;}
+
+      const x = Number(windowState.x);
+      const y = Number(windowState.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {return;}
+
+      const clampedPosition = this.#clampWindowPosition(windowElement, x, y);
+      windowElement.style.left = '0px';
+      windowElement.style.top = '0px';
+      windowElement.style.right = '';
+      windowElement.style.transform = `translate(${clampedPosition.x}px, ${clampedPosition.y}px)`;
+
+      if ((clampedPosition.x != x) || (clampedPosition.y != y)) {
+        windowState.x = clampedPosition.x;
+        windowState.y = clampedPosition.y;
+        void this.saveUserStorageNow?.();
+      }
+    });
+  }
+
+  /** Saves the current position of the settings window.
+   * @param {HTMLElement} windowElement
+   * @since 0.95.0
+   */
+  #saveWindowPosition(windowElement) {
+    const windowState = this.#getWindowState();
+    if (!windowState || !windowElement?.isConnected) {return;}
+
+    const rect = windowElement.getBoundingClientRect();
+    const clampedPosition = this.#clampWindowPosition(windowElement, rect.left, rect.top);
+    windowElement.style.left = '0px';
+    windowElement.style.top = '0px';
+    windowElement.style.right = '';
+    windowElement.style.transform = `translate(${clampedPosition.x}px, ${clampedPosition.y}px)`;
+
+    windowState.x = clampedPosition.x;
+    windowState.y = clampedPosition.y;
+
+    void this.saveUserStorageNow?.();
+  }
+
+  /** Enables position persistence for the settings window.
+   * @since 0.95.0
+   */
+  #initializeWindowPositionPersistence() {
+    const windowElement = document.querySelector(`#${this.windowID}.bm-window`);
+    if (!windowElement) {return;}
+
+    this.#restoreWindowPosition(windowElement);
+
+    this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`, {
+      onEnd: ({element}) => this.#saveWindowPosition(element)
+    });
   }
 
   /** Displays an error when a settings category fails to load.

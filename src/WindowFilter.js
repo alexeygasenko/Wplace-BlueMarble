@@ -635,7 +635,8 @@ export default class WindowFilter extends Overlay {
           'data-total': colorTotal,
           'data-percent': (colorPercent.slice(-1) == '%') ? colorPercent.slice(0, -1) : '0',
           'data-incorrect': colorIncorrect || 0
-        }).addDiv({'class': 'bm-filter-container-rgb', 'style': `background-color: rgb(${color.rgb?.map(channel => Number(channel) || 0).join(',')});${color.premium ? styleBackgroundStar : ''}`})
+        }, (instance, div) => this.#initializeColorBlockToggle(div, color))
+          .addDiv({'class': 'bm-filter-container-rgb', 'style': `background-color: rgb(${color.rgb?.map(channel => Number(channel) || 0).join(',')});${color.premium ? styleBackgroundStar : ''}`})
             .addButton({
               'class': 'bm-button-trans ' + bgEffectForButtons,
               'data-state': isColorHidden ? 'hidden' : 'shown',
@@ -645,26 +646,14 @@ export default class WindowFilter extends Overlay {
               (instance, button) => {
 
                 // When the button is clicked
-                button.onclick = () => {
-                  button.style.textDecoration = 'none';
-                  button.disabled = true;
-                  if (button.dataset['state'] == 'shown') {
-                    button.innerHTML = this.eyeClosed;
-                    button.dataset['state'] = 'hidden';
-                    button.ariaLabel = `Show the color ${color.name || ''} on templates.`;
-                    this.templateManager.setColorFiltered(color.id, true);
-                  } else {
-                    button.innerHTML = this.eyeOpen;
-                    button.dataset['state'] = 'shown';
-                    button.ariaLabel = `Hide the color ${color.name || ''} on templates.`;
-                    this.templateManager.setColorFiltered(color.id, false);
-                  }
-                  button.disabled = false;
-                  button.style.textDecoration = '';
+                button.onclick = event => {
+                  event.stopPropagation();
+                  this.#toggleColorVisibility(button, color);
                 }
 
                 // Disables the "hide color" button if the color is "Transparent" (or no ID exists)
                 if (!color.id) {button.disabled = true;}
+                this.#syncColorToggleLabel(button, color);
               }
             ).buildElement()
             .addSmall({'textContent': `#${color.id.toString().padStart(2, 0)}`, 'style': `color: ${((color.id == -1) || (color.id == 0)) ? 'white' : textColorForPaletteColorBackground}`}).buildElement()
@@ -684,7 +673,8 @@ export default class WindowFilter extends Overlay {
           'data-total': colorTotal,
           'data-percent': (colorPercent.slice(-1) == '%') ? colorPercent.slice(0, -1) : '0',
           'data-incorrect': colorIncorrect || 0
-        }).addDiv({'class': 'bm-flex-center', 'style': 'flex-direction: column;'})
+        }, (instance, div) => this.#initializeColorBlockToggle(div, color))
+          .addDiv({'class': 'bm-flex-center', 'style': 'flex-direction: column;'})
             .addDiv({'class': 'bm-filter-container-rgb', 'style': `background-color: rgb(${color.rgb?.map(channel => Number(channel) || 0).join(',')});`})
               .addButton({
                 'class': 'bm-button-trans ' + bgEffectForButtons,
@@ -695,26 +685,14 @@ export default class WindowFilter extends Overlay {
                 (instance, button) => {
 
                   // When the button is clicked
-                  button.onclick = () => {
-                    button.style.textDecoration = 'none';
-                    button.disabled = true;
-                    if (button.dataset['state'] == 'shown') {
-                      button.innerHTML = this.eyeClosed;
-                      button.dataset['state'] = 'hidden';
-                      button.ariaLabel = `Show the color ${color.name || ''} on templates.`;
-                      this.templateManager.setColorFiltered(color.id, true);
-                    } else {
-                      button.innerHTML = this.eyeOpen;
-                      button.dataset['state'] = 'shown';
-                      button.ariaLabel = `Hide the color ${color.name || ''} on templates.`;
-                      this.templateManager.setColorFiltered(color.id, false);
-                    }
-                    button.disabled = false;
-                    button.style.textDecoration = '';
+                  button.onclick = event => {
+                    event.stopPropagation();
+                    this.#toggleColorVisibility(button, color);
                   }
 
                   // Disables the "hide color" button if the color is "Transparent" (or no ID exists)
                   if (!color.id) {button.disabled = true;}
+                  this.#syncColorToggleLabel(button, color);
                 }
               ).buildElement()
             .buildElement()
@@ -814,6 +792,73 @@ export default class WindowFilter extends Overlay {
       
       button.click(); // If the button is not in its proper state, then we click it
     }
+  }
+
+  /** Updates the color toggle labels on the icon and the clickable color block.
+   * @param {HTMLButtonElement} button - The color visibility button
+   * @param {Object} color - Palette color metadata
+   * @since 0.95.0
+   */
+  #syncColorToggleLabel(button, color) {
+    const ariaLabel = (button.dataset['state'] == 'hidden')
+      ? `Show the color ${color.name || ''} on templates.`
+      : `Hide the color ${color.name || ''} on templates.`;
+
+    button.ariaLabel = ariaLabel;
+    button.closest('.bm-filter-color')?.setAttribute('aria-label', ariaLabel);
+  }
+
+  /** Toggles a color from the clickable color block or its icon.
+   * @param {HTMLButtonElement} button - The color visibility button
+   * @param {Object} color - Palette color metadata
+   * @since 0.95.0
+   */
+  #toggleColorVisibility(button, color) {
+    if (!button || button.disabled || !color.id) {return;}
+
+    button.style.textDecoration = 'none';
+    button.disabled = true;
+
+    if (button.dataset['state'] == 'shown') {
+      button.innerHTML = this.eyeClosed;
+      button.dataset['state'] = 'hidden';
+      this.templateManager.setColorFiltered(color.id, true);
+    } else {
+      button.innerHTML = this.eyeOpen;
+      button.dataset['state'] = 'shown';
+      this.templateManager.setColorFiltered(color.id, false);
+    }
+
+    this.#syncColorToggleLabel(button, color);
+    button.disabled = false;
+    button.style.textDecoration = '';
+  }
+
+  /** Makes a color block toggleable by pointer or keyboard.
+   * @param {HTMLElement} colorElement - The color block element
+   * @param {Object} color - Palette color metadata
+   * @since 0.95.0
+   */
+  #initializeColorBlockToggle(colorElement, color) {
+    if (!colorElement || !color.id) {return;}
+
+    colorElement.classList.add('bm-filter-color-toggle');
+    colorElement.tabIndex = 0;
+    colorElement.setAttribute('role', 'button');
+
+    colorElement.onclick = event => {
+      if (event.target instanceof Element && event.target.closest('button, a, input, select, textarea')) {return;}
+
+      const button = colorElement.querySelector('.bm-filter-container-rgb button');
+      this.#toggleColorVisibility(button, color);
+    };
+
+    colorElement.onkeydown = event => {
+      if ((event.key != 'Enter') && (event.key != ' ')) {return;}
+
+      event.preventDefault();
+      colorElement.click();
+    };
   }
 
   /** The information about a specific color on the palette.
