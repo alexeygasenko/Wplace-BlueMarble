@@ -742,11 +742,97 @@ input[type=file] {
 #bm-window-filter .bm-filter-sort-panel legend {
   margin-bottom: 0.12rem;
 }
+#bm-window-filter .bm-filter-sort-heading,
+#bm-window-filter .bm-filter-sort-prefix,
+#bm-window-filter .bm-filter-sort-suffix,
+#bm-window-filter .bm-filter-sort-checkbox {
+  color: rgba(49, 71, 105, 0.82);
+  font-family: var(--bm-font-display);
+  font-size: 0.76rem;
+  letter-spacing: 0;
+}
+#bm-window-filter .bm-filter-sort-heading {
+  font-weight: 400;
+  text-transform: uppercase;
+}
 #bm-window-filter .bm-filter-sort-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.38rem;
+}
+#bm-window-filter .bm-filter-sort-prefix,
+#bm-window-filter .bm-filter-sort-suffix {
+  line-height: 1;
+}
+#bm-window-filter .bm-filter-sort-checkbox {
+  display: flex;
+  width: fit-content;
+  gap: 0.68rem;
+  align-items: center;
+  margin: 10px 0;
+  line-height: 1;
+  font-weight: 400;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+#bm-window-filter .bm-filter-sort-checkbox input[type=checkbox] {
+  appearance: none;
+  width: 1.12rem;
+  height: 1.12rem;
+  margin: 0;
+  position: relative;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 5px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.22),
+      rgba(164, 208, 255, 0.12));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 8px 18px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+#bm-window-filter .bm-filter-sort-checkbox input[type=checkbox]::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.34rem;
+  height: 0.58rem;
+  border-right: 2px solid rgba(9, 28, 58, 0.98);
+  border-bottom: 2px solid rgba(9, 28, 58, 0.98);
+  opacity: 0;
+  transform: translate(-50%, -58%) rotate(45deg) scale(0.72);
+  transform-origin: center;
+  transition: opacity 160ms ease, transform 220ms cubic-bezier(.22, 1, .36, 1);
+}
+#bm-window-filter .bm-filter-sort-checkbox input[type=checkbox]:hover,
+#bm-window-filter .bm-filter-sort-checkbox input[type=checkbox]:focus-visible {
+  border-color: rgba(230, 245, 255, 0.36);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.28),
+      rgba(186, 246, 255, 0.18));
+  box-shadow:
+    0 0 0 3px rgba(116, 231, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 20px rgba(0, 0, 0, 0.08);
+}
+#bm-window-filter .bm-filter-sort-checkbox input[type=checkbox]:checked {
+  border-color: rgba(186, 246, 255, 0.34);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(186, 246, 255, 0.92),
+      rgba(129, 182, 255, 0.78));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+#bm-window-filter .bm-filter-sort-checkbox input[type=checkbox]:checked::before {
+  opacity: 1;
+  transform: translate(-50%, -58%) rotate(45deg) scale(1);
 }
 #bm-window-filter .bm-filter-sort-dropdown {
   position: relative;
@@ -862,10 +948,7 @@ input[type=file] {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32) !important;
 }
 #bm-window-filter .bm-filter-sort-suffix {
-  color: rgba(36, 57, 90, 0.84);
-  font-family: var(--bm-font-display);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
+  color: rgba(49, 71, 105, 0.82);
 }
 #bm-window-filter .bm-filter-sort-panel .bm-container {
   margin-top: 0.1rem;
@@ -873,10 +956,12 @@ input[type=file] {
 }
 #bm-window-filter .bm-filter-sort-actions {
   display: flex;
-  justify-content: flex-start;
+  justify-content: stretch;
+  width: 100%;
 }
 #bm-window-filter .bm-filter-sort-actions button {
-  min-width: 7.8rem;
+  width: 100%;
+  min-width: 0;
 }
 #bm-filter-flex {
   display: flex;
@@ -1745,6 +1830,108 @@ input[type=file] {
 }
 
 /* src/WindowSettings.css */
+#bm-window-settings .bm-settings-drag-title-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+  pointer-events: none;
+}
+#bm-window-settings .bm-settings-drag-title {
+  margin: 0;
+  color: rgba(16, 33, 60, 0.96);
+  font-family: var(--bm-font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+#bm-window-settings .bm-settings-subheading {
+  margin: 0.52rem 0 0.36rem;
+  color: rgba(49, 71, 105, 0.82);
+  font-family: var(--bm-font-display);
+  font-size: 0.76rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+#bm-window-settings .bm-settings-checkbox {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  gap: 0.68rem;
+  align-items: flex-start;
+  margin: 10px 0;
+  color: rgba(49, 71, 105, 0.82);
+  font-family: var(--bm-font-display);
+  font-size: 0.76rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+#bm-window-settings .bm-settings-checkbox input[type=checkbox] {
+  appearance: none;
+  width: 1.12rem;
+  height: 1.12rem;
+  margin: 0;
+  position: relative;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 5px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.22),
+      rgba(164, 208, 255, 0.12));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 8px 18px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+#bm-window-settings .bm-settings-checkbox input[type=checkbox]::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.34rem;
+  height: 0.58rem;
+  border-right: 2px solid rgba(9, 28, 58, 0.98);
+  border-bottom: 2px solid rgba(9, 28, 58, 0.98);
+  opacity: 0;
+  transform: translate(-50%, -58%) rotate(45deg) scale(0.72);
+  transform-origin: center;
+  transition: opacity 160ms ease, transform 220ms cubic-bezier(.22, 1, .36, 1);
+}
+#bm-window-settings .bm-settings-checkbox input[type=checkbox]:hover,
+#bm-window-settings .bm-settings-checkbox input[type=checkbox]:focus-visible {
+  border-color: rgba(230, 245, 255, 0.36);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.28),
+      rgba(186, 246, 255, 0.18));
+  box-shadow:
+    0 0 0 3px rgba(116, 231, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 20px rgba(0, 0, 0, 0.08);
+}
+#bm-window-settings .bm-settings-checkbox input[type=checkbox]:checked {
+  border-color: rgba(186, 246, 255, 0.34);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(186, 246, 255, 0.92),
+      rgba(129, 182, 255, 0.78));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+#bm-window-settings .bm-settings-checkbox input[type=checkbox]:checked::before {
+  opacity: 1;
+  transform: translate(-50%, -58%) rotate(45deg) scale(1);
+}
 #bm-window-settings div:has(> .bm-highlight-preset-container) {
   width: fit-content;
   justify-content: flex-start;
@@ -1757,7 +1944,7 @@ input[type=file] {
 #bm-window-settings .bm-highlight-preset-container span {
   width: fit-content;
   margin: auto;
-  font-size: 0.7em;
+  font-size: 1rem;
 }
 #bm-window-settings .bm-highlight-preset-container button {
   width: fit-content;
@@ -1833,4 +2020,4 @@ input[type=file] {
 
 /* src/main.css */
 
-/* Build Hash: 98cc13fbd043 */
+/* Build Hash: 1c24c2e639fc */

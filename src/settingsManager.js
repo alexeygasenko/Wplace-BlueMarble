@@ -117,10 +117,11 @@ export default class SettingsManager extends WindowSettings {
       .addHr().buildElement()
       .addDiv({'class': 'bm-container', 'style': 'margin-left: 1.5ch;'})
         .addCheckbox({'textContent': 'Highlight transparent pixels'}, (instance, label, checkbox) => {
+          label.classList.add('bm-settings-checkbox');
           checkbox.checked = !this.userSettings?.flags?.includes('hl-noTrans'); // Makes the checkbox match the last stored user setting
           checkbox.onchange = (event) => this.toggleFlag('hl-noTrans', !event.target.checked); // Forces the flag to be the opposite state as the checkbox. E.g. "Checked" means 'hl-noTrans' is false (does not exist).
         }).buildElement()
-        .addP({'id': 'bm-highlight-preset-label', 'textContent': 'Choose a preset:', 'style': 'font-weight: 700;'}).buildElement()
+        .addP({'id': 'bm-highlight-preset-label', 'class': 'bm-settings-subheading', 'textContent': 'Choose a preset'}).buildElement()
         .addDiv({'class': 'bm-flex-center', 'role': 'group', 'aria-labelledby': 'bm-highlight-preset-label'})
           .addDiv({'class': 'bm-highlight-preset-container'})
             .addSpan({'textContent': 'None'}).buildElement()
@@ -139,7 +140,7 @@ export default class SettingsManager extends WindowSettings {
             .addButton({'innerHTML': highlightPresetOff.replace('#fff', '#2f4f4f'), 'aria-label': 'Preset "Full Template"'}, (instance, button) => {button.onclick = () => this.#updateHighlightToPreset('Full')}).buildElement()
           .buildElement()
         .buildElement()
-        .addP({'id': 'bm-highlight-grid-label', 'textContent': 'Create a custom pattern:', 'style': 'font-weight: 700;'}).buildElement()
+        .addP({'id': 'bm-highlight-grid-label', 'class': 'bm-settings-subheading', 'textContent': 'Create a custom pattern'}).buildElement()
         .addDiv({'class': 'bm-highlight-grid', 'role': 'group', 'aria-labelledby': 'bm-highlight-grid-label'});
           // We leave this open so we can add buttons
 
@@ -335,10 +336,12 @@ export default class SettingsManager extends WindowSettings {
       .addHr().buildElement()
       .addDiv({'class': 'bm-container', 'style': 'margin-left: 1.5ch;'})
         .addCheckbox({'textContent': 'Template creation should skip transparent tiles'}, (instance, label, checkbox) => {
+          label.classList.add('bm-settings-checkbox');
           checkbox.checked = !this.userSettings?.flags?.includes('hl-noSkip'); // Makes the checkbox match the last stored user setting
           checkbox.onchange = (event) => this.toggleFlag('hl-noSkip', !event.target.checked); // If the user wants to skip, then the checkbox is NOT checked
         }).buildElement()
         .addCheckbox({'innerHTML': 'Experimental: Template creation should <em>aggressively</em> skip transparent tiles'}, (instance, label, checkbox) => {
+          label.classList.add('bm-settings-checkbox');
           checkbox.checked = this.userSettings?.flags?.includes('hl-agSkip'); // Makes the checkbox match the last stored user setting
           checkbox.onchange = (event) => this.toggleFlag('hl-agSkip', event.target.checked); // If the user wants to aggressively skip, then the checkbox is checked
         }).buildElement()

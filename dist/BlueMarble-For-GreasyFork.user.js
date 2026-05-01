@@ -1766,12 +1766,12 @@
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().addDiv().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": closeIcon, "aria-label": 'Close window "Settings"' }, (instance, button) => {
+      }).buildElement().addDiv({ "class": "bm-settings-drag-title-slot" }).addHeader(1, { "class": "bm-dragbar-title-persistent bm-settings-drag-title", "textContent": "Settings" }).buildElement().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": closeIcon, "aria-label": 'Close window "Settings"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowSettings_instances, closeWindow_fn).call(this);
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically" }).addHeader(1, { "textContent": "Settings" }).buildElement().buildElement().addHr().buildElement().addP({ "textContent": "Settings take 5 seconds to save." }).buildElement().addDiv({ "class": "bm-container bm-scrollable" }, (instance, div) => {
+      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addHr({ "class": "bm-window-divider-top" }).buildElement().addDiv({ "class": "bm-container bm-scrollable" }, (instance, div) => {
         this.buildHighlight();
         this.buildTemplate();
       }).buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
@@ -1971,9 +1971,10 @@
       const highlightPresetCross = '<svg viewBox="0 0 3 3"><path d="M0,0H3V3H0Z" fill="#fff"/><path d="M1,0H2V1H3V2H2V3H1V2H0V1H1Z" fill="brown"/><path d="M1,1H2V2H1Z" fill="#2f4f4f"/></svg>';
       const storedHighlight = this.userSettings?.highlight ?? [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
       this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "class": "bm-container", "style": "margin-left: 1.5ch;" }).addCheckbox({ "textContent": "Highlight transparent pixels" }, (instance, label, checkbox) => {
+        label.classList.add("bm-settings-checkbox");
         checkbox.checked = !this.userSettings?.flags?.includes("hl-noTrans");
         checkbox.onchange = (event) => this.toggleFlag("hl-noTrans", !event.target.checked);
-      }).buildElement().addP({ "id": "bm-highlight-preset-label", "textContent": "Choose a preset:", "style": "font-weight: 700;" }).buildElement().addDiv({ "class": "bm-flex-center", "role": "group", "aria-labelledby": "bm-highlight-preset-label" }).addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "None" }).buildElement().addButton({ "innerHTML": highlightPresetOff, "aria-label": 'Preset "None"' }, (instance, button) => {
+      }).buildElement().addP({ "id": "bm-highlight-preset-label", "class": "bm-settings-subheading", "textContent": "Choose a preset" }).buildElement().addDiv({ "class": "bm-flex-center", "role": "group", "aria-labelledby": "bm-highlight-preset-label" }).addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "None" }).buildElement().addButton({ "innerHTML": highlightPresetOff, "aria-label": 'Preset "None"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "None");
       }).buildElement().buildElement().addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "Cross" }).buildElement().addButton({ "innerHTML": highlightPresetCross, "aria-label": 'Preset "Cross Shape"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "Cross");
@@ -1981,7 +1982,7 @@
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "X");
       }).buildElement().buildElement().addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "Full" }).buildElement().addButton({ "innerHTML": highlightPresetOff.replace("#fff", "#2f4f4f"), "aria-label": 'Preset "Full Template"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "Full");
-      }).buildElement().buildElement().buildElement().addP({ "id": "bm-highlight-grid-label", "textContent": "Create a custom pattern:", "style": "font-weight: 700;" }).buildElement().addDiv({ "class": "bm-highlight-grid", "role": "group", "aria-labelledby": "bm-highlight-grid-label" });
+      }).buildElement().buildElement().buildElement().addP({ "id": "bm-highlight-grid-label", "class": "bm-settings-subheading", "textContent": "Create a custom pattern" }).buildElement().addDiv({ "class": "bm-highlight-grid", "role": "group", "aria-labelledby": "bm-highlight-grid-label" });
       for (let buttonY = -1; buttonY <= 1; buttonY++) {
         for (let buttonX = -1; buttonX <= 1; buttonX++) {
           const buttonState = storedHighlight[storedHighlight.findIndex(([, x, y]) => x == buttonX && y == buttonY)]?.[0] ?? 0;
@@ -2007,9 +2008,11 @@
      */
     buildTemplate() {
       this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "class": "bm-container", "style": "margin-left: 1.5ch;" }).addCheckbox({ "textContent": "Template creation should skip transparent tiles" }, (instance, label, checkbox) => {
+        label.classList.add("bm-settings-checkbox");
         checkbox.checked = !this.userSettings?.flags?.includes("hl-noSkip");
         checkbox.onchange = (event) => this.toggleFlag("hl-noSkip", !event.target.checked);
       }).buildElement().addCheckbox({ "innerHTML": "Experimental: Template creation should <em>aggressively</em> skip transparent tiles" }, (instance, label, checkbox) => {
+        label.classList.add("bm-settings-checkbox");
         checkbox.checked = this.userSettings?.flags?.includes("hl-agSkip");
         checkbox.onchange = (event) => this.toggleFlag("hl-agSkip", event.target.checked);
       }).buildElement().buildElement().buildElement();
@@ -2475,7 +2478,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     const minute = String(date.getMinutes()).padStart(2, "0");
     return `${day}.${month}.${year} ${hour}:${minute}`;
   }
-  var _WindowFilter_instances, getWindowState_fn2, prefersWindowedMode_fn, setWindowModePreference_fn, getWindowedColorLayout_fn, getActiveWindowedColorLayout_fn, getWindowedLayoutSize_fn, getWindowLayoutMaxWidth_fn, getWindowLayoutMinHeight_fn, getWindowLayoutMaxHeight_fn, saveWindowLayoutSize_fn, restoreWindowLayoutSize_fn, applyWindowedColorLayout_fn, syncSortFormControls_fn, initializeCustomSortDropdowns_fn, closeCustomSortDropdowns_fn, cleanupCustomSortDropdowns_fn, closeWindow_fn2, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn2, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, initializeHorizontalScrollWheel_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, syncColorToggleLabel_fn, toggleColorVisibility_fn, animateColorToggleIcon_fn, initializeColorBlockToggle_fn, calculatePixelStatistics_fn;
+  var _WindowFilter_instances, getWindowState_fn2, setWindowOpenState_fn, prefersWindowedMode_fn, setWindowModePreference_fn, getWindowedColorLayout_fn, getActiveWindowedColorLayout_fn, getWindowedLayoutSize_fn, getWindowLayoutMaxWidth_fn, getWindowLayoutMinHeight_fn, getWindowLayoutMaxHeight_fn, saveWindowLayoutSize_fn, restoreWindowLayoutSize_fn, applyWindowedColorLayout_fn, syncSortFormControls_fn, initializeCustomSortDropdowns_fn, closeCustomSortDropdowns_fn, cleanupCustomSortDropdowns_fn, closeWindow_fn2, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn2, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, initializeHorizontalScrollWheel_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, syncColorToggleLabel_fn, toggleColorVisibility_fn, animateColorToggleIcon_fn, initializeColorBlockToggle_fn, calculatePixelStatistics_fn;
   var WindowFilter = class extends Overlay {
     /** Constructor for the color filter window
      * @param {*} executor - The executing class
@@ -2552,7 +2555,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       }).buildElement().addDiv({ "class": "bm-filter-drag-title-slot" }).addHeader(1, { "class": "bm-dragbar-title-persistent bm-filter-drag-title", "textContent": "Color Filter" }).buildElement().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": windowedIcon, "title": 'Switch to windowed mode for "Color Filter"', "aria-label": 'Switch to windowed mode for "Color Filter"' }, (instance, button) => {
         button.onclick = () => {
           __privateMethod(this, _WindowFilter_instances, setWindowModePreference_fn).call(this, true);
-          __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
+          __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this, true);
           this.buildWindowed();
         };
         button.ontouchend = () => {
@@ -2567,7 +2570,13 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, false);
       }).buildElement().addButton({ "class": "bm-button-secondary", "textContent": "Show All Colors" }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, true);
-      }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-scrollable bm-filter-scrollable" }).addDiv({ "class": "bm-container bm-filter-insights" }).addDiv({ "class": "bm-filter-stat-grid" }).addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Tiles" }).buildElement().addSpan({ "id": "bm-filter-tile-load", "class": "bm-filter-stat-value", "textContent": "0 / ???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Correct" }).buildElement().addSpan({ "id": "bm-filter-tot-correct", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Total" }).buildElement().addSpan({ "id": "bm-filter-tot-total", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Remaining" }).buildElement().addSpan({ "id": "bm-filter-tot-remaining", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card bm-filter-stat-card-wide" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Finish At" }).buildElement().addSpan({ "id": "bm-filter-tot-completed", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().buildElement().addHr().buildElement().addForm({ "class": "bm-container bm-filter-sort-panel" }).addFieldset().addLegend({ "textContent": "Sort Options:", "style": "font-weight: 700;" }).buildElement().addDiv({ "class": "bm-container bm-filter-sort-row" }).addSelect({ "id": "bm-filter-sort-primary", "class": "bm-filter-sort-select", "name": "sortPrimary", "textContent": "I want to view " }).addOption({ "value": "id", "textContent": "color IDs" }).buildElement().addOption({ "value": "name", "textContent": "color names" }).buildElement().addOption({ "value": "premium", "textContent": "premium colors" }).buildElement().addOption({ "value": "percent", "textContent": "percentage" }).buildElement().addOption({ "value": "correct", "textContent": "correct pixels" }).buildElement().addOption({ "value": "incorrect", "textContent": "incorrect pixels" }).buildElement().addOption({ "value": "total", "textContent": "total pixels" }).buildElement().buildElement().addSelect({ "id": "bm-filter-sort-secondary", "class": "bm-filter-sort-select", "name": "sortSecondary", "textContent": " in " }).addOption({ "value": "ascending", "textContent": "ascending" }).buildElement().addOption({ "value": "descending", "textContent": "descending" }).buildElement().buildElement().addSpan({ "class": "bm-filter-sort-suffix", "textContent": " order." }).buildElement().buildElement().addDiv({ "class": "bm-container" }).addCheckbox({ "id": "bm-filter-show-unused", "name": "showUnused", "textContent": "Show unused colors" }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-container bm-filter-sort-actions" }).addButton({ "class": "bm-button-primary", "textContent": "Sort Colors", "type": "submit" }, (instance, button) => {
+      }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-scrollable bm-filter-scrollable" }).addDiv({ "class": "bm-container bm-filter-insights" }).addDiv({ "class": "bm-filter-stat-grid" }).addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Tiles" }).buildElement().addSpan({ "id": "bm-filter-tile-load", "class": "bm-filter-stat-value", "textContent": "0 / ???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Correct" }).buildElement().addSpan({ "id": "bm-filter-tot-correct", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Total" }).buildElement().addSpan({ "id": "bm-filter-tot-total", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Remaining" }).buildElement().addSpan({ "id": "bm-filter-tot-remaining", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card bm-filter-stat-card-wide" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Finish At" }).buildElement().addSpan({ "id": "bm-filter-tot-completed", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().buildElement().addHr().buildElement().addForm({ "class": "bm-container bm-filter-sort-panel" }).addFieldset().addLegend({ "class": "bm-filter-sort-heading", "textContent": "Sort Options" }).buildElement().addDiv({ "class": "bm-container bm-filter-sort-row" }).addSelect({ "id": "bm-filter-sort-primary", "class": "bm-filter-sort-select", "name": "sortPrimary", "textContent": "Show" }, (instance, label) => {
+        label.classList.add("bm-filter-sort-prefix");
+      }).addOption({ "value": "id", "textContent": "color IDs" }).buildElement().addOption({ "value": "name", "textContent": "color names" }).buildElement().addOption({ "value": "premium", "textContent": "premium colors" }).buildElement().addOption({ "value": "percent", "textContent": "percentage" }).buildElement().addOption({ "value": "correct", "textContent": "correct pixels" }).buildElement().addOption({ "value": "incorrect", "textContent": "incorrect pixels" }).buildElement().addOption({ "value": "total", "textContent": "total pixels" }).buildElement().buildElement().addSelect({ "id": "bm-filter-sort-secondary", "class": "bm-filter-sort-select", "name": "sortSecondary", "textContent": "in" }, (instance, label) => {
+        label.classList.add("bm-filter-sort-prefix");
+      }).addOption({ "value": "ascending", "textContent": "ascending" }).buildElement().addOption({ "value": "descending", "textContent": "descending" }).buildElement().buildElement().addSpan({ "class": "bm-filter-sort-suffix", "textContent": "order" }).buildElement().buildElement().addDiv({ "class": "bm-container" }).addCheckbox({ "id": "bm-filter-show-unused", "name": "showUnused", "textContent": "Show unused colors" }, (instance, label) => {
+        label.classList.add("bm-filter-sort-checkbox");
+      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-container bm-filter-sort-actions" }).addButton({ "class": "bm-button-primary", "textContent": "Sort Colors", "type": "submit" }, (instance, button) => {
         button.onclick = (event) => {
           event.preventDefault();
           const formData = new FormData(document.querySelector(`#${this.windowID} form`));
@@ -2583,6 +2592,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
       __privateMethod(this, _WindowFilter_instances, initializeHorizontalScrollWheel_fn).call(this, scrollableContainer);
       __privateMethod(this, _WindowFilter_instances, initializeCustomSortDropdowns_fn).call(this);
+      __privateMethod(this, _WindowFilter_instances, setWindowOpenState_fn).call(this, true);
       __privateMethod(this, _WindowFilter_instances, buildColorList_fn).call(this, scrollableContainer);
       __privateMethod(this, _WindowFilter_instances, syncSortFormControls_fn).call(this);
       __privateMethod(this, _WindowFilter_instances, sortColorList_fn).call(this, this.sortPrimary, this.sortSecondary, this.showUnused);
@@ -2630,7 +2640,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       }).buildElement().addButton({ "class": "bm-button-circle bm-filter-fullscreen-toggle", "innerHTML": fullscreenIcon, "title": 'Switch to fullscreen mode for "Color Filter"', "aria-label": 'Switch to fullscreen mode for "Color Filter"' }, (instance, button) => {
         button.onclick = () => {
           __privateMethod(this, _WindowFilter_instances, setWindowModePreference_fn).call(this, false);
-          __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
+          __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this, true);
           this.buildWindow();
         };
         button.ontouchend = () => {
@@ -2661,10 +2671,19 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       __privateMethod(this, _WindowFilter_instances, initializeWindowedPersistence_fn).call(this);
       const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
       __privateMethod(this, _WindowFilter_instances, initializeHorizontalScrollWheel_fn).call(this, scrollableContainer);
+      __privateMethod(this, _WindowFilter_instances, setWindowOpenState_fn).call(this, true);
       __privateMethod(this, _WindowFilter_instances, buildColorList_fn).call(this, scrollableContainer);
       __privateMethod(this, _WindowFilter_instances, syncSortFormControls_fn).call(this);
       __privateMethod(this, _WindowFilter_instances, sortColorList_fn).call(this, this.sortPrimary, this.sortSecondary, this.showUnused);
       __privateMethod(this, _WindowFilter_instances, startAutoRefresh_fn).call(this);
+    }
+    /** Returns whether the filter window should be restored on page load.
+     * @returns {boolean}
+     * @since 0.96.0
+     */
+    shouldAutoOpen() {
+      const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this);
+      return windowState?.isOpen !== false;
     }
     /** The information about a specific color on the palette.
      * @typedef {Object} ColorData
@@ -2746,7 +2765,9 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         if (pixelCount) {
           const isWindowedPixelCount = !!pixelCount.closest(`#${this.windowID}.bm-windowed`);
           const isHorizontalWindowedPixelCount = !!pixelCount.closest(`#${this.windowID}.bm-windowed.bm-filter-layout-horizontal`);
-          if (isHorizontalWindowedPixelCount) {
+          if (Number(colorTotal) === 0) {
+            pixelCount.textContent = "-";
+          } else if (isHorizontalWindowedPixelCount) {
             pixelCount.innerHTML = `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}`;
           } else if (isWindowedPixelCount) {
             pixelCount.textContent = `${colorCorrectLocalized} / ${colorTotalLocalized}`;
@@ -2774,6 +2795,18 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     }
     (_a = this.settingsManager.userSettings)[_b = this.windowStateKey] ?? (_a[_b] = {});
     return this.settingsManager.userSettings[this.windowStateKey];
+  };
+  /** Persists whether the filter window is currently open.
+   * @param {boolean} isOpen
+   * @since 0.96.0
+   */
+  setWindowOpenState_fn = function(isOpen) {
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this);
+    if (!windowState) {
+      return;
+    }
+    windowState.isOpen = !!isOpen;
+    void this.settingsManager?.saveUserStorageNow();
   };
   /** Returns whether the filter should open in windowed mode.
    * Defaults to windowed mode when no explicit preference was stored.
@@ -3146,10 +3179,13 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
   /** Immediately closes the filter window and cleans up persistence observers.
    * @since 0.92.0
    */
-  closeWindow_fn2 = function() {
+  closeWindow_fn2 = function(preserveOpenState = false) {
     const windowElement = document.querySelector(`#${this.windowID}`);
     if (windowElement?.classList.contains("bm-windowed")) {
       __privateMethod(this, _WindowFilter_instances, saveWindowState_fn).call(this, windowElement);
+    }
+    if (!preserveOpenState) {
+      __privateMethod(this, _WindowFilter_instances, setWindowOpenState_fn).call(this, false);
     }
     __privateMethod(this, _WindowFilter_instances, stopAutoRefresh_fn).call(this);
     __privateMethod(this, _WindowFilter_instances, cleanupWindowPersistence_fn).call(this);
@@ -3415,6 +3451,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         colorIncorrect
       } = colorStatistics[color.id];
       const isColorHidden = !!(this.templateManager.shouldFilterColor.get(color.id) || false);
+      const hasNoPixels = Number(colorTotal) === 0;
       if (isWindowedMode) {
         const styleBackgroundStar = `background-size: auto 100%; background-repeat: repeat-x; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50,5L79,91L2,39L98,39L21,91' fill='${textColorForPaletteColorBackground}' fill-opacity='.1'/></svg>");`;
         colorList.addDiv({
@@ -3446,7 +3483,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
             }
             __privateMethod(this, _WindowFilter_instances, syncColorToggleLabel_fn).call(this, button, color);
           }
-        ).buildElement().addHeader(2, { "textContent": color.name, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-cnt", "innerHTML": isHorizontalWindowedMode ? `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}` : `${colorCorrectLocalized} / ${colorTotalLocalized}`, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}; flex: 1 1 auto; text-align: right;` }).buildElement().buildElement().buildElement();
+        ).buildElement().addHeader(2, { "textContent": color.name, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-cnt", "innerHTML": hasNoPixels ? "-" : isHorizontalWindowedMode ? `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}` : `${colorCorrectLocalized} / ${colorTotalLocalized}`, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}; flex: 1 1 auto; text-align: right;` }).buildElement().buildElement().buildElement();
       } else {
         colorList.addDiv({
           "class": "bm-container bm-filter-color bm-flex-between",
@@ -3477,7 +3514,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
             }
             __privateMethod(this, _WindowFilter_instances, syncColorToggleLabel_fn).call(this, button, color);
           }
-        ).buildElement().buildElement().addDiv({ "class": "bm-filter-color-title" }).addHeader(2, { "textContent": color.name }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-filter-color-meta" }).addDiv({ "class": "bm-filter-color-progress" }).addSpan({ "class": "bm-filter-color-pxl-cnt", "innerHTML": `${colorCorrectLocalized} /<br>${colorTotalLocalized}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-desc", "innerHTML": `${colorPercent} done<br>${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} off` }).buildElement().buildElement().buildElement().buildElement();
+        ).buildElement().buildElement().addDiv({ "class": "bm-filter-color-title" }).addHeader(2, { "textContent": color.name }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-filter-color-meta" }).addDiv({ "class": "bm-filter-color-progress" }).addSpan({ "class": "bm-filter-color-pxl-cnt", "innerHTML": hasNoPixels ? "-" : `${colorCorrectLocalized} /<br>${colorTotalLocalized}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-desc", "innerHTML": `${colorPercent} done<br>${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} off` }).buildElement().buildElement().buildElement().buildElement();
       }
     }
     colorList.buildOverlay(parentElement);
@@ -3800,8 +3837,11 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().bui
      * This might cause a memory leak. I pray that this is not the case...
      * @since 0.88.330
      */
-    buildWindowFilter() {
+    buildWindowFilter({ respectSavedVisibility = false } = {}) {
       const windowFilter = new WindowFilter(this);
+      if (respectSavedVisibility && !windowFilter.shouldAutoOpen()) {
+        return;
+      }
       windowFilter.buildPreferredWindow();
     }
   };
@@ -5079,7 +5119,7 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
     await templateManager.importJSON(storageTemplates);
     apiManager.spontaneousResponseListener(windowMain);
     windowMain.buildWindow();
-    windowMain.buildWindowFilter();
+    windowMain.buildWindowFilter({ "respectSavedVisibility": true });
     apiManager.applyCachedUserData(windowMain);
     void apiManager.requestCurrentUserData(windowMain);
     observeBlack();
@@ -5115,4 +5155,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: 0495ccb18152
+// Build Hash: 4ba9924b3f72

@@ -184,8 +184,11 @@ export default class WindowMain extends Overlay {
    * This might cause a memory leak. I pray that this is not the case...
    * @since 0.88.330
    */
-  buildWindowFilter() {
+  buildWindowFilter({respectSavedVisibility = false} = {}) {
     const windowFilter = new WindowFilter(this); // Creates a new color filter window instance
+    if (respectSavedVisibility && !windowFilter.shouldAutoOpen()) {
+      return;
+    }
     windowFilter.buildPreferredWindow();
   }
 

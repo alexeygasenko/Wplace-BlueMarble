@@ -261,7 +261,7 @@ async function initializeBlueMarble() {
   apiManager.spontaneousResponseListener(windowMain); // Reads spontaneous fetch responces
 
   windowMain.buildWindow(); // Builds the main Blue Marble window
-  windowMain.buildWindowFilter(); // Opens the Color Filter window automatically on page load
+  windowMain.buildWindowFilter({'respectSavedVisibility': true}); // Restores the Color Filter window only if it was open before reload
 
   apiManager.applyCachedUserData(windowMain); // Hydrates the UI from the earliest cached /me response if it exists
   void apiManager.requestCurrentUserData(windowMain); // Ensures the main window gets current /me data even if startup missed it

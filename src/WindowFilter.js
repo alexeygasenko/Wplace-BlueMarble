@@ -126,7 +126,7 @@ export default class WindowFilter extends Overlay {
           .addButton({'class': 'bm-button-circle', 'innerHTML': windowedIcon, 'title': 'Switch to windowed mode for "Color Filter"', 'aria-label': 'Switch to windowed mode for "Color Filter"'}, (instance, button) => {
             button.onclick = () => {
               this.#setWindowModePreference(true);
-              this.#closeWindow();
+              this.#closeWindow(true);
               this.buildWindowed();
             };
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
@@ -175,9 +175,11 @@ export default class WindowFilter extends Overlay {
             .addHr().buildElement()
             .addForm({'class': 'bm-container bm-filter-sort-panel'})
               .addFieldset()
-                .addLegend({'textContent': 'Sort Options:', 'style': 'font-weight: 700;'}).buildElement()
+                .addLegend({'class': 'bm-filter-sort-heading', 'textContent': 'Sort Options'}).buildElement()
                 .addDiv({'class': 'bm-container bm-filter-sort-row'})
-                  .addSelect({'id': 'bm-filter-sort-primary', 'class': 'bm-filter-sort-select', 'name': 'sortPrimary', 'textContent': 'I want to view '})
+                  .addSelect({'id': 'bm-filter-sort-primary', 'class': 'bm-filter-sort-select', 'name': 'sortPrimary', 'textContent': 'Show'}, (instance, label) => {
+                    label.classList.add('bm-filter-sort-prefix');
+                  })
                     .addOption({'value': 'id', 'textContent': 'color IDs'}).buildElement()
                     .addOption({'value': 'name', 'textContent': 'color names'}).buildElement()
                     .addOption({'value': 'premium', 'textContent': 'premium colors'}).buildElement()
@@ -186,14 +188,18 @@ export default class WindowFilter extends Overlay {
                     .addOption({'value': 'incorrect', 'textContent': 'incorrect pixels'}).buildElement()
                     .addOption({'value': 'total', 'textContent': 'total pixels'}).buildElement()
                   .buildElement()
-                  .addSelect({'id': 'bm-filter-sort-secondary', 'class': 'bm-filter-sort-select', 'name': 'sortSecondary', 'textContent': ' in '})
+                  .addSelect({'id': 'bm-filter-sort-secondary', 'class': 'bm-filter-sort-select', 'name': 'sortSecondary', 'textContent': 'in'}, (instance, label) => {
+                    label.classList.add('bm-filter-sort-prefix');
+                  })
                     .addOption({'value': 'ascending', 'textContent': 'ascending'}).buildElement()
                     .addOption({'value': 'descending', 'textContent': 'descending'}).buildElement()
                   .buildElement()
-                  .addSpan({'class': 'bm-filter-sort-suffix', 'textContent': ' order.'}).buildElement()
+                  .addSpan({'class': 'bm-filter-sort-suffix', 'textContent': 'order'}).buildElement()
                 .buildElement()
                 .addDiv({'class': 'bm-container'})
-                  .addCheckbox({'id': 'bm-filter-show-unused', 'name': 'showUnused', 'textContent': 'Show unused colors'}).buildElement()
+                  .addCheckbox({'id': 'bm-filter-show-unused', 'name': 'showUnused', 'textContent': 'Show unused colors'}, (instance, label) => {
+                    label.classList.add('bm-filter-sort-checkbox');
+                  }).buildElement()
                 .buildElement()
               .buildElement()
               .addDiv({'class': 'bm-container bm-filter-sort-actions'})
@@ -228,6 +234,7 @@ export default class WindowFilter extends Overlay {
     const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
     this.#initializeHorizontalScrollWheel(scrollableContainer);
     this.#initializeCustomSortDropdowns();
+    this.#setWindowOpenState(true);
     
     // These run when the user opens the Color Filter window
     this.#buildColorList(scrollableContainer);
@@ -290,7 +297,7 @@ export default class WindowFilter extends Overlay {
           .addButton({'class': 'bm-button-circle bm-filter-fullscreen-toggle', 'innerHTML': fullscreenIcon, 'title': 'Switch to fullscreen mode for "Color Filter"', 'aria-label': 'Switch to fullscreen mode for "Color Filter"'}, (instance, button) => {
             button.onclick = () => {
               this.#setWindowModePreference(false);
-              this.#closeWindow();
+              this.#closeWindow(true);
               this.buildWindow();
             };
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
@@ -347,6 +354,7 @@ export default class WindowFilter extends Overlay {
     // Obtains the scrollable container to put the color filter in
     const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
     this.#initializeHorizontalScrollWheel(scrollableContainer);
+    this.#setWindowOpenState(true);
     
     // These run when the user opens the Color Filter window
     this.#buildColorList(scrollableContainer);
@@ -363,6 +371,26 @@ export default class WindowFilter extends Overlay {
     if (!this.settingsManager) {return null;}
     this.settingsManager.userSettings[this.windowStateKey] ??= {};
     return this.settingsManager.userSettings[this.windowStateKey];
+  }
+
+  /** Returns whether the filter window should be restored on page load.
+   * @returns {boolean}
+   * @since 0.96.0
+   */
+  shouldAutoOpen() {
+    const windowState = this.#getWindowState();
+    return windowState?.isOpen !== false;
+  }
+
+  /** Persists whether the filter window is currently open.
+   * @param {boolean} isOpen
+   * @since 0.96.0
+   */
+  #setWindowOpenState(isOpen) {
+    const windowState = this.#getWindowState();
+    if (!windowState) {return;}
+    windowState.isOpen = !!isOpen;
+    void this.settingsManager?.saveUserStorageNow();
   }
 
   /** Returns whether the filter should open in windowed mode.
@@ -759,10 +787,13 @@ export default class WindowFilter extends Overlay {
   /** Immediately closes the filter window and cleans up persistence observers.
    * @since 0.92.0
    */
-  #closeWindow() {
+  #closeWindow(preserveOpenState = false) {
     const windowElement = document.querySelector(`#${this.windowID}`);
     if (windowElement?.classList.contains('bm-windowed')) {
       this.#saveWindowState(windowElement);
+    }
+    if (!preserveOpenState) {
+      this.#setWindowOpenState(false);
     }
     this.#stopAutoRefresh();
     this.#cleanupWindowPersistence();
@@ -1065,6 +1096,7 @@ export default class WindowFilter extends Overlay {
       } = colorStatistics[color.id];
 
       const isColorHidden = !!(this.templateManager.shouldFilterColor.get(color.id) || false);
+      const hasNoPixels = Number(colorTotal) === 0;
 
       // Add the color to the color list DOM
       if (isWindowedMode) {
@@ -1105,7 +1137,7 @@ export default class WindowFilter extends Overlay {
               }
             ).buildElement()
             .addHeader(2, {'textContent': color.name, 'style': `color: ${((color.id == -1) || (color.id == 0)) ? 'white' : textColorForPaletteColorBackground}`}).buildElement()
-            .addSmall({'class': 'bm-filter-color-pxl-cnt', 'innerHTML': isHorizontalWindowedMode ? `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}` : `${colorCorrectLocalized} / ${colorTotalLocalized}`, 'style': `color: ${((color.id == -1) || (color.id == 0)) ? 'white' : textColorForPaletteColorBackground}; flex: 1 1 auto; text-align: right;`}).buildElement()
+            .addSmall({'class': 'bm-filter-color-pxl-cnt', 'innerHTML': hasNoPixels ? '-' : (isHorizontalWindowedMode ? `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}` : `${colorCorrectLocalized} / ${colorTotalLocalized}`), 'style': `color: ${((color.id == -1) || (color.id == 0)) ? 'white' : textColorForPaletteColorBackground}; flex: 1 1 auto; text-align: right;`}).buildElement()
           .buildElement()
         .buildElement();
       } else {
@@ -1152,7 +1184,7 @@ export default class WindowFilter extends Overlay {
           .buildElement()
           .addDiv({'class': 'bm-filter-color-meta'})
             .addDiv({'class': 'bm-filter-color-progress'})
-              .addSpan({'class': 'bm-filter-color-pxl-cnt', 'innerHTML': `${colorCorrectLocalized} /<br>${colorTotalLocalized}`}).buildElement()
+              .addSpan({'class': 'bm-filter-color-pxl-cnt', 'innerHTML': hasNoPixels ? '-' : `${colorCorrectLocalized} /<br>${colorTotalLocalized}`}).buildElement()
               .addSmall({'class': 'bm-filter-color-pxl-desc', 'innerHTML': `${colorPercent} done<br>${((typeof colorIncorrect == 'number') && !isNaN(colorIncorrect)) ? colorIncorrect : '???'} off`}).buildElement()
             .buildElement()
           .buildElement()
@@ -1467,7 +1499,9 @@ export default class WindowFilter extends Overlay {
       if (pixelCount) {
         const isWindowedPixelCount = !!pixelCount.closest(`#${this.windowID}.bm-windowed`);
         const isHorizontalWindowedPixelCount = !!pixelCount.closest(`#${this.windowID}.bm-windowed.bm-filter-layout-horizontal`);
-        if (isHorizontalWindowedPixelCount) {
+        if (Number(colorTotal) === 0) {
+          pixelCount.textContent = '-';
+        } else if (isHorizontalWindowedPixelCount) {
           pixelCount.innerHTML = `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}`;
         } else if (isWindowedPixelCount) {
           pixelCount.textContent = `${colorCorrectLocalized} / ${colorTotalLocalized}`;

@@ -44,7 +44,9 @@ export default class WindowSettings extends Overlay {
           button.onclick = () => instance.handleMinimization(button);
           button.ontouchend = () => {button.click()}; // Needed only to negate weird interaction with dragbar
         }).buildElement()
-        .addDiv().buildElement() // Contains the minimized h1 element
+        .addDiv({'class': 'bm-settings-drag-title-slot'})
+          .addHeader(1, {'class': 'bm-dragbar-title-persistent bm-settings-drag-title', 'textContent': 'Settings'}).buildElement()
+        .buildElement()
         .addDiv({'class': 'bm-flex-center'})
           .addButton({'class': 'bm-button-circle', 'innerHTML': closeIcon, 'aria-label': 'Close window "Settings"'}, (instance, button) => {
             button.onclick = () => this.#closeWindow();
@@ -53,11 +55,7 @@ export default class WindowSettings extends Overlay {
         .buildElement()
       .buildElement()
       .addDiv({'class': 'bm-window-content'})
-        .addDiv({'class': 'bm-container bm-center-vertically'})
-          .addHeader(1, {'textContent': 'Settings'}).buildElement()
-        .buildElement()
-        .addHr().buildElement()
-        .addP({'textContent': 'Settings take 5 seconds to save.'}).buildElement()
+        .addHr({'class': 'bm-window-divider-top'}).buildElement()
         .addDiv({'class': 'bm-container bm-scrollable'}, (instance, div) => {
           // Each category in the settings window
           this.buildHighlight();
