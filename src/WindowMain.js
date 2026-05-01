@@ -49,7 +49,22 @@ export default class WindowMain extends Overlay {
           button.onclick = () => instance.handleMinimization(button);
           button.ontouchend = () => {button.click();}; // Needed ONLY to negate weird interaction with dragbar
         }).buildElement()
-        .addDiv().buildElement() // Contains the minimized h1 element
+        .addDiv({'class': 'bm-main-drag-brand'})
+          .addImg({'class': 'bm-favicon', 'src': 'https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/assets/Favicon.png'}, (instance, img) => {
+            // Adds a birthday hat & confetti to the window if it is Blue Marble's birthday
+            const date = new Date();
+            const dayOfTheYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 1)) / (1000 * 60 * 60 * 24)) + 1;
+            if (dayOfTheYear == 204) {
+              img.parentNode.style.position = 'relative';
+              img.parentNode.innerHTML = img.parentNode.innerHTML + `<svg class="bm-main-birthday-hat" viewBox="0 0 9 7"><path d="M0,3L9,0L2,7" fill="#0af"/><path d="M0,3A.4,.4 0 1 1 1,5" fill="#a00"/><path d="M1.5,6A1,1 0 0 1 3,6L2,7" fill="#a0f"/><path d="M4,5A.6,.6 0 1 1 5,4" fill="#0a0"/><path d="M6,3A.8,.8 0 1 1 7,2" fill="#fa0"/><path d="M4.5,1.5A1,1 0 0 1 3,2" fill="#aa0"/></svg>`;
+              img.onload = () => {
+                const confettiManager = new ConfettiManager();
+                confettiManager.createConfetti(document.querySelector(`#${this.windowID}`));
+              };
+            }
+          }).buildElement()
+          .addHeader(1, {'class': 'bm-dragbar-title-persistent', 'textContent': this.name}).buildElement()
+        .buildElement()
         .addDiv({'class': 'bm-flex-center'})
           .addButton({'class': 'bm-button-circle', 'innerHTML': settingsIcon, 'title': 'Settings', 'aria-label': 'Open settings'}, (instance, button) => {
             button.onclick = () => {
@@ -59,24 +74,7 @@ export default class WindowMain extends Overlay {
         .buildElement()
       .buildElement()
       .addDiv({'class': 'bm-window-content'})
-        .addHr().buildElement()
-        .addDiv({'class': 'bm-container bm-main-hero'})
-          .addImg({'class': 'bm-favicon', 'src': 'https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/assets/Favicon.png'}, (instance, img) => {
-            // Adds a birthday hat & confetti to the window if it is Blue Marble's birthday
-            const date = new Date();
-            const dayOfTheYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 1)) / (1000 * 60 * 60 * 24)) + 1;
-            if (dayOfTheYear == 204) {
-              img.parentNode.style.position = 'relative';
-              img.parentNode.innerHTML = img.parentNode.innerHTML + `<svg viewBox="0 0 9 7" width="2em" height="2em" style="position: absolute; top: -.75em; left: 3.25ch;"><path d="M0,3L9,0L2,7" fill="#0af"/><path d="M0,3A.4,.4 0 1 1 1,5" fill="#a00"/><path d="M1.5,6A1,1 0 0 1 3,6L2,7" fill="#a0f"/><path d="M4,5A.6,.6 0 1 1 5,4" fill="#0a0"/><path d="M6,3A.8,.8 0 1 1 7,2" fill="#fa0"/><path d="M4.5,1.5A1,1 0 0 1 3,2" fill="#aa0"/></svg>`;
-              img.onload = () => {
-                const confettiManager = new ConfettiManager();
-                confettiManager.createConfetti(document.querySelector(`#${this.windowID}`));
-              };
-            }
-          }).buildElement()
-          .addHeader(1, {'textContent': this.name}).buildElement()
-        .buildElement()
-        .addHr().buildElement()
+        .addHr({'class': 'bm-window-divider-top'}).buildElement()
         .addDiv({'class': 'bm-container bm-main-stats'})
           .addDiv({'class': 'bm-main-stat-card bm-main-stat-card-value'})
             .addSpan({'class': 'bm-main-stat-label', 'textContent': 'Droplets'}).buildElement()
@@ -186,8 +184,11 @@ export default class WindowMain extends Overlay {
    * This might cause a memory leak. I pray that this is not the case...
    * @since 0.88.330
    */
-  buildWindowFilter() {
+  buildWindowFilter({respectSavedVisibility = false} = {}) {
     const windowFilter = new WindowFilter(this); // Creates a new color filter window instance
+    if (respectSavedVisibility && !windowFilter.shouldAutoOpen()) {
+      return;
+    }
     windowFilter.buildPreferredWindow();
   }
 

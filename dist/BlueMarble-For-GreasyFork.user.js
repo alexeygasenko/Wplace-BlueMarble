@@ -217,12 +217,6 @@
     });
     return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
   }
-  function rgbToHex(red, green, blue) {
-    if (Array.isArray(red)) {
-      [red, green, blue] = red;
-    }
-    return (1 << 24 | red << 16 | green << 8 | blue).toString(16).slice(1);
-  }
   function colorpaletteForBlueMarble(tolerance) {
     const colorpaletteBM = colorpalette;
     colorpaletteBM.unshift({ "id": -1, "premium": false, "name": "Erased", "rgb": [222, 250, 206] });
@@ -1323,8 +1317,10 @@
       button.style.textDecoration = "none";
       const window2 = button.closest(".bm-window");
       const dragbar = button.closest(".bm-dragbar");
-      const header = window2?.querySelector("h1");
       const windowContent = window2?.querySelector(".bm-window-content");
+      const titleSlot = button.nextElementSibling;
+      const persistentDragbarHeader = titleSlot?.querySelector(".bm-dragbar-title-persistent");
+      const header = persistentDragbarHeader ?? windowContent?.querySelector("h1") ?? window2?.querySelector("h1");
       if (!window2 || !dragbar || !windowContent) {
         button.disabled = false;
         button.style.textDecoration = "";
@@ -1377,18 +1373,26 @@
           window2.style.minHeight = "0px";
           window2.style.height = getCollapsedHeight() + "px";
         }
-        const dragbarHeader1 = header?.cloneNode(true) ?? document.createElement("h1");
+        window2.classList.add("bm-window-collapsed");
+        const dragbarHeader1 = persistentDragbarHeader ?? header?.cloneNode(true) ?? document.createElement("h1");
         const dragbarHeader1Text = dragbarHeader1.textContent;
-        button.nextElementSibling.appendChild(dragbarHeader1);
+        if (!persistentDragbarHeader) {
+          dragbarHeader1.classList.add("bm-dragbar-minimized-title");
+          (titleSlot ?? dragbar).appendChild(dragbarHeader1);
+        }
         button.innerHTML = minimizeIconCollapsed;
         button.dataset["buttonStatus"] = "collapsed";
         button.ariaLabel = `Unminimize window "${dragbarHeader1Text}"`;
+        button.title = button.ariaLabel;
       } else {
-        const dragbarHeader1 = dragbar.querySelector("h1");
+        const dragbarHeader1 = dragbar.querySelector(".bm-dragbar-minimized-title") ?? dragbar.querySelector(".bm-dragbar-title-persistent") ?? dragbar.querySelector("h1") ?? document.createElement("h1");
         const dragbarHeader1Text = dragbarHeader1.textContent;
-        dragbarHeader1.remove();
+        if (dragbarHeader1.classList.contains("bm-dragbar-minimized-title")) {
+          dragbarHeader1.remove();
+        }
         windowContent.style.display = "";
         windowContent.style.height = "0";
+        window2.classList.remove("bm-window-collapsed");
         window2.style.width = window2.dataset["widthBeforeMinimize"] ?? "";
         window2.style.minHeight = window2.dataset["minHeightBeforeMinimize"] ?? "";
         window2.style.height = window2.dataset["heightBeforeMinimize"] ?? "";
@@ -1403,6 +1407,7 @@
         button.innerHTML = minimizeIconExpanded;
         button.dataset["buttonStatus"] = "expanded";
         button.ariaLabel = `Minimize window "${dragbarHeader1Text}"`;
+        button.title = button.ariaLabel;
       }
     }
     /** Handles dragging of the overlay.
@@ -1524,7 +1529,7 @@
     /** Handles resizing of an overlay window from a resize handle.
      * @param {string} resizeMeSelector - The element to resize
      * @param {string} iResizeThingsSelector - The resize handle element
-     * @param {{onEnd?: function({element: HTMLElement, width: number, height: number}): void, minWidth?: number, minHeight?: number, maxWidth?: number, maxHeight?: number}} [options={}]
+     * @param {{onEnd?: function({element: HTMLElement, width: number, height: number}): void, minWidth?: number | function(): number, minHeight?: number | function(): number, maxWidth?: number | function(): number, maxHeight?: number | function(): number}} [options={}]
      * @since 0.92.0
      */
     handleResize(resizeMeSelector, iResizeThingsSelector, options = {}) {
@@ -1546,10 +1551,22 @@
       let targetWidth = 0;
       let targetHeight = 0;
       let animationFrame = null;
-      const getMaximumWidth = () => Number.isFinite(options?.maxWidth) ? options.maxWidth : window.innerWidth - 16;
-      const getMaximumHeight = () => Number.isFinite(options?.maxHeight) ? options.maxHeight : window.innerHeight - 16;
-      const minimumWidth = Number.isFinite(options?.minWidth) ? options.minWidth : 200;
-      const minimumHeight = Number.isFinite(options?.minHeight) ? options.minHeight : 160;
+      const getMaximumWidth = () => {
+        const maximumWidth = typeof options?.maxWidth == "function" ? options.maxWidth() : options?.maxWidth;
+        return Number.isFinite(maximumWidth) ? maximumWidth : window.innerWidth - 16;
+      };
+      const getMaximumHeight = () => {
+        const maximumHeight = typeof options?.maxHeight == "function" ? options.maxHeight() : options?.maxHeight;
+        return Number.isFinite(maximumHeight) ? maximumHeight : window.innerHeight - 16;
+      };
+      const getMinimumWidth = () => {
+        const minimumWidth = typeof options?.minWidth == "function" ? options.minWidth() : options?.minWidth;
+        return Number.isFinite(minimumWidth) ? minimumWidth : 200;
+      };
+      const getMinimumHeight = () => {
+        const minimumHeight = typeof options?.minHeight == "function" ? options.minHeight() : options?.minHeight;
+        return Number.isFinite(minimumHeight) ? minimumHeight : 160;
+      };
       const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
       const updateSize = () => {
         if (isResizing) {
@@ -1609,8 +1626,8 @@
         if (!isResizing) {
           return;
         }
-        targetWidth = clamp(startWidth + (event.clientX - startX), minimumWidth, getMaximumWidth());
-        targetHeight = clamp(startHeight + (event.clientY - startY), minimumHeight, getMaximumHeight());
+        targetWidth = clamp(startWidth + (event.clientX - startX), getMinimumWidth(), getMaximumWidth());
+        targetHeight = clamp(startHeight + (event.clientY - startY), getMinimumHeight(), getMaximumHeight());
       };
       const onTouchMove = (event) => {
         if (!isResizing) {
@@ -1620,8 +1637,8 @@
         if (!touch) {
           return;
         }
-        targetWidth = clamp(startWidth + (touch.clientX - startX), minimumWidth, getMaximumWidth());
-        targetHeight = clamp(startHeight + (touch.clientY - startY), minimumHeight, getMaximumHeight());
+        targetWidth = clamp(startWidth + (touch.clientX - startX), getMinimumWidth(), getMaximumWidth());
+        targetHeight = clamp(startHeight + (touch.clientY - startY), getMinimumHeight(), getMaximumHeight());
         event.preventDefault();
       };
       iResizeThings.addEventListener("mousedown", (event) => {
@@ -1749,12 +1766,12 @@
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().addDiv().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": closeIcon, "aria-label": 'Close window "Settings"' }, (instance, button) => {
+      }).buildElement().addDiv({ "class": "bm-settings-drag-title-slot" }).addHeader(1, { "class": "bm-dragbar-title-persistent bm-settings-drag-title", "textContent": "Settings" }).buildElement().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": closeIcon, "aria-label": 'Close window "Settings"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowSettings_instances, closeWindow_fn).call(this);
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically" }).addHeader(1, { "textContent": "Settings" }).buildElement().buildElement().addHr().buildElement().addP({ "textContent": "Settings take 5 seconds to save." }).buildElement().addDiv({ "class": "bm-container bm-scrollable" }, (instance, div) => {
+      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addHr({ "class": "bm-window-divider-top" }).buildElement().addDiv({ "class": "bm-container bm-scrollable" }, (instance, div) => {
         this.buildHighlight();
         this.buildTemplate();
       }).buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
@@ -1954,9 +1971,10 @@
       const highlightPresetCross = '<svg viewBox="0 0 3 3"><path d="M0,0H3V3H0Z" fill="#fff"/><path d="M1,0H2V1H3V2H2V3H1V2H0V1H1Z" fill="brown"/><path d="M1,1H2V2H1Z" fill="#2f4f4f"/></svg>';
       const storedHighlight = this.userSettings?.highlight ?? [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
       this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "class": "bm-container", "style": "margin-left: 1.5ch;" }).addCheckbox({ "textContent": "Highlight transparent pixels" }, (instance, label, checkbox) => {
+        label.classList.add("bm-settings-checkbox");
         checkbox.checked = !this.userSettings?.flags?.includes("hl-noTrans");
         checkbox.onchange = (event) => this.toggleFlag("hl-noTrans", !event.target.checked);
-      }).buildElement().addP({ "id": "bm-highlight-preset-label", "textContent": "Choose a preset:", "style": "font-weight: 700;" }).buildElement().addDiv({ "class": "bm-flex-center", "role": "group", "aria-labelledby": "bm-highlight-preset-label" }).addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "None" }).buildElement().addButton({ "innerHTML": highlightPresetOff, "aria-label": 'Preset "None"' }, (instance, button) => {
+      }).buildElement().addP({ "id": "bm-highlight-preset-label", "class": "bm-settings-subheading", "textContent": "Choose a preset" }).buildElement().addDiv({ "class": "bm-flex-center", "role": "group", "aria-labelledby": "bm-highlight-preset-label" }).addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "None" }).buildElement().addButton({ "innerHTML": highlightPresetOff, "aria-label": 'Preset "None"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "None");
       }).buildElement().buildElement().addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "Cross" }).buildElement().addButton({ "innerHTML": highlightPresetCross, "aria-label": 'Preset "Cross Shape"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "Cross");
@@ -1964,7 +1982,7 @@
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "X");
       }).buildElement().buildElement().addDiv({ "class": "bm-highlight-preset-container" }).addSpan({ "textContent": "Full" }).buildElement().addButton({ "innerHTML": highlightPresetOff.replace("#fff", "#2f4f4f"), "aria-label": 'Preset "Full Template"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _SettingsManager_instances, updateHighlightToPreset_fn).call(this, "Full");
-      }).buildElement().buildElement().buildElement().addP({ "id": "bm-highlight-grid-label", "textContent": "Create a custom pattern:", "style": "font-weight: 700;" }).buildElement().addDiv({ "class": "bm-highlight-grid", "role": "group", "aria-labelledby": "bm-highlight-grid-label" });
+      }).buildElement().buildElement().buildElement().addP({ "id": "bm-highlight-grid-label", "class": "bm-settings-subheading", "textContent": "Create a custom pattern" }).buildElement().addDiv({ "class": "bm-highlight-grid", "role": "group", "aria-labelledby": "bm-highlight-grid-label" });
       for (let buttonY = -1; buttonY <= 1; buttonY++) {
         for (let buttonX = -1; buttonX <= 1; buttonX++) {
           const buttonState = storedHighlight[storedHighlight.findIndex(([, x, y]) => x == buttonX && y == buttonY)]?.[0] ?? 0;
@@ -1990,9 +2008,11 @@
      */
     buildTemplate() {
       this.window = this.addDiv({ "class": "bm-container" }).addHeader(2, { "textContent": "Pixel Highlight" }).buildElement().addHr().buildElement().addDiv({ "class": "bm-container", "style": "margin-left: 1.5ch;" }).addCheckbox({ "textContent": "Template creation should skip transparent tiles" }, (instance, label, checkbox) => {
+        label.classList.add("bm-settings-checkbox");
         checkbox.checked = !this.userSettings?.flags?.includes("hl-noSkip");
         checkbox.onchange = (event) => this.toggleFlag("hl-noSkip", !event.target.checked);
       }).buildElement().addCheckbox({ "innerHTML": "Experimental: Template creation should <em>aggressively</em> skip transparent tiles" }, (instance, label, checkbox) => {
+        label.classList.add("bm-settings-checkbox");
         checkbox.checked = this.userSettings?.flags?.includes("hl-agSkip");
         checkbox.onchange = (event) => this.toggleFlag("hl-agSkip", event.target.checked);
       }).buildElement().buildElement().buildElement();
@@ -2446,25 +2466,19 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
 
   // src/WindowFilter.js
   var closeIcon2 = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
-  var fullscreenIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 4.5H4.5v4M15.5 4.5h4v4M19.5 15.5v4h-4M8.5 19.5h-4v-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
+  var fullscreenIcon = '<svg class="bm-button-icon bm-button-icon-fullscreen" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4.5H4.5V8M16 4.5h3.5V8M19.5 16v3.5H16M8 19.5H4.5V16"/><path d="M4.8 4.8l5.1 5.1M19.2 4.8l-5.1 5.1M19.2 19.2l-5.1-5.1M4.8 19.2l5.1-5.1"/></g></svg>';
   var windowedIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 7.5V10H7.5M16.5 10H14V7.5M14 16.5V14h2.5M7.5 14H10v2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var horizontalLayoutIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7.5h15M4.5 16.5h15"/><path d="M7.5 5v5M12 5v5M16.5 5v5M7.5 14v5M12 14v5M16.5 14v5"/></g></svg>';
+  var verticalLayoutIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4.5v15M16 4.5v15"/><path d="M5.5 7.5h5M5.5 12h5M5.5 16.5h5M13.5 7.5h5M13.5 12h5M13.5 16.5h5"/></g></svg>';
   function localizeCompactDate(date) {
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = String(date.getFullYear()).slice(-2);
+    const hour = String(date.getHours()).padStart(2, "0");
     const minute = String(date.getMinutes()).padStart(2, "0");
-    const uses12HourClock = new Intl.DateTimeFormat(void 0, { hour: "numeric" }).resolvedOptions().hour12;
-    let hour = date.getHours();
-    let period = "";
-    if (uses12HourClock) {
-      period = hour >= 12 ? " PM" : " AM";
-      hour = hour % 12 || 12;
-    } else {
-      hour = String(hour).padStart(2, "0");
-    }
-    return `${month}/${day}/${year} ${hour}:${minute}${period}`;
+    return `${day}.${month}.${year} ${hour}:${minute}`;
   }
-  var _WindowFilter_instances, getWindowState_fn2, prefersWindowedMode_fn, setWindowModePreference_fn, syncSortFormControls_fn, closeWindow_fn2, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn2, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, syncColorToggleLabel_fn, toggleColorVisibility_fn, animateColorToggleIcon_fn, initializeColorBlockToggle_fn, calculatePixelStatistics_fn;
+  var _WindowFilter_instances, getWindowState_fn2, setWindowOpenState_fn, prefersWindowedMode_fn, setWindowModePreference_fn, getWindowedColorLayout_fn, getActiveWindowedColorLayout_fn, getWindowedLayoutSize_fn, getWindowLayoutMaxWidth_fn, getWindowLayoutMinHeight_fn, getWindowLayoutMaxHeight_fn, saveWindowLayoutSize_fn, restoreWindowLayoutSize_fn, applyWindowedColorLayout_fn, syncSortFormControls_fn, initializeCustomSortDropdowns_fn, closeCustomSortDropdowns_fn, cleanupCustomSortDropdowns_fn, closeWindow_fn2, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn2, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, initializeHorizontalScrollWheel_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, syncColorToggleLabel_fn, toggleColorVisibility_fn, animateColorToggleIcon_fn, initializeColorBlockToggle_fn, calculatePixelStatistics_fn;
   var WindowFilter = class extends Overlay {
     /** Constructor for the color filter window
      * @param {*} executor - The executing class
@@ -2483,11 +2497,16 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       this.windowStateKey = "windowFilter";
       this.windowResizeObserver = null;
       this.windowViewportResizeHandler = null;
+      this.windowHorizontalWheelHandler = null;
+      this.windowHorizontalWheelElement = null;
       this.windowSaveTimeout = null;
+      this.sortDropdownPointerHandler = null;
+      this.sortDropdownKeyHandler = null;
       this.colorRefreshInterval = null;
       this.colorRefreshIntervalMS = 1e4;
       this.windowMinWidth = 360;
       this.windowMinHeight = 220;
+      this.windowHorizontalHeight = 170;
       this.windowMaxWidth = 1e3;
       this.windowMaxHeight = 1400;
       this.templateManager = executor.apiManager?.templateManager;
@@ -2528,30 +2547,36 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         return;
       }
       this.window = this.addDiv({ "id": this.windowID, "class": "bm-window" }, (instance, div) => {
-      }).addDragbar().addButton({ "class": "bm-button-circle", "innerHTML": minimizeIconExpanded, "aria-label": 'Minimize window "Color Filter"', "data-button-status": "expanded" }, (instance, button) => {
+      }).addDragbar().addButton({ "class": "bm-button-circle", "innerHTML": minimizeIconExpanded, "title": 'Minimize window "Color Filter"', "aria-label": 'Minimize window "Color Filter"', "data-button-status": "expanded" }, (instance, button) => {
         button.onclick = () => instance.handleMinimization(button);
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().addDiv().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": windowedIcon, "aria-label": 'Switch to windowed mode for "Color Filter"' }, (instance, button) => {
+      }).buildElement().addDiv({ "class": "bm-filter-drag-title-slot" }).addHeader(1, { "class": "bm-dragbar-title-persistent bm-filter-drag-title", "textContent": "Color Filter" }).buildElement().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": windowedIcon, "title": 'Switch to windowed mode for "Color Filter"', "aria-label": 'Switch to windowed mode for "Color Filter"' }, (instance, button) => {
         button.onclick = () => {
           __privateMethod(this, _WindowFilter_instances, setWindowModePreference_fn).call(this, true);
-          __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
+          __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this, true);
           this.buildWindowed();
         };
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().addButton({ "class": "bm-button-circle", "innerHTML": closeIcon2, "aria-label": 'Close window "Color Filter"' }, (instance, button) => {
+      }).buildElement().addButton({ "class": "bm-button-circle", "innerHTML": closeIcon2, "title": 'Close window "Color Filter"', "aria-label": 'Close window "Color Filter"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically bm-filter-header" }).addHeader(1, { "textContent": "Color Filter" }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-flex-between bm-center-vertically bm-filter-toolbar", "style": "gap: 1.5ch;" }).addButton({ "class": "bm-button-secondary", "textContent": "Hide All Colors" }, (instance, button) => {
+      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addHr({ "class": "bm-window-divider-top" }).buildElement().addDiv({ "class": "bm-container bm-flex-between bm-center-vertically bm-filter-toolbar", "style": "gap: 1.5ch;" }).addButton({ "class": "bm-button-secondary", "textContent": "Hide All Colors" }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, false);
       }).buildElement().addButton({ "class": "bm-button-secondary", "textContent": "Show All Colors" }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, true);
-      }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-scrollable bm-filter-scrollable" }).addDiv({ "class": "bm-container bm-filter-insights" }).addDiv({ "class": "bm-filter-stat-grid" }).addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Tiles" }).buildElement().addSpan({ "id": "bm-filter-tile-load", "class": "bm-filter-stat-value", "textContent": "0 / ???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Correct" }).buildElement().addSpan({ "id": "bm-filter-tot-correct", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Total" }).buildElement().addSpan({ "id": "bm-filter-tot-total", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Remaining" }).buildElement().addSpan({ "id": "bm-filter-tot-remaining", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card bm-filter-stat-card-wide" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Finish At" }).buildElement().addSpan({ "id": "bm-filter-tot-completed", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().buildElement().addHr().buildElement().addForm({ "class": "bm-container bm-filter-sort-panel" }).addFieldset().addLegend({ "textContent": "Sort Options:", "style": "font-weight: 700;" }).buildElement().addDiv({ "class": "bm-container" }).addSelect({ "id": "bm-filter-sort-primary", "name": "sortPrimary", "textContent": "I want to view " }).addOption({ "value": "id", "textContent": "color IDs" }).buildElement().addOption({ "value": "name", "textContent": "color names" }).buildElement().addOption({ "value": "premium", "textContent": "premium colors" }).buildElement().addOption({ "value": "percent", "textContent": "percentage" }).buildElement().addOption({ "value": "correct", "textContent": "correct pixels" }).buildElement().addOption({ "value": "incorrect", "textContent": "incorrect pixels" }).buildElement().addOption({ "value": "total", "textContent": "total pixels" }).buildElement().buildElement().addSelect({ "id": "bm-filter-sort-secondary", "name": "sortSecondary", "textContent": " in " }).addOption({ "value": "ascending", "textContent": "ascending" }).buildElement().addOption({ "value": "descending", "textContent": "descending" }).buildElement().buildElement().addSpan({ "textContent": " order." }).buildElement().buildElement().addDiv({ "class": "bm-container" }).addCheckbox({ "id": "bm-filter-show-unused", "name": "showUnused", "textContent": "Show unused colors" }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-container bm-filter-sort-actions" }).addButton({ "class": "bm-button-primary", "textContent": "Sort Colors", "type": "submit" }, (instance, button) => {
+      }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-scrollable bm-filter-scrollable" }).addDiv({ "class": "bm-container bm-filter-insights" }).addDiv({ "class": "bm-filter-stat-grid" }).addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Tiles" }).buildElement().addSpan({ "id": "bm-filter-tile-load", "class": "bm-filter-stat-value", "textContent": "0 / ???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Correct" }).buildElement().addSpan({ "id": "bm-filter-tot-correct", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Total" }).buildElement().addSpan({ "id": "bm-filter-tot-total", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Remaining" }).buildElement().addSpan({ "id": "bm-filter-tot-remaining", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().addDiv({ "class": "bm-filter-stat-card bm-filter-stat-card-wide" }).addSpan({ "class": "bm-filter-stat-label", "textContent": "Finish At" }).buildElement().addSpan({ "id": "bm-filter-tot-completed", "class": "bm-filter-stat-value", "textContent": "???" }).buildElement().buildElement().buildElement().addHr().buildElement().addForm({ "class": "bm-container bm-filter-sort-panel" }).addFieldset().addLegend({ "class": "bm-filter-sort-heading", "textContent": "Sort Options" }).buildElement().addDiv({ "class": "bm-container bm-filter-sort-row" }).addSelect({ "id": "bm-filter-sort-primary", "class": "bm-filter-sort-select", "name": "sortPrimary", "textContent": "Show" }, (instance, label) => {
+        label.classList.add("bm-filter-sort-prefix");
+      }).addOption({ "value": "id", "textContent": "color IDs" }).buildElement().addOption({ "value": "name", "textContent": "color names" }).buildElement().addOption({ "value": "premium", "textContent": "premium colors" }).buildElement().addOption({ "value": "percent", "textContent": "percentage" }).buildElement().addOption({ "value": "correct", "textContent": "correct pixels" }).buildElement().addOption({ "value": "incorrect", "textContent": "incorrect pixels" }).buildElement().addOption({ "value": "total", "textContent": "total pixels" }).buildElement().buildElement().addSelect({ "id": "bm-filter-sort-secondary", "class": "bm-filter-sort-select", "name": "sortSecondary", "textContent": "in" }, (instance, label) => {
+        label.classList.add("bm-filter-sort-prefix");
+      }).addOption({ "value": "ascending", "textContent": "ascending" }).buildElement().addOption({ "value": "descending", "textContent": "descending" }).buildElement().buildElement().addSpan({ "class": "bm-filter-sort-suffix", "textContent": "order" }).buildElement().buildElement().addDiv({ "class": "bm-container" }).addCheckbox({ "id": "bm-filter-show-unused", "name": "showUnused", "textContent": "Show unused colors" }, (instance, label) => {
+        label.classList.add("bm-filter-sort-checkbox");
+      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-container bm-filter-sort-actions" }).addButton({ "class": "bm-button-primary", "textContent": "Sort Colors", "type": "submit" }, (instance, button) => {
         button.onclick = (event) => {
           event.preventDefault();
           const formData = new FormData(document.querySelector(`#${this.windowID} form`));
@@ -2565,6 +2590,9 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       }).buildElement().buildElement().buildElement().buildElement().buildElement().buildElement().buildElement().buildOverlay(this.windowParent);
       this.handleDrag(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-dragbar`);
       const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
+      __privateMethod(this, _WindowFilter_instances, initializeHorizontalScrollWheel_fn).call(this, scrollableContainer);
+      __privateMethod(this, _WindowFilter_instances, initializeCustomSortDropdowns_fn).call(this);
+      __privateMethod(this, _WindowFilter_instances, setWindowOpenState_fn).call(this, true);
       __privateMethod(this, _WindowFilter_instances, buildColorList_fn).call(this, scrollableContainer);
       __privateMethod(this, _WindowFilter_instances, syncSortFormControls_fn).call(this);
       __privateMethod(this, _WindowFilter_instances, sortColorList_fn).call(this, this.sortPrimary, this.sortSecondary, this.showUnused);
@@ -2589,9 +2617,9 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         "id": this.windowID,
         "class": "bm-window bm-windowed",
         "style": `width: 360px; height: min(70vh, 32rem); min-width: ${this.windowMinWidth}px; min-height: ${this.windowMinHeight}px; max-width: min(${this.windowMaxWidth}px, calc(100vw - 16px)); max-height: min(${this.windowMaxHeight}px, calc(100vh - 16px));`
-      }).addDragbar().addButton({ "class": "bm-button-circle", "innerHTML": minimizeIconExpanded, "aria-label": 'Minimize window "Color Filter"', "data-button-status": "expanded" }, (instance, button) => {
+      }).addDragbar().addButton({ "class": "bm-button-circle", "innerHTML": minimizeIconExpanded, "title": 'Minimize window "Color Filter"', "aria-label": 'Minimize window "Color Filter"', "data-button-status": "expanded" }, (instance, button) => {
         button.onclick = () => {
-          const windowedColorTotals = document.querySelector("#bm-filter-windowed-color-totals");
+          const windowedColorTotals = document.querySelector("#bm-filter-windowed-color-totals-dragbar");
           if (windowedColorTotals) {
             windowedColorTotals.style.display = button.dataset["buttonStatus"] == "expanded" ? "none" : "";
           }
@@ -2600,23 +2628,36 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().addDiv().addSpan({ "id": "bm-filter-windowed-color-totals", "class": "bm-dragbar-text", "style": "font-weight: 700;" }).buildElement().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": fullscreenIcon, "aria-label": 'Switch to fullscreen mode for "Color Filter"' }, (instance, button) => {
+      }).buildElement().addDiv().addSpan({ "id": "bm-filter-windowed-color-totals-dragbar", "class": "bm-dragbar-text", "style": "font-weight: 700;" }).buildElement().addHeader(1, { "class": "bm-dragbar-title-persistent bm-filter-drag-title bm-filter-horizontal-drag-title", "textContent": "Color Filter" }).buildElement().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "id": "bm-filter-layout-toggle", "class": "bm-button-circle bm-filter-layout-toggle", "innerHTML": horizontalLayoutIcon, "title": "Switch color layout", "aria-label": "Switch to horizontal color layout" }, (instance, button) => {
+        button.onclick = () => {
+          const windowElement = button.closest(`#${this.windowID}`);
+          const currentLayout = windowElement?.classList.contains("bm-filter-layout-horizontal") ? "horizontal" : "vertical";
+          __privateMethod(this, _WindowFilter_instances, applyWindowedColorLayout_fn).call(this, currentLayout == "horizontal" ? "vertical" : "horizontal");
+        };
+        button.ontouchend = () => {
+          button.click();
+        };
+      }).buildElement().addButton({ "class": "bm-button-circle bm-filter-fullscreen-toggle", "innerHTML": fullscreenIcon, "title": 'Switch to fullscreen mode for "Color Filter"', "aria-label": 'Switch to fullscreen mode for "Color Filter"' }, (instance, button) => {
         button.onclick = () => {
           __privateMethod(this, _WindowFilter_instances, setWindowModePreference_fn).call(this, false);
-          __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
+          __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this, true);
           this.buildWindow();
         };
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().addButton({ "class": "bm-button-circle", "innerHTML": closeIcon2, "aria-label": 'Close window "Color Filter"' }, (instance, button) => {
+      }).buildElement().addButton({ "class": "bm-button-circle", "innerHTML": closeIcon2, "title": 'Close window "Color Filter"', "aria-label": 'Close window "Color Filter"' }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, closeWindow_fn2).call(this);
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addDiv({ "class": "bm-container bm-center-vertically bm-filter-header" }).addHeader(1, { "textContent": "Color Filter" }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-flex-between bm-center-vertically bm-filter-toolbar", "style": "gap: 1.5ch;" }).addButton({ "class": "bm-button-secondary", "textContent": "None" }, (instance, button) => {
+      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addHr({ "class": "bm-window-divider-top" }).buildElement().addDiv({ "class": "bm-container bm-center-vertically bm-filter-windowed-summary-row" }).addDiv({ "class": "bm-filter-windowed-summary" }).addSpan({ "class": "bm-filter-windowed-summary-label", "textContent": "Painted" }).buildElement().addSpan({ "id": "bm-filter-windowed-color-totals-inline", "class": "bm-filter-windowed-summary-value", "textContent": "0 / ???" }).buildElement().buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-flex-between bm-center-vertically bm-filter-toolbar bm-filter-toolbar-vertical", "style": "gap: 1.5ch;" }).addButton({ "class": "bm-button-secondary", "textContent": "None", "title": "Hide all colors", "aria-label": "Hide all colors" }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, false);
-      }).buildElement().addButton({ "class": "bm-button-secondary", "textContent": "All" }, (instance, button) => {
+      }).buildElement().addButton({ "class": "bm-button-secondary", "textContent": "All", "title": "Show all colors", "aria-label": "Show all colors" }, (instance, button) => {
+        button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, true);
+      }).buildElement().buildElement().addDiv({ "class": "bm-filter-toolbar-horizontal" }).addButton({ "class": "bm-button-secondary", "textContent": "None", "title": "Hide all colors", "aria-label": "Hide all colors" }, (instance, button) => {
+        button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, false);
+      }).buildElement().addButton({ "class": "bm-button-secondary", "textContent": "All", "title": "Show all colors", "aria-label": "Show all colors" }, (instance, button) => {
         button.onclick = () => __privateMethod(this, _WindowFilter_instances, selectColorList_fn).call(this, true);
       }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-scrollable bm-filter-scrollable" }).buildElement().buildElement().addDiv({
         "class": "bm-resize-corner",
@@ -2626,12 +2667,23 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         "textContent": "\u25E2",
         "style": "position: absolute; right: 0; bottom: 0; width: 28px; height: 28px; display: flex; align-items: flex-end; justify-content: flex-end; padding-right: 4px; padding-bottom: 4px; box-sizing: border-box; z-index: 5; cursor: nwse-resize; pointer-events: auto; touch-action: none; user-select: none; font-size: 8px; line-height: 1; color: rgba(255,255,255,0.95); background: transparent; border: none; box-shadow: none;"
       }).buildElement().buildElement().buildOverlay(this.windowParent);
+      __privateMethod(this, _WindowFilter_instances, applyWindowedColorLayout_fn).call(this, __privateMethod(this, _WindowFilter_instances, getWindowedColorLayout_fn).call(this), false);
       __privateMethod(this, _WindowFilter_instances, initializeWindowedPersistence_fn).call(this);
       const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
+      __privateMethod(this, _WindowFilter_instances, initializeHorizontalScrollWheel_fn).call(this, scrollableContainer);
+      __privateMethod(this, _WindowFilter_instances, setWindowOpenState_fn).call(this, true);
       __privateMethod(this, _WindowFilter_instances, buildColorList_fn).call(this, scrollableContainer);
       __privateMethod(this, _WindowFilter_instances, syncSortFormControls_fn).call(this);
       __privateMethod(this, _WindowFilter_instances, sortColorList_fn).call(this, this.sortPrimary, this.sortSecondary, this.showUnused);
       __privateMethod(this, _WindowFilter_instances, startAutoRefresh_fn).call(this);
+    }
+    /** Returns whether the filter window should be restored on page load.
+     * @returns {boolean}
+     * @since 0.96.0
+     */
+    shouldAutoOpen() {
+      const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this);
+      return windowState?.isOpen !== false;
     }
     /** The information about a specific color on the palette.
      * @typedef {Object} ColorData
@@ -2676,11 +2728,15 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
           colorIncorrect
         };
       }
-      const windowedColorTotals = document.querySelector("#bm-filter-windowed-color-totals");
-      if (windowedColorTotals) {
-        const allCorrect = this.allPixelsCorrectTotal.toString().length > 7 ? this.allPixelsCorrectTotal.toString().slice(0, 2) + "\u2026" + this.allPixelsCorrectTotal.toString().slice(-3) : this.allPixelsCorrectTotal.toString();
-        const allTotal = this.allPixelsTotal.toString().length > 7 ? this.allPixelsTotal.toString().slice(0, 2) + "\u2026" + this.allPixelsTotal.toString().slice(-3) : this.allPixelsTotal.toString();
-        this.updateInnerHTML("#bm-filter-windowed-color-totals", `${allCorrect}/${allTotal}`, true);
+      const windowedDragbarTotals = document.querySelector("#bm-filter-windowed-color-totals-dragbar");
+      const windowedInlineTotals = document.querySelector("#bm-filter-windowed-color-totals-inline");
+      const allCorrectCompact = this.allPixelsCorrectTotal.toString().length > 7 ? this.allPixelsCorrectTotal.toString().slice(0, 2) + "\u2026" + this.allPixelsCorrectTotal.toString().slice(-3) : this.allPixelsCorrectTotal.toString();
+      const allTotalCompact = this.allPixelsTotal.toString().length > 7 ? this.allPixelsTotal.toString().slice(0, 2) + "\u2026" + this.allPixelsTotal.toString().slice(-3) : this.allPixelsTotal.toString();
+      if (windowedDragbarTotals) {
+        this.updateInnerHTML("#bm-filter-windowed-color-totals-dragbar", `${allCorrectCompact}/${allTotalCompact}`, true);
+      }
+      if (windowedInlineTotals) {
+        this.updateInnerHTML("#bm-filter-windowed-color-totals-inline", `${localizeNumber(this.allPixelsCorrectTotal)} / ${localizeNumber(this.allPixelsTotal)}`, true);
       }
       this.updateInnerHTML("#bm-filter-tile-load", `${localizeNumber(this.tilesLoadedTotal)} / ${localizeNumber(this.tilesTotal)}`);
       this.updateInnerHTML("#bm-filter-tot-correct", localizeNumber(this.allPixelsCorrectTotal));
@@ -2708,7 +2764,12 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         const pixelCount = document.querySelector(`#${this.windowID} .bm-filter-color[data-id="${colorID}"] .bm-filter-color-pxl-cnt`);
         if (pixelCount) {
           const isWindowedPixelCount = !!pixelCount.closest(`#${this.windowID}.bm-windowed`);
-          if (isWindowedPixelCount) {
+          const isHorizontalWindowedPixelCount = !!pixelCount.closest(`#${this.windowID}.bm-windowed.bm-filter-layout-horizontal`);
+          if (Number(colorTotal) === 0) {
+            pixelCount.textContent = "-";
+          } else if (isHorizontalWindowedPixelCount) {
+            pixelCount.innerHTML = `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}`;
+          } else if (isWindowedPixelCount) {
             pixelCount.textContent = `${colorCorrectLocalized} / ${colorTotalLocalized}`;
           } else {
             pixelCount.innerHTML = `${colorCorrectLocalized} /<br>${colorTotalLocalized}`;
@@ -2734,6 +2795,18 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     }
     (_a = this.settingsManager.userSettings)[_b = this.windowStateKey] ?? (_a[_b] = {});
     return this.settingsManager.userSettings[this.windowStateKey];
+  };
+  /** Persists whether the filter window is currently open.
+   * @param {boolean} isOpen
+   * @since 0.96.0
+   */
+  setWindowOpenState_fn = function(isOpen) {
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this);
+    if (!windowState) {
+      return;
+    }
+    windowState.isOpen = !!isOpen;
+    void this.settingsManager?.saveUserStorageNow();
   };
   /** Returns whether the filter should open in windowed mode.
    * Defaults to windowed mode when no explicit preference was stored.
@@ -2765,6 +2838,146 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     this.settingsManager.toggleFlag(this.windowModeFlag, shouldBeWindowed);
     void this.settingsManager.saveUserStorageNow();
   };
+  /** Returns the preferred color layout for the windowed filter.
+   * @returns {'vertical' | 'horizontal'}
+   * @since 0.95.0
+   */
+  getWindowedColorLayout_fn = function() {
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this);
+    return windowState?.colorLayout == "horizontal" ? "horizontal" : "vertical";
+  };
+  /** Returns the active color layout for the rendered window.
+   * @param {HTMLElement} [windowElement]
+   * @returns {'vertical' | 'horizontal'}
+   * @since 0.95.0
+   */
+  getActiveWindowedColorLayout_fn = function(windowElement = document.querySelector(`#${this.windowID}.bm-windowed`)) {
+    return windowElement?.classList.contains("bm-filter-layout-horizontal") ? "horizontal" : "vertical";
+  };
+  /** Returns the per-layout size object for the windowed filter.
+   * @param {'vertical' | 'horizontal'} layout
+   * @returns {{width?: number, height?: number} | null}
+   * @since 0.95.0
+   */
+  getWindowedLayoutSize_fn = function(layout) {
+    var _a;
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this);
+    if (!windowState) {
+      return null;
+    }
+    windowState.layoutSizes ?? (windowState.layoutSizes = {});
+    (_a = windowState.layoutSizes)[layout] ?? (_a[layout] = {});
+    return windowState.layoutSizes[layout];
+  };
+  /** Returns the maximum window width for a color layout.
+   * @param {'vertical' | 'horizontal'} layout
+   * @returns {number}
+   * @since 0.95.0
+   */
+  getWindowLayoutMaxWidth_fn = function(layout) {
+    const viewportMaximum = window.innerWidth - 16;
+    if (layout == "horizontal") {
+      return viewportMaximum;
+    }
+    return Math.min(this.windowMaxWidth, viewportMaximum);
+  };
+  /** Returns the minimum window height for a color layout.
+   * @param {'vertical' | 'horizontal'} layout
+   * @returns {number}
+   * @since 0.95.0
+   */
+  getWindowLayoutMinHeight_fn = function(layout) {
+    return layout == "horizontal" ? this.windowHorizontalHeight : this.windowMinHeight;
+  };
+  /** Returns the maximum window height for a color layout.
+   * @param {'vertical' | 'horizontal'} layout
+   * @returns {number}
+   * @since 0.95.0
+   */
+  getWindowLayoutMaxHeight_fn = function(layout) {
+    const viewportMaximum = window.innerHeight - 16;
+    if (layout == "horizontal") {
+      return Math.min(this.windowHorizontalHeight, viewportMaximum);
+    }
+    return Math.min(this.windowMaxHeight, viewportMaximum);
+  };
+  /** Persists only the size for the current color layout.
+   * @param {HTMLElement} windowElement
+   * @param {'vertical' | 'horizontal'} layout
+   * @since 0.95.0
+   */
+  saveWindowLayoutSize_fn = function(windowElement, layout) {
+    const layoutSize = __privateMethod(this, _WindowFilter_instances, getWindowedLayoutSize_fn).call(this, layout);
+    if (!layoutSize || !windowElement?.isConnected) {
+      return;
+    }
+    const rect = windowElement.getBoundingClientRect();
+    layoutSize.width = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, rect.width, this.windowMinWidth, __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxWidth_fn).call(this, layout));
+    layoutSize.height = layout == "horizontal" ? __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxHeight_fn).call(this, layout) : __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, rect.height, __privateMethod(this, _WindowFilter_instances, getWindowLayoutMinHeight_fn).call(this, layout), __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxHeight_fn).call(this, layout));
+  };
+  /** Restores the remembered size for a color layout.
+   * @param {HTMLElement} windowElement
+   * @param {'vertical' | 'horizontal'} layout
+   * @since 0.95.0
+   */
+  restoreWindowLayoutSize_fn = function(windowElement, layout) {
+    const layoutSize = __privateMethod(this, _WindowFilter_instances, getWindowedLayoutSize_fn).call(this, layout);
+    if (!layoutSize || !windowElement?.isConnected) {
+      return;
+    }
+    let width = Number(layoutSize.width);
+    let height = Number(layoutSize.height);
+    if (!Number.isFinite(width)) {
+      width = layout == "horizontal" ? Math.max(windowElement.getBoundingClientRect().width, Math.min(760, __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxWidth_fn).call(this, layout))) : Number(__privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this)?.width) || windowElement.getBoundingClientRect().width;
+    }
+    if (layout == "horizontal") {
+      height = __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxHeight_fn).call(this, layout);
+    } else if (!Number.isFinite(height)) {
+      height = Number(__privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this)?.height) || windowElement.getBoundingClientRect().height;
+    }
+    width = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, width, this.windowMinWidth, __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxWidth_fn).call(this, layout));
+    height = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, height, __privateMethod(this, _WindowFilter_instances, getWindowLayoutMinHeight_fn).call(this, layout), __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxHeight_fn).call(this, layout));
+    layoutSize.width = width;
+    layoutSize.height = height;
+    windowElement.style.width = `${width}px`;
+    windowElement.style.height = `${height}px`;
+  };
+  /** Applies the color list layout in windowed mode.
+   * @param {'vertical' | 'horizontal'} layout
+   * @param {boolean} [shouldPersist=true]
+   * @since 0.95.0
+   */
+  applyWindowedColorLayout_fn = function(layout, shouldPersist = true) {
+    const normalizedLayout = layout == "horizontal" ? "horizontal" : "vertical";
+    const windowElement = document.querySelector(`#${this.windowID}.bm-windowed`);
+    if (!windowElement) {
+      return;
+    }
+    const previousLayout = __privateMethod(this, _WindowFilter_instances, getActiveWindowedColorLayout_fn).call(this, windowElement);
+    if (shouldPersist && previousLayout != normalizedLayout) {
+      __privateMethod(this, _WindowFilter_instances, saveWindowLayoutSize_fn).call(this, windowElement, previousLayout);
+    }
+    windowElement.classList.toggle("bm-filter-layout-horizontal", normalizedLayout == "horizontal");
+    windowElement.classList.toggle("bm-filter-layout-vertical", normalizedLayout != "horizontal");
+    const toggleButton = windowElement.querySelector("#bm-filter-layout-toggle");
+    if (toggleButton) {
+      const showsHorizontalLayout = normalizedLayout == "horizontal";
+      toggleButton.innerHTML = showsHorizontalLayout ? verticalLayoutIcon : horizontalLayoutIcon;
+      toggleButton.title = showsHorizontalLayout ? "Switch to vertical color layout" : "Switch to horizontal color layout";
+      toggleButton.ariaLabel = toggleButton.title;
+      toggleButton.setAttribute("aria-pressed", showsHorizontalLayout ? "true" : "false");
+    }
+    const windowState = __privateMethod(this, _WindowFilter_instances, getWindowState_fn2).call(this);
+    if (windowState) {
+      windowState.colorLayout = normalizedLayout;
+    }
+    this.updateColorList();
+    __privateMethod(this, _WindowFilter_instances, restoreWindowLayoutSize_fn).call(this, windowElement, normalizedLayout);
+    if (shouldPersist) {
+      __privateMethod(this, _WindowFilter_instances, saveWindowState_fn).call(this, windowElement);
+      void this.settingsManager?.saveUserStorageNow();
+    }
+  };
   /** Updates the visible sort controls to reflect the active sort state.
    * @since 0.92.1
    */
@@ -2774,24 +2987,209 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     const showUnusedInput = document.querySelector(`#${this.windowID} #bm-filter-show-unused`);
     if (sortPrimaryInput instanceof HTMLSelectElement) {
       sortPrimaryInput.value = this.sortPrimary;
+      sortPrimaryInput.dispatchEvent(new Event("change", { "bubbles": true }));
     }
     if (sortSecondaryInput instanceof HTMLSelectElement) {
       sortSecondaryInput.value = this.sortSecondary;
+      sortSecondaryInput.dispatchEvent(new Event("change", { "bubbles": true }));
     }
     if (showUnusedInput instanceof HTMLInputElement) {
       showUnusedInput.checked = this.showUnused;
     }
   };
+  /** Enhances native sort selects into custom dropdowns while preserving form values.
+   * @since 0.96.0
+   */
+  initializeCustomSortDropdowns_fn = function() {
+    const sortSelects = Array.from(document.querySelectorAll(`#${this.windowID} .bm-filter-sort-select`));
+    if (!sortSelects.length) {
+      return;
+    }
+    for (const select of sortSelects) {
+      if (!(select instanceof HTMLSelectElement) || select.dataset["customized"] == "true") {
+        continue;
+      }
+      const wrapper = document.createElement("div");
+      wrapper.className = "bm-filter-sort-dropdown";
+      wrapper.dataset["inputId"] = select.id;
+      const trigger = document.createElement("button");
+      trigger.type = "button";
+      trigger.className = "bm-filter-sort-dropdown-trigger";
+      trigger.setAttribute("aria-haspopup", "listbox");
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.setAttribute("aria-controls", `${select.id}-menu`);
+      const triggerText = document.createElement("span");
+      triggerText.className = "bm-filter-sort-dropdown-text";
+      trigger.appendChild(triggerText);
+      const menu = document.createElement("div");
+      menu.id = `${select.id}-menu`;
+      menu.className = "bm-filter-sort-dropdown-menu";
+      menu.setAttribute("role", "listbox");
+      const updateDropdownState = () => {
+        const selectedValue = select.value;
+        const selectedOption = Array.from(select.options).find((option) => option.value == selectedValue) ?? select.options[0];
+        triggerText.textContent = selectedOption?.textContent ?? "";
+        for (const optionButton of menu.querySelectorAll(".bm-filter-sort-dropdown-option")) {
+          const isSelected = optionButton.dataset["value"] == selectedValue;
+          optionButton.classList.toggle("is-selected", isSelected);
+          optionButton.setAttribute("aria-selected", isSelected ? "true" : "false");
+        }
+      };
+      const focusDropdownOption = (direction = "selected") => {
+        const optionButtons = Array.from(menu.querySelectorAll(".bm-filter-sort-dropdown-option"));
+        if (!optionButtons.length) {
+          return;
+        }
+        let targetIndex = optionButtons.findIndex((button) => button.classList.contains("is-selected"));
+        if (targetIndex < 0) {
+          targetIndex = 0;
+        }
+        if (direction === "first") {
+          targetIndex = 0;
+        } else if (direction === "last") {
+          targetIndex = optionButtons.length - 1;
+        } else if (typeof direction == "number") {
+          const activeIndex = optionButtons.findIndex((button) => button === document.activeElement);
+          const baseIndex = activeIndex >= 0 ? activeIndex : targetIndex;
+          targetIndex = (baseIndex + direction + optionButtons.length) % optionButtons.length;
+        }
+        optionButtons[targetIndex]?.focus();
+      };
+      const setOpenState = (shouldOpen) => {
+        wrapper.classList.toggle("is-open", shouldOpen);
+        trigger.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+        if (shouldOpen) {
+          focusDropdownOption("selected");
+        }
+      };
+      trigger.onclick = () => {
+        const shouldOpen = !wrapper.classList.contains("is-open");
+        __privateMethod(this, _WindowFilter_instances, closeCustomSortDropdowns_fn).call(this, shouldOpen ? wrapper : null);
+        setOpenState(shouldOpen);
+      };
+      trigger.onkeydown = (event) => {
+        if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+          event.preventDefault();
+          if (!wrapper.classList.contains("is-open")) {
+            __privateMethod(this, _WindowFilter_instances, closeCustomSortDropdowns_fn).call(this, wrapper);
+            setOpenState(true);
+          }
+          focusDropdownOption(event.key == "ArrowUp" ? "last" : "selected");
+        } else if (event.key == "Escape") {
+          setOpenState(false);
+        }
+      };
+      for (const option of Array.from(select.options)) {
+        const optionButton = document.createElement("button");
+        optionButton.type = "button";
+        optionButton.className = "bm-filter-sort-dropdown-option";
+        optionButton.dataset["value"] = option.value;
+        optionButton.textContent = option.textContent;
+        optionButton.setAttribute("role", "option");
+        optionButton.onclick = () => {
+          select.value = option.value;
+          select.dispatchEvent(new Event("change", { "bubbles": true }));
+          setOpenState(false);
+          trigger.focus();
+        };
+        optionButton.onkeydown = (event) => {
+          if (event.key == "ArrowDown") {
+            event.preventDefault();
+            focusDropdownOption(1);
+          } else if (event.key == "ArrowUp") {
+            event.preventDefault();
+            focusDropdownOption(-1);
+          } else if (event.key == "Home") {
+            event.preventDefault();
+            focusDropdownOption("first");
+          } else if (event.key == "End") {
+            event.preventDefault();
+            focusDropdownOption("last");
+          } else if (event.key == "Escape") {
+            event.preventDefault();
+            setOpenState(false);
+            trigger.focus();
+          } else if (event.key == "Enter" || event.key == " ") {
+            event.preventDefault();
+            optionButton.click();
+          }
+        };
+        menu.appendChild(optionButton);
+      }
+      select.classList.add("bm-filter-sort-native");
+      select.tabIndex = -1;
+      select.setAttribute("aria-hidden", "true");
+      select.dataset["customized"] = "true";
+      select.addEventListener("change", updateDropdownState);
+      select.parentElement?.insertBefore(wrapper, select);
+      wrapper.appendChild(select);
+      wrapper.appendChild(trigger);
+      wrapper.appendChild(menu);
+      updateDropdownState();
+    }
+    if (!this.sortDropdownPointerHandler) {
+      this.sortDropdownPointerHandler = (event) => {
+        if (!(event.target instanceof Element)) {
+          __privateMethod(this, _WindowFilter_instances, closeCustomSortDropdowns_fn).call(this);
+          return;
+        }
+        if (!event.target.closest(`#${this.windowID} .bm-filter-sort-dropdown`)) {
+          __privateMethod(this, _WindowFilter_instances, closeCustomSortDropdowns_fn).call(this);
+        }
+      };
+      document.addEventListener("pointerdown", this.sortDropdownPointerHandler);
+    }
+    if (!this.sortDropdownKeyHandler) {
+      this.sortDropdownKeyHandler = (event) => {
+        if (event.key == "Escape") {
+          __privateMethod(this, _WindowFilter_instances, closeCustomSortDropdowns_fn).call(this);
+        }
+      };
+      document.addEventListener("keydown", this.sortDropdownKeyHandler);
+    }
+  };
+  /** Closes custom sort dropdowns, optionally leaving one open.
+   * @param {HTMLElement | null} [exceptDropdown=null]
+   * @since 0.96.0
+   */
+  closeCustomSortDropdowns_fn = function(exceptDropdown = null) {
+    const dropdowns = document.querySelectorAll(`#${this.windowID} .bm-filter-sort-dropdown`);
+    for (const dropdown of dropdowns) {
+      const shouldStayOpen = !!exceptDropdown && dropdown === exceptDropdown;
+      dropdown.classList.toggle("is-open", shouldStayOpen);
+      const trigger = dropdown.querySelector(".bm-filter-sort-dropdown-trigger");
+      if (trigger instanceof HTMLButtonElement) {
+        trigger.setAttribute("aria-expanded", shouldStayOpen ? "true" : "false");
+      }
+    }
+  };
+  /** Removes global handlers used by custom sort dropdowns.
+   * @since 0.96.0
+   */
+  cleanupCustomSortDropdowns_fn = function() {
+    if (this.sortDropdownPointerHandler) {
+      document.removeEventListener("pointerdown", this.sortDropdownPointerHandler);
+      this.sortDropdownPointerHandler = null;
+    }
+    if (this.sortDropdownKeyHandler) {
+      document.removeEventListener("keydown", this.sortDropdownKeyHandler);
+      this.sortDropdownKeyHandler = null;
+    }
+  };
   /** Immediately closes the filter window and cleans up persistence observers.
    * @since 0.92.0
    */
-  closeWindow_fn2 = function() {
+  closeWindow_fn2 = function(preserveOpenState = false) {
     const windowElement = document.querySelector(`#${this.windowID}`);
     if (windowElement?.classList.contains("bm-windowed")) {
       __privateMethod(this, _WindowFilter_instances, saveWindowState_fn).call(this, windowElement);
     }
+    if (!preserveOpenState) {
+      __privateMethod(this, _WindowFilter_instances, setWindowOpenState_fn).call(this, false);
+    }
     __privateMethod(this, _WindowFilter_instances, stopAutoRefresh_fn).call(this);
     __privateMethod(this, _WindowFilter_instances, cleanupWindowPersistence_fn).call(this);
+    __privateMethod(this, _WindowFilter_instances, cleanupCustomSortDropdowns_fn).call(this);
     windowElement?.remove();
   };
   /** Starts the automatic Color Filter statistics refresh loop.
@@ -2828,6 +3226,11 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     if (this.windowViewportResizeHandler) {
       window.removeEventListener("resize", this.windowViewportResizeHandler);
       this.windowViewportResizeHandler = null;
+    }
+    if (this.windowHorizontalWheelHandler && this.windowHorizontalWheelElement) {
+      this.windowHorizontalWheelElement.removeEventListener("wheel", this.windowHorizontalWheelHandler);
+      this.windowHorizontalWheelHandler = null;
+      this.windowHorizontalWheelElement = null;
     }
     if (this.windowSaveTimeout) {
       clearTimeout(this.windowSaveTimeout);
@@ -2870,17 +3273,23 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     if (!windowState || !windowElement) {
       return;
     }
-    const width = Number(windowState.width);
-    const height = Number(windowState.height);
+    const layout = __privateMethod(this, _WindowFilter_instances, getWindowedColorLayout_fn).call(this);
+    const layoutSize = __privateMethod(this, _WindowFilter_instances, getWindowedLayoutSize_fn).call(this, layout);
+    const width = Number(layoutSize?.width ?? windowState.width);
+    const height = Number(layoutSize?.height ?? windowState.height);
     const hasWidth = Number.isFinite(width);
     const hasHeight = Number.isFinite(height);
     if (hasWidth) {
-      windowState.width = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, width, this.windowMinWidth, Math.min(this.windowMaxWidth, window.innerWidth - 16));
-      windowElement.style.width = `${windowState.width}px`;
+      const nextWidth = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, width, this.windowMinWidth, __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxWidth_fn).call(this, layout));
+      layoutSize.width = nextWidth;
+      windowState.width = nextWidth;
+      windowElement.style.width = `${nextWidth}px`;
     }
     if (hasHeight) {
-      windowState.height = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, height, this.windowMinHeight, Math.min(this.windowMaxHeight, window.innerHeight - 16));
-      windowElement.style.height = `${windowState.height}px`;
+      const nextHeight = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, height, __privateMethod(this, _WindowFilter_instances, getWindowLayoutMinHeight_fn).call(this, layout), __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxHeight_fn).call(this, layout));
+      layoutSize.height = nextHeight;
+      windowState.height = nextHeight;
+      windowElement.style.height = `${nextHeight}px`;
     }
     requestAnimationFrame(() => {
       if (!windowElement.isConnected) {
@@ -2915,9 +3324,10 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     if (windowElement.querySelector('.bm-dragbar button[data-button-status="collapsed"]')) {
       return;
     }
+    const layout = __privateMethod(this, _WindowFilter_instances, getActiveWindowedColorLayout_fn).call(this, windowElement);
     const rect = windowElement.getBoundingClientRect();
-    const width = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, rect.width, this.windowMinWidth, Math.min(this.windowMaxWidth, window.innerWidth - 16));
-    const height = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, rect.height, this.windowMinHeight, Math.min(this.windowMaxHeight, window.innerHeight - 16));
+    const width = __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, rect.width, this.windowMinWidth, __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxWidth_fn).call(this, layout));
+    const height = layout == "horizontal" ? __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxHeight_fn).call(this, layout) : __privateMethod(this, _WindowFilter_instances, clampWindowDimension_fn).call(this, rect.height, __privateMethod(this, _WindowFilter_instances, getWindowLayoutMinHeight_fn).call(this, layout), __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxHeight_fn).call(this, layout));
     if (Math.round(rect.width) != width) {
       windowElement.style.width = `${width}px`;
     }
@@ -2933,6 +3343,12 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     windowState.y = clampedPosition.y;
     windowState.width = width;
     windowState.height = height;
+    windowState.colorLayout = layout;
+    const layoutSize = __privateMethod(this, _WindowFilter_instances, getWindowedLayoutSize_fn).call(this, layout);
+    if (layoutSize) {
+      layoutSize.width = width;
+      layoutSize.height = height;
+    }
     void this.settingsManager?.saveUserStorageNow();
   };
   /** Debounces persisting the current window size and position.
@@ -2964,9 +3380,8 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     });
     this.handleResize(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-resize-corner`, {
       minWidth: this.windowMinWidth,
-      minHeight: this.windowMinHeight,
-      maxWidth: Math.min(this.windowMaxWidth, window.innerWidth - 16),
-      maxHeight: Math.min(this.windowMaxHeight, window.innerHeight - 16),
+      minHeight: () => __privateMethod(this, _WindowFilter_instances, getWindowLayoutMinHeight_fn).call(this, __privateMethod(this, _WindowFilter_instances, getActiveWindowedColorLayout_fn).call(this, windowElement)),
+      maxHeight: () => __privateMethod(this, _WindowFilter_instances, getWindowLayoutMaxHeight_fn).call(this, __privateMethod(this, _WindowFilter_instances, getActiveWindowedColorLayout_fn).call(this, windowElement)),
       onEnd: ({ element }) => __privateMethod(this, _WindowFilter_instances, saveWindowState_fn).call(this, element)
     });
     if (typeof ResizeObserver == "function") {
@@ -2976,18 +3391,48 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     this.windowViewportResizeHandler = () => __privateMethod(this, _WindowFilter_instances, scheduleWindowStateSave_fn).call(this, windowElement, 0);
     window.addEventListener("resize", this.windowViewportResizeHandler);
   };
+  /** Converts vertical wheel input into horizontal scrolling for the horizontal color layout.
+   * @param {HTMLElement} scrollableContainer
+   * @since 0.95.0
+   */
+  initializeHorizontalScrollWheel_fn = function(scrollableContainer) {
+    if (!scrollableContainer) {
+      return;
+    }
+    if (this.windowHorizontalWheelHandler && this.windowHorizontalWheelElement) {
+      this.windowHorizontalWheelElement.removeEventListener("wheel", this.windowHorizontalWheelHandler);
+    }
+    this.windowHorizontalWheelElement = scrollableContainer;
+    this.windowHorizontalWheelHandler = (event) => {
+      const windowElement = scrollableContainer.closest(`#${this.windowID}.bm-windowed`);
+      if (!windowElement?.classList.contains("bm-filter-layout-horizontal")) {
+        return;
+      }
+      if (scrollableContainer.scrollWidth <= scrollableContainer.clientWidth) {
+        return;
+      }
+      const horizontalDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!horizontalDelta) {
+        return;
+      }
+      scrollableContainer.scrollLeft += horizontalDelta;
+      event.preventDefault();
+    };
+    scrollableContainer.addEventListener("wheel", this.windowHorizontalWheelHandler, { passive: false });
+  };
   /** Creates the color list container.
    * @param {HTMLElement} parentElement - Parent element to add the color list to as a child
    * @since 0.88.222
    */
   buildColorList_fn = function(parentElement) {
-    const isWindowedMode = parentElement.closest(`#${this.windowID}`)?.classList.contains("bm-windowed");
+    const parentWindow = parentElement.closest(`#${this.windowID}`);
+    const isWindowedMode = parentWindow?.classList.contains("bm-windowed");
+    const isHorizontalWindowedMode = isWindowedMode && parentWindow?.classList.contains("bm-filter-layout-horizontal");
     console.log(`Is Windowed Mode: ${isWindowedMode}`);
     const colorList = new Overlay(this.name, this.version);
     colorList.addDiv({ "id": this.colorListID });
     const colorStatistics = this.updateColorList();
     for (const color of this.palette) {
-      const colorValueHex = "#" + rgbToHex(color.rgb).toUpperCase();
       const lumin = calculateRelativeLuminance(color.rgb);
       let textColorForPaletteColorBackground = 1.05 / (lumin + 0.05) > (lumin + 0.05) / 0.05 ? "white" : "black";
       if (!color.id) {
@@ -3006,6 +3451,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         colorIncorrect
       } = colorStatistics[color.id];
       const isColorHidden = !!(this.templateManager.shouldFilterColor.get(color.id) || false);
+      const hasNoPixels = Number(colorTotal) === 0;
       if (isWindowedMode) {
         const styleBackgroundStar = `background-size: auto 100%; background-repeat: repeat-x; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50,5L79,91L2,39L98,39L21,91' fill='${textColorForPaletteColorBackground}' fill-opacity='.1'/></svg>");`;
         colorList.addDiv({
@@ -3037,7 +3483,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
             }
             __privateMethod(this, _WindowFilter_instances, syncColorToggleLabel_fn).call(this, button, color);
           }
-        ).buildElement().addSmall({ "textContent": `#${color.id.toString().padStart(2, 0)}`, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}` }).buildElement().addHeader(2, { "textContent": color.name, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-cnt", "textContent": `${colorCorrectLocalized} / ${colorTotalLocalized}`, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}; flex: 1 1 auto; text-align: right;` }).buildElement().buildElement().buildElement();
+        ).buildElement().addHeader(2, { "textContent": color.name, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-cnt", "innerHTML": hasNoPixels ? "-" : isHorizontalWindowedMode ? `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}` : `${colorCorrectLocalized} / ${colorTotalLocalized}`, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}; flex: 1 1 auto; text-align: right;` }).buildElement().buildElement().buildElement();
       } else {
         colorList.addDiv({
           "class": "bm-container bm-filter-color bm-flex-between",
@@ -3068,7 +3514,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
             }
             __privateMethod(this, _WindowFilter_instances, syncColorToggleLabel_fn).call(this, button, color);
           }
-        ).buildElement().buildElement().addDiv({ "class": "bm-filter-color-title" }).addSmall({ "textContent": `#${color.id.toString().padStart(2, 0)} / ${color.id == -2 ? "mixed" : colorValueHex}` }).buildElement().addHeader(2, { "textContent": color.name }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-filter-color-meta" }).addDiv({ "class": "bm-filter-color-progress" }).addSpan({ "class": "bm-filter-color-pxl-cnt", "innerHTML": `${colorCorrectLocalized} /<br>${colorTotalLocalized}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-desc", "innerHTML": `${colorPercent} done<br>${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} off` }).buildElement().buildElement().buildElement().buildElement();
+        ).buildElement().buildElement().addDiv({ "class": "bm-filter-color-title" }).addHeader(2, { "textContent": color.name }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-filter-color-meta" }).addDiv({ "class": "bm-filter-color-progress" }).addSpan({ "class": "bm-filter-color-pxl-cnt", "innerHTML": hasNoPixels ? "-" : `${colorCorrectLocalized} /<br>${colorTotalLocalized}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-desc", "innerHTML": `${colorPercent} done<br>${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} off` }).buildElement().buildElement().buildElement().buildElement();
       }
     }
     colorList.buildOverlay(parentElement);
@@ -3290,22 +3736,22 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         button.ontouchend = () => {
           button.click();
         };
-      }).buildElement().addDiv().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": settingsIcon, "title": "Settings", "aria-label": "Open settings" }, (instance, button) => {
-        button.onclick = () => {
-          instance.settingsManager.buildWindow();
-        };
-      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addHr().buildElement().addDiv({ "class": "bm-container bm-main-hero" }).addImg({ "class": "bm-favicon", "src": "https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/assets/Favicon.png" }, (instance, img) => {
+      }).buildElement().addDiv({ "class": "bm-main-drag-brand" }).addImg({ "class": "bm-favicon", "src": "https://raw.githubusercontent.com/SwingTheVine/Wplace-BlueMarble/main/dist/assets/Favicon.png" }, (instance, img) => {
         const date = /* @__PURE__ */ new Date();
         const dayOfTheYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 1)) / (1e3 * 60 * 60 * 24)) + 1;
         if (dayOfTheYear == 204) {
           img.parentNode.style.position = "relative";
-          img.parentNode.innerHTML = img.parentNode.innerHTML + `<svg viewBox="0 0 9 7" width="2em" height="2em" style="position: absolute; top: -.75em; left: 3.25ch;"><path d="M0,3L9,0L2,7" fill="#0af"/><path d="M0,3A.4,.4 0 1 1 1,5" fill="#a00"/><path d="M1.5,6A1,1 0 0 1 3,6L2,7" fill="#a0f"/><path d="M4,5A.6,.6 0 1 1 5,4" fill="#0a0"/><path d="M6,3A.8,.8 0 1 1 7,2" fill="#fa0"/><path d="M4.5,1.5A1,1 0 0 1 3,2" fill="#aa0"/></svg>`;
+          img.parentNode.innerHTML = img.parentNode.innerHTML + `<svg class="bm-main-birthday-hat" viewBox="0 0 9 7"><path d="M0,3L9,0L2,7" fill="#0af"/><path d="M0,3A.4,.4 0 1 1 1,5" fill="#a00"/><path d="M1.5,6A1,1 0 0 1 3,6L2,7" fill="#a0f"/><path d="M4,5A.6,.6 0 1 1 5,4" fill="#0a0"/><path d="M6,3A.8,.8 0 1 1 7,2" fill="#fa0"/><path d="M4.5,1.5A1,1 0 0 1 3,2" fill="#aa0"/></svg>`;
           img.onload = () => {
             const confettiManager = new ConfettiManager();
             confettiManager.createConfetti(document.querySelector(`#${this.windowID}`));
           };
         }
-      }).buildElement().addHeader(1, { "textContent": this.name }).buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-main-stats" }).addDiv({ "class": "bm-main-stat-card bm-main-stat-card-value" }).addSpan({ "class": "bm-main-stat-label", "textContent": "Droplets" }).buildElement().addSpan({ "id": "bm-user-droplets", "class": "bm-main-stat-value", "textContent": "0" }).buildElement().buildElement().addDiv({ "class": "bm-main-stat-card bm-main-stat-card-value" }).addSpan({ "class": "bm-main-stat-label", "textContent": "Next Level" }).buildElement().addSpan({ "id": "bm-user-nextlevel", "class": "bm-main-stat-value", "textContent": "0 px" }).buildElement().buildElement().addDiv({ "class": "bm-main-stat-card bm-main-stat-card-timer" }).addSpan({ "class": "bm-main-stat-label", "textContent": "Charges" }).buildElement().addTimer(Date.now(), 1e3, { "class": "bm-main-stat-value", "style": "font-weight: 700;" }, (instance, timer) => {
+      }).buildElement().addHeader(1, { "class": "bm-dragbar-title-persistent", "textContent": this.name }).buildElement().buildElement().addDiv({ "class": "bm-flex-center" }).addButton({ "class": "bm-button-circle", "innerHTML": settingsIcon, "title": "Settings", "aria-label": "Open settings" }, (instance, button) => {
+        button.onclick = () => {
+          instance.settingsManager.buildWindow();
+        };
+      }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-window-content" }).addHr({ "class": "bm-window-divider-top" }).buildElement().addDiv({ "class": "bm-container bm-main-stats" }).addDiv({ "class": "bm-main-stat-card bm-main-stat-card-value" }).addSpan({ "class": "bm-main-stat-label", "textContent": "Droplets" }).buildElement().addSpan({ "id": "bm-user-droplets", "class": "bm-main-stat-value", "textContent": "0" }).buildElement().buildElement().addDiv({ "class": "bm-main-stat-card bm-main-stat-card-value" }).addSpan({ "class": "bm-main-stat-label", "textContent": "Next Level" }).buildElement().addSpan({ "id": "bm-user-nextlevel", "class": "bm-main-stat-value", "textContent": "0 px" }).buildElement().buildElement().addDiv({ "class": "bm-main-stat-card bm-main-stat-card-timer" }).addSpan({ "class": "bm-main-stat-label", "textContent": "Charges" }).buildElement().addTimer(Date.now(), 1e3, { "class": "bm-main-stat-value", "style": "font-weight: 700;" }, (instance, timer) => {
         instance.apiManager.chargeRefillTimerID = timer.id;
       }).buildElement().buildElement().buildElement().addHr().buildElement().addDiv({ "class": "bm-container bm-main-shell" }).addDiv({ "class": "bm-container bm-main-coords" }).addButton(
         { "class": "bm-button-circle bm-button-pin", "style": "margin-top: 0;", "innerHTML": '<svg viewBox="0 0 4 6"><path d="M.5,3.4A2,2 0 1 1 3.5,3.4L2,6"/><circle cx="2" cy="2" r=".7" fill="#fff"/></svg>' },
@@ -3391,8 +3837,11 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().bui
      * This might cause a memory leak. I pray that this is not the case...
      * @since 0.88.330
      */
-    buildWindowFilter() {
+    buildWindowFilter({ respectSavedVisibility = false } = {}) {
       const windowFilter = new WindowFilter(this);
+      if (respectSavedVisibility && !windowFilter.shouldAutoOpen()) {
+        return;
+      }
       windowFilter.buildPreferredWindow();
     }
   };
@@ -4670,7 +5119,7 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
     await templateManager.importJSON(storageTemplates);
     apiManager.spontaneousResponseListener(windowMain);
     windowMain.buildWindow();
-    windowMain.buildWindowFilter();
+    windowMain.buildWindowFilter({ "respectSavedVisibility": true });
     apiManager.applyCachedUserData(windowMain);
     void apiManager.requestCurrentUserData(windowMain);
     observeBlack();
@@ -4706,4 +5155,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: 766764cf4c48
+// Build Hash: 4ba9924b3f72
