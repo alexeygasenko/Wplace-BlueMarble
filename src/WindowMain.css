@@ -10,7 +10,43 @@
   flex-direction: column;
 }
 
-#bm-window-main .bm-main-hero,
+#bm-window-main .bm-main-drag-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  min-width: 0;
+  max-width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#bm-window-main .bm-main-drag-brand .bm-favicon {
+  flex: 0 0 auto;
+  width: auto;
+  height: 1.18rem;
+  margin-right: 0.38rem;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+#bm-window-main .bm-main-drag-brand h1 {
+  min-width: 0;
+  margin: 0;
+  line-height: 1;
+}
+
+#bm-window-main .bm-main-birthday-hat {
+  position: absolute;
+  top: -0.34rem;
+  left: 1.08rem;
+  width: 1rem;
+  height: 1rem;
+  pointer-events: none;
+}
+
 #bm-window-main .bm-main-shell {
   position: relative;
   overflow: hidden;
@@ -22,7 +58,6 @@
     0 10px 24px rgba(0, 0, 0, 0.1);
 }
 
-#bm-window-main .bm-main-hero::before,
 #bm-window-main .bm-main-shell::before {
   content: "";
   position: absolute;
@@ -31,33 +66,6 @@
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 26%),
     radial-gradient(circle at 20% 0%, rgba(186, 246, 255, 0.16), transparent 24%);
-}
-
-#bm-window-main .bm-main-hero {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.48rem 0.58rem;
-  text-align: center;
-}
-
-#bm-window-main .bm-main-hero .bm-favicon,
-#bm-window-main .bm-main-hero h1 {
-  position: relative;
-  z-index: 1;
-}
-
-#bm-window-main .bm-main-hero .bm-favicon {
-  margin-right: 0;
-  padding: 0;
-  background: none;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-#bm-window-main .bm-main-hero h1 {
-  margin: 0;
 }
 
 #bm-window-main .bm-main-stats {

@@ -1220,8 +1220,10 @@ export default class Overlay {
 
     const window = button.closest('.bm-window'); // Get the window
     const dragbar = button.closest('.bm-dragbar'); // Get the dragbar
-    const header = window?.querySelector('h1'); // Get the header
     const windowContent = window?.querySelector('.bm-window-content'); // Get the window content container
+    const titleSlot = button.nextElementSibling; // Contains the minimized or persistent h1 element
+    const persistentDragbarHeader = titleSlot?.querySelector('.bm-dragbar-title-persistent');
+    const header = persistentDragbarHeader ?? windowContent?.querySelector('h1') ?? window?.querySelector('h1'); // Get the header
 
     if (!window || !dragbar || !windowContent) {
       button.disabled = false;
@@ -1288,26 +1290,37 @@ export default class Overlay {
         window.style.minHeight = '0px';
         window.style.height = getCollapsedHeight() + 'px';
       }
+      window.classList.add('bm-window-collapsed');
       
       // Makes a clone of the h1 element inside the window, and adds it to the dragbar
-      const dragbarHeader1 = header?.cloneNode(true) ?? document.createElement('h1');
+      const dragbarHeader1 = persistentDragbarHeader ?? header?.cloneNode(true) ?? document.createElement('h1');
       const dragbarHeader1Text = dragbarHeader1.textContent;
-      button.nextElementSibling.appendChild(dragbarHeader1);
+      if (!persistentDragbarHeader) {
+        dragbarHeader1.classList.add('bm-dragbar-minimized-title');
+        (titleSlot ?? dragbar).appendChild(dragbarHeader1);
+      }
       
       button.innerHTML = minimizeIconCollapsed; // Swap button icon
       button.dataset['buttonStatus'] = 'collapsed'; // Swap button status tracker
       button.ariaLabel = `Unminimize window "${dragbarHeader1Text}"`; // Screen reader label
+      button.title = button.ariaLabel; // Tooltip label
     } else {
       // Else, the window is closed, and we want to open it
 
       // Deletes the h1 element inside the dragbar
-      const dragbarHeader1 = dragbar.querySelector('h1');
+      const dragbarHeader1 = dragbar.querySelector('.bm-dragbar-minimized-title')
+        ?? dragbar.querySelector('.bm-dragbar-title-persistent')
+        ?? dragbar.querySelector('h1')
+        ?? document.createElement('h1');
       const dragbarHeader1Text = dragbarHeader1.textContent;
-      dragbarHeader1.remove();
+      if (dragbarHeader1.classList.contains('bm-dragbar-minimized-title')) {
+        dragbarHeader1.remove();
+      }
 
       // Logic for the transition animation to expand the window
       windowContent.style.display = ''; // Resets display to default
       windowContent.style.height = '0'; // Sets the height to 0
+      window.classList.remove('bm-window-collapsed');
       window.style.width = window.dataset['widthBeforeMinimize'] ?? ''; // Restores width to the pre-minimized value
       window.style.minHeight = window.dataset['minHeightBeforeMinimize'] ?? ''; // Restores resizable windows
       window.style.height = window.dataset['heightBeforeMinimize'] ?? ''; // Restores height to the pre-minimized value
@@ -1323,6 +1336,7 @@ export default class Overlay {
       button.innerHTML = minimizeIconExpanded; // Swap button icon
       button.dataset['buttonStatus'] = 'expanded'; // Swap button status tracker
       button.ariaLabel = `Minimize window "${dragbarHeader1Text}"`; // Screen reader label
+      button.title = button.ariaLabel; // Tooltip label
     }
   }
 
@@ -1478,7 +1492,7 @@ export default class Overlay {
   /** Handles resizing of an overlay window from a resize handle.
    * @param {string} resizeMeSelector - The element to resize
    * @param {string} iResizeThingsSelector - The resize handle element
-   * @param {{onEnd?: function({element: HTMLElement, width: number, height: number}): void, minWidth?: number, minHeight?: number, maxWidth?: number, maxHeight?: number}} [options={}]
+   * @param {{onEnd?: function({element: HTMLElement, width: number, height: number}): void, minWidth?: number | function(): number, minHeight?: number | function(): number, maxWidth?: number | function(): number, maxHeight?: number | function(): number}} [options={}]
    * @since 0.92.0
    */
   handleResize(resizeMeSelector, iResizeThingsSelector, options = {}) {
@@ -1503,10 +1517,22 @@ export default class Overlay {
     let targetHeight = 0;
     let animationFrame = null;
 
-    const getMaximumWidth = () => Number.isFinite(options?.maxWidth) ? options.maxWidth : window.innerWidth - 16;
-    const getMaximumHeight = () => Number.isFinite(options?.maxHeight) ? options.maxHeight : window.innerHeight - 16;
-    const minimumWidth = Number.isFinite(options?.minWidth) ? options.minWidth : 200;
-    const minimumHeight = Number.isFinite(options?.minHeight) ? options.minHeight : 160;
+    const getMaximumWidth = () => {
+      const maximumWidth = typeof options?.maxWidth == 'function' ? options.maxWidth() : options?.maxWidth;
+      return Number.isFinite(maximumWidth) ? maximumWidth : window.innerWidth - 16;
+    };
+    const getMaximumHeight = () => {
+      const maximumHeight = typeof options?.maxHeight == 'function' ? options.maxHeight() : options?.maxHeight;
+      return Number.isFinite(maximumHeight) ? maximumHeight : window.innerHeight - 16;
+    };
+    const getMinimumWidth = () => {
+      const minimumWidth = typeof options?.minWidth == 'function' ? options.minWidth() : options?.minWidth;
+      return Number.isFinite(minimumWidth) ? minimumWidth : 200;
+    };
+    const getMinimumHeight = () => {
+      const minimumHeight = typeof options?.minHeight == 'function' ? options.minHeight() : options?.minHeight;
+      return Number.isFinite(minimumHeight) ? minimumHeight : 160;
+    };
 
     const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
 
@@ -1576,16 +1602,16 @@ export default class Overlay {
 
     const onMouseMove = event => {
       if (!isResizing) {return;}
-      targetWidth = clamp(startWidth + (event.clientX - startX), minimumWidth, getMaximumWidth());
-      targetHeight = clamp(startHeight + (event.clientY - startY), minimumHeight, getMaximumHeight());
+      targetWidth = clamp(startWidth + (event.clientX - startX), getMinimumWidth(), getMaximumWidth());
+      targetHeight = clamp(startHeight + (event.clientY - startY), getMinimumHeight(), getMaximumHeight());
     };
 
     const onTouchMove = event => {
       if (!isResizing) {return;}
       const touch = event?.touches?.[0];
       if (!touch) {return;}
-      targetWidth = clamp(startWidth + (touch.clientX - startX), minimumWidth, getMaximumWidth());
-      targetHeight = clamp(startHeight + (touch.clientY - startY), minimumHeight, getMaximumHeight());
+      targetWidth = clamp(startWidth + (touch.clientX - startX), getMinimumWidth(), getMaximumWidth());
+      targetHeight = clamp(startHeight + (touch.clientY - startY), getMinimumHeight(), getMaximumHeight());
       event.preventDefault();
     };
 

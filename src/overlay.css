@@ -213,6 +213,10 @@
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
 }
 
+.bm-window .bm-window-divider-top {
+  margin-top: 0.5rem;
+}
+
 /* Container with a vertically centered header 1-6 */
 .bm-container.bm-center-vertically {
   width: fit-content;

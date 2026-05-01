@@ -1,28 +1,21 @@
 import ConfettiManager from "./confetttiManager";
 import Overlay, { minimizeIconExpanded } from "./Overlay";
-import { calculateRelativeLuminance, localizeNumber, localizePercent, rgbToHex } from "./utils";
+import { calculateRelativeLuminance, localizeNumber, localizePercent } from "./utils";
 
 const closeIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
-const fullscreenIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 4.5H4.5v4M15.5 4.5h4v4M19.5 15.5v4h-4M8.5 19.5h-4v-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
+const fullscreenIcon = '<svg class="bm-button-icon bm-button-icon-fullscreen" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4.5H4.5V8M16 4.5h3.5V8M19.5 16v3.5H16M8 19.5H4.5V16"/><path d="M4.8 4.8l5.1 5.1M19.2 4.8l-5.1 5.1M19.2 19.2l-5.1-5.1M4.8 19.2l5.1-5.1"/></g></svg>';
 const windowedIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 7.5V10H7.5M16.5 10H14V7.5M14 16.5V14h2.5M7.5 14H10v2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const horizontalLayoutIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7.5h15M4.5 16.5h15"/><path d="M7.5 5v5M12 5v5M16.5 5v5M7.5 14v5M12 14v5M16.5 14v5"/></g></svg>';
+const verticalLayoutIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4.5v15M16 4.5v15"/><path d="M5.5 7.5h5M5.5 12h5M5.5 16.5h5M13.5 7.5h5M13.5 12h5M13.5 16.5h5"/></g></svg>';
 
 function localizeCompactDate(date) {
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = String(date.getFullYear()).slice(-2);
+  const hour = String(date.getHours()).padStart(2, '0');
   const minute = String(date.getMinutes()).padStart(2, '0');
-  const uses12HourClock = new Intl.DateTimeFormat(undefined, {hour: 'numeric'}).resolvedOptions().hour12;
 
-  let hour = date.getHours();
-  let period = '';
-  if (uses12HourClock) {
-    period = hour >= 12 ? ' PM' : ' AM';
-    hour = hour % 12 || 12;
-  } else {
-    hour = String(hour).padStart(2, '0');
-  }
-
-  return `${month}/${day}/${year} ${hour}:${minute}${period}`;
+  return `${day}.${month}.${year} ${hour}:${minute}`;
 }
 
 /** The overlay builder for the color filter Blue Marble window.
@@ -49,11 +42,14 @@ export default class WindowFilter extends Overlay {
     this.windowStateKey = 'windowFilter'; // User setting key for the persisted window state
     this.windowResizeObserver = null; // Resize observer for the windowed mode
     this.windowViewportResizeHandler = null; // Resize handler for viewport changes
+    this.windowHorizontalWheelHandler = null; // Wheel handler for horizontal color layout scrolling
+    this.windowHorizontalWheelElement = null; // Scrollable element using the horizontal wheel handler
     this.windowSaveTimeout = null; // Debounce timer for resize persistence
     this.colorRefreshInterval = null; // Auto-refresh timer for live color statistics
     this.colorRefreshIntervalMS = 10000; // Refresh Color Filter statistics every 10 seconds
     this.windowMinWidth = 360; // Minimum width for the windowed filter
     this.windowMinHeight = 220; // Minimum height for the windowed filter
+    this.windowHorizontalHeight = 170; // Fixed height for the horizontal windowed filter
     this.windowMaxWidth = 1000; // Maximum width for the windowed filter
     this.windowMaxHeight = 1400; // Maximum height for the windowed filter
 
@@ -117,13 +113,15 @@ export default class WindowFilter extends Overlay {
       //   div.parentElement.appendChild(div); // When the window is clicked on, bring to top
       // }
     }).addDragbar()
-        .addButton({'class': 'bm-button-circle', 'innerHTML': minimizeIconExpanded, 'aria-label': 'Minimize window "Color Filter"', 'data-button-status': 'expanded'}, (instance, button) => {
+        .addButton({'class': 'bm-button-circle', 'innerHTML': minimizeIconExpanded, 'title': 'Minimize window "Color Filter"', 'aria-label': 'Minimize window "Color Filter"', 'data-button-status': 'expanded'}, (instance, button) => {
           button.onclick = () => instance.handleMinimization(button);
           button.ontouchend = () => {button.click()}; // Needed only to negate weird interaction with dragbar
         }).buildElement()
-        .addDiv().buildElement() // Contains the minimized h1 element
+        .addDiv({'class': 'bm-filter-drag-title-slot'})
+          .addHeader(1, {'class': 'bm-dragbar-title-persistent bm-filter-drag-title', 'textContent': 'Color Filter'}).buildElement()
+        .buildElement()
         .addDiv({'class': 'bm-flex-center'})
-          .addButton({'class': 'bm-button-circle', 'innerHTML': windowedIcon, 'aria-label': 'Switch to windowed mode for "Color Filter"'}, (instance, button) => {
+          .addButton({'class': 'bm-button-circle', 'innerHTML': windowedIcon, 'title': 'Switch to windowed mode for "Color Filter"', 'aria-label': 'Switch to windowed mode for "Color Filter"'}, (instance, button) => {
             button.onclick = () => {
               this.#setWindowModePreference(true);
               this.#closeWindow();
@@ -131,17 +129,14 @@ export default class WindowFilter extends Overlay {
             };
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
           }).buildElement()
-          .addButton({'class': 'bm-button-circle', 'innerHTML': closeIcon, 'aria-label': 'Close window "Color Filter"'}, (instance, button) => {
+          .addButton({'class': 'bm-button-circle', 'innerHTML': closeIcon, 'title': 'Close window "Color Filter"', 'aria-label': 'Close window "Color Filter"'}, (instance, button) => {
             button.onclick = () => this.#closeWindow();
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
           }).buildElement()
         .buildElement()
       .buildElement()
       .addDiv({'class': 'bm-window-content'})
-        .addDiv({'class': 'bm-container bm-center-vertically bm-filter-header'})
-          .addHeader(1, {'textContent': 'Color Filter'}).buildElement()
-        .buildElement()
-        .addHr().buildElement()
+        .addHr({'class': 'bm-window-divider-top'}).buildElement()
         .addDiv({'class': 'bm-container bm-flex-between bm-center-vertically bm-filter-toolbar', 'style': 'gap: 1.5ch;'})
           .addButton({'class': 'bm-button-secondary', 'textContent': 'Hide All Colors'}, (instance, button) => {
             button.onclick = () => this.#selectColorList(false);
@@ -229,6 +224,7 @@ export default class WindowFilter extends Overlay {
 
     // Obtains the scrollable container to put the color filter in
     const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
+    this.#initializeHorizontalScrollWheel(scrollableContainer);
     
     // These run when the user opens the Color Filter window
     this.#buildColorList(scrollableContainer);
@@ -264,9 +260,9 @@ export default class WindowFilter extends Overlay {
       'style': `width: 360px; height: min(70vh, 32rem); min-width: ${this.windowMinWidth}px; min-height: ${this.windowMinHeight}px; max-width: min(${this.windowMaxWidth}px, calc(100vw - 16px)); max-height: min(${this.windowMaxHeight}px, calc(100vh - 16px));`
     })
       .addDragbar()
-        .addButton({'class': 'bm-button-circle', 'innerHTML': minimizeIconExpanded, 'aria-label': 'Minimize window "Color Filter"', 'data-button-status': 'expanded'}, (instance, button) => {
+        .addButton({'class': 'bm-button-circle', 'innerHTML': minimizeIconExpanded, 'title': 'Minimize window "Color Filter"', 'aria-label': 'Minimize window "Color Filter"', 'data-button-status': 'expanded'}, (instance, button) => {
           button.onclick = () => {
-            const windowedColorTotals = document.querySelector('#bm-filter-windowed-color-totals');
+            const windowedColorTotals = document.querySelector('#bm-filter-windowed-color-totals-dragbar');
             if (windowedColorTotals) {
               windowedColorTotals.style.display = (button.dataset['buttonStatus'] == 'expanded') ? 'none' : '';
             }
@@ -275,11 +271,20 @@ export default class WindowFilter extends Overlay {
           button.ontouchend = () => {button.click()}; // Needed only to negate weird interaction with dragbar
         }).buildElement()
         .addDiv()
-          .addSpan({'id': 'bm-filter-windowed-color-totals', 'class': 'bm-dragbar-text', 'style': 'font-weight: 700;'}).buildElement() // Contains correct / total pixel values
+          .addSpan({'id': 'bm-filter-windowed-color-totals-dragbar', 'class': 'bm-dragbar-text', 'style': 'font-weight: 700;'}).buildElement() // Contains correct / total pixel values
+          .addHeader(1, {'class': 'bm-dragbar-title-persistent bm-filter-drag-title bm-filter-horizontal-drag-title', 'textContent': 'Color Filter'}).buildElement()
           // Minimized h1 element will appear here
         .buildElement() 
         .addDiv({'class': 'bm-flex-center'})
-          .addButton({'class': 'bm-button-circle', 'innerHTML': fullscreenIcon, 'aria-label': 'Switch to fullscreen mode for "Color Filter"'}, (instance, button) => {
+          .addButton({'id': 'bm-filter-layout-toggle', 'class': 'bm-button-circle bm-filter-layout-toggle', 'innerHTML': horizontalLayoutIcon, 'title': 'Switch color layout', 'aria-label': 'Switch to horizontal color layout'}, (instance, button) => {
+            button.onclick = () => {
+              const windowElement = button.closest(`#${this.windowID}`);
+              const currentLayout = windowElement?.classList.contains('bm-filter-layout-horizontal') ? 'horizontal' : 'vertical';
+              this.#applyWindowedColorLayout(currentLayout == 'horizontal' ? 'vertical' : 'horizontal');
+            };
+            button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
+          }).buildElement()
+          .addButton({'class': 'bm-button-circle bm-filter-fullscreen-toggle', 'innerHTML': fullscreenIcon, 'title': 'Switch to fullscreen mode for "Color Filter"', 'aria-label': 'Switch to fullscreen mode for "Color Filter"'}, (instance, button) => {
             button.onclick = () => {
               this.#setWindowModePreference(false);
               this.#closeWindow();
@@ -287,22 +292,34 @@ export default class WindowFilter extends Overlay {
             };
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
           }).buildElement()
-          .addButton({'class': 'bm-button-circle', 'innerHTML': closeIcon, 'aria-label': 'Close window "Color Filter"'}, (instance, button) => {
+          .addButton({'class': 'bm-button-circle', 'innerHTML': closeIcon, 'title': 'Close window "Color Filter"', 'aria-label': 'Close window "Color Filter"'}, (instance, button) => {
             button.onclick = () => this.#closeWindow();
             button.ontouchend = () => {button.click();}; // Needed only to negate weird interaction with dragbar
           }).buildElement()
         .buildElement()
       .buildElement()
       .addDiv({'class': 'bm-window-content'})
-        .addDiv({'class': 'bm-container bm-center-vertically bm-filter-header'})
-          .addHeader(1, {'textContent': 'Color Filter'}).buildElement()
+        .addHr({'class': 'bm-window-divider-top'}).buildElement()
+        .addDiv({'class': 'bm-container bm-center-vertically bm-filter-windowed-summary-row'})
+          .addDiv({'class': 'bm-filter-windowed-summary'})
+            .addSpan({'class': 'bm-filter-windowed-summary-label', 'textContent': 'Painted'}).buildElement()
+            .addSpan({'id': 'bm-filter-windowed-color-totals-inline', 'class': 'bm-filter-windowed-summary-value', 'textContent': '0 / ???'}).buildElement()
+          .buildElement()
         .buildElement()
         .addHr().buildElement()
-        .addDiv({'class': 'bm-container bm-flex-between bm-center-vertically bm-filter-toolbar', 'style': 'gap: 1.5ch;'})
-          .addButton({'class': 'bm-button-secondary', 'textContent': 'None'}, (instance, button) => {
+        .addDiv({'class': 'bm-container bm-flex-between bm-center-vertically bm-filter-toolbar bm-filter-toolbar-vertical', 'style': 'gap: 1.5ch;'})
+          .addButton({'class': 'bm-button-secondary', 'textContent': 'None', 'title': 'Hide all colors', 'aria-label': 'Hide all colors'}, (instance, button) => {
             button.onclick = () => this.#selectColorList(false);
           }).buildElement()
-          .addButton({'class': 'bm-button-secondary', 'textContent': 'All'}, (instance, button) => {
+          .addButton({'class': 'bm-button-secondary', 'textContent': 'All', 'title': 'Show all colors', 'aria-label': 'Show all colors'}, (instance, button) => {
+            button.onclick = () => this.#selectColorList(true);
+          }).buildElement()
+        .buildElement()
+        .addDiv({'class': 'bm-filter-toolbar-horizontal'})
+          .addButton({'class': 'bm-button-secondary', 'textContent': 'None', 'title': 'Hide all colors', 'aria-label': 'Hide all colors'}, (instance, button) => {
+            button.onclick = () => this.#selectColorList(false);
+          }).buildElement()
+          .addButton({'class': 'bm-button-secondary', 'textContent': 'All', 'title': 'Show all colors', 'aria-label': 'Show all colors'}, (instance, button) => {
             button.onclick = () => this.#selectColorList(true);
           }).buildElement()
         .buildElement()
@@ -321,10 +338,12 @@ export default class WindowFilter extends Overlay {
       }).buildElement()
     .buildElement().buildOverlay(this.windowParent);
 
+    this.#applyWindowedColorLayout(this.#getWindowedColorLayout(), false);
     this.#initializeWindowedPersistence();
 
     // Obtains the scrollable container to put the color filter in
     const scrollableContainer = document.querySelector(`#${this.windowID} .bm-container.bm-scrollable`);
+    this.#initializeHorizontalScrollWheel(scrollableContainer);
     
     // These run when the user opens the Color Filter window
     this.#buildColorList(scrollableContainer);
@@ -367,6 +386,158 @@ export default class WindowFilter extends Overlay {
     if (!this.settingsManager) {return;}
     this.settingsManager.toggleFlag(this.windowModeFlag, shouldBeWindowed);
     void this.settingsManager.saveUserStorageNow();
+  }
+
+  /** Returns the preferred color layout for the windowed filter.
+   * @returns {'vertical' | 'horizontal'}
+   * @since 0.95.0
+   */
+  #getWindowedColorLayout() {
+    const windowState = this.#getWindowState();
+    return windowState?.colorLayout == 'horizontal' ? 'horizontal' : 'vertical';
+  }
+
+  /** Returns the active color layout for the rendered window.
+   * @param {HTMLElement} [windowElement]
+   * @returns {'vertical' | 'horizontal'}
+   * @since 0.95.0
+   */
+  #getActiveWindowedColorLayout(windowElement = document.querySelector(`#${this.windowID}.bm-windowed`)) {
+    return windowElement?.classList.contains('bm-filter-layout-horizontal') ? 'horizontal' : 'vertical';
+  }
+
+  /** Returns the per-layout size object for the windowed filter.
+   * @param {'vertical' | 'horizontal'} layout
+   * @returns {{width?: number, height?: number} | null}
+   * @since 0.95.0
+   */
+  #getWindowedLayoutSize(layout) {
+    const windowState = this.#getWindowState();
+    if (!windowState) {return null;}
+    windowState.layoutSizes ??= {};
+    windowState.layoutSizes[layout] ??= {};
+    return windowState.layoutSizes[layout];
+  }
+
+  /** Returns the maximum window width for a color layout.
+   * @param {'vertical' | 'horizontal'} layout
+   * @returns {number}
+   * @since 0.95.0
+   */
+  #getWindowLayoutMaxWidth(layout) {
+    const viewportMaximum = window.innerWidth - 16;
+    if (layout == 'horizontal') {return viewportMaximum;}
+    return Math.min(this.windowMaxWidth, viewportMaximum);
+  }
+
+  /** Returns the minimum window height for a color layout.
+   * @param {'vertical' | 'horizontal'} layout
+   * @returns {number}
+   * @since 0.95.0
+   */
+  #getWindowLayoutMinHeight(layout) {
+    return layout == 'horizontal' ? this.windowHorizontalHeight : this.windowMinHeight;
+  }
+
+  /** Returns the maximum window height for a color layout.
+   * @param {'vertical' | 'horizontal'} layout
+   * @returns {number}
+   * @since 0.95.0
+   */
+  #getWindowLayoutMaxHeight(layout) {
+    const viewportMaximum = window.innerHeight - 16;
+    if (layout == 'horizontal') {
+      return Math.min(this.windowHorizontalHeight, viewportMaximum);
+    }
+    return Math.min(this.windowMaxHeight, viewportMaximum);
+  }
+
+  /** Persists only the size for the current color layout.
+   * @param {HTMLElement} windowElement
+   * @param {'vertical' | 'horizontal'} layout
+   * @since 0.95.0
+   */
+  #saveWindowLayoutSize(windowElement, layout) {
+    const layoutSize = this.#getWindowedLayoutSize(layout);
+    if (!layoutSize || !windowElement?.isConnected) {return;}
+
+    const rect = windowElement.getBoundingClientRect();
+    layoutSize.width = this.#clampWindowDimension(rect.width, this.windowMinWidth, this.#getWindowLayoutMaxWidth(layout));
+    layoutSize.height = layout == 'horizontal'
+      ? this.#getWindowLayoutMaxHeight(layout)
+      : this.#clampWindowDimension(rect.height, this.#getWindowLayoutMinHeight(layout), this.#getWindowLayoutMaxHeight(layout));
+  }
+
+  /** Restores the remembered size for a color layout.
+   * @param {HTMLElement} windowElement
+   * @param {'vertical' | 'horizontal'} layout
+   * @since 0.95.0
+   */
+  #restoreWindowLayoutSize(windowElement, layout) {
+    const layoutSize = this.#getWindowedLayoutSize(layout);
+    if (!layoutSize || !windowElement?.isConnected) {return;}
+
+    let width = Number(layoutSize.width);
+    let height = Number(layoutSize.height);
+
+    if (!Number.isFinite(width)) {
+      width = layout == 'horizontal'
+        ? Math.max(windowElement.getBoundingClientRect().width, Math.min(760, this.#getWindowLayoutMaxWidth(layout)))
+        : Number(this.#getWindowState()?.width) || windowElement.getBoundingClientRect().width;
+    }
+
+    if (layout == 'horizontal') {
+      height = this.#getWindowLayoutMaxHeight(layout);
+    } else if (!Number.isFinite(height)) {
+      height = Number(this.#getWindowState()?.height) || windowElement.getBoundingClientRect().height;
+    }
+
+    width = this.#clampWindowDimension(width, this.windowMinWidth, this.#getWindowLayoutMaxWidth(layout));
+    height = this.#clampWindowDimension(height, this.#getWindowLayoutMinHeight(layout), this.#getWindowLayoutMaxHeight(layout));
+
+    layoutSize.width = width;
+    layoutSize.height = height;
+    windowElement.style.width = `${width}px`;
+    windowElement.style.height = `${height}px`;
+  }
+
+  /** Applies the color list layout in windowed mode.
+   * @param {'vertical' | 'horizontal'} layout
+   * @param {boolean} [shouldPersist=true]
+   * @since 0.95.0
+   */
+  #applyWindowedColorLayout(layout, shouldPersist = true) {
+    const normalizedLayout = layout == 'horizontal' ? 'horizontal' : 'vertical';
+    const windowElement = document.querySelector(`#${this.windowID}.bm-windowed`);
+    if (!windowElement) {return;}
+
+    const previousLayout = this.#getActiveWindowedColorLayout(windowElement);
+    if (shouldPersist && previousLayout != normalizedLayout) {
+      this.#saveWindowLayoutSize(windowElement, previousLayout);
+    }
+
+    windowElement.classList.toggle('bm-filter-layout-horizontal', normalizedLayout == 'horizontal');
+    windowElement.classList.toggle('bm-filter-layout-vertical', normalizedLayout != 'horizontal');
+
+    const toggleButton = windowElement.querySelector('#bm-filter-layout-toggle');
+    if (toggleButton) {
+      const showsHorizontalLayout = normalizedLayout == 'horizontal';
+      toggleButton.innerHTML = showsHorizontalLayout ? verticalLayoutIcon : horizontalLayoutIcon;
+      toggleButton.title = showsHorizontalLayout ? 'Switch to vertical color layout' : 'Switch to horizontal color layout';
+      toggleButton.ariaLabel = toggleButton.title;
+      toggleButton.setAttribute('aria-pressed', showsHorizontalLayout ? 'true' : 'false');
+    }
+
+    const windowState = this.#getWindowState();
+    if (windowState) {
+      windowState.colorLayout = normalizedLayout;
+    }
+    this.updateColorList();
+    this.#restoreWindowLayoutSize(windowElement, normalizedLayout);
+    if (shouldPersist) {
+      this.#saveWindowState(windowElement);
+      void this.settingsManager?.saveUserStorageNow();
+    }
   }
 
   /** Updates the visible sort controls to reflect the active sort state.
@@ -436,6 +607,11 @@ export default class WindowFilter extends Overlay {
       window.removeEventListener('resize', this.windowViewportResizeHandler);
       this.windowViewportResizeHandler = null;
     }
+    if (this.windowHorizontalWheelHandler && this.windowHorizontalWheelElement) {
+      this.windowHorizontalWheelElement.removeEventListener('wheel', this.windowHorizontalWheelHandler);
+      this.windowHorizontalWheelHandler = null;
+      this.windowHorizontalWheelElement = null;
+    }
     if (this.windowSaveTimeout) {
       clearTimeout(this.windowSaveTimeout);
       this.windowSaveTimeout = null;
@@ -479,18 +655,24 @@ export default class WindowFilter extends Overlay {
     const windowState = this.#getWindowState();
     if (!windowState || !windowElement) {return;}
 
-    const width = Number(windowState.width);
-    const height = Number(windowState.height);
+    const layout = this.#getWindowedColorLayout();
+    const layoutSize = this.#getWindowedLayoutSize(layout);
+    const width = Number(layoutSize?.width ?? windowState.width);
+    const height = Number(layoutSize?.height ?? windowState.height);
     const hasWidth = Number.isFinite(width);
     const hasHeight = Number.isFinite(height);
 
     if (hasWidth) {
-      windowState.width = this.#clampWindowDimension(width, this.windowMinWidth, Math.min(this.windowMaxWidth, window.innerWidth - 16));
-      windowElement.style.width = `${windowState.width}px`;
+      const nextWidth = this.#clampWindowDimension(width, this.windowMinWidth, this.#getWindowLayoutMaxWidth(layout));
+      layoutSize.width = nextWidth;
+      windowState.width = nextWidth;
+      windowElement.style.width = `${nextWidth}px`;
     }
     if (hasHeight) {
-      windowState.height = this.#clampWindowDimension(height, this.windowMinHeight, Math.min(this.windowMaxHeight, window.innerHeight - 16));
-      windowElement.style.height = `${windowState.height}px`;
+      const nextHeight = this.#clampWindowDimension(height, this.#getWindowLayoutMinHeight(layout), this.#getWindowLayoutMaxHeight(layout));
+      layoutSize.height = nextHeight;
+      windowState.height = nextHeight;
+      windowElement.style.height = `${nextHeight}px`;
     }
 
     requestAnimationFrame(() => {
@@ -523,9 +705,12 @@ export default class WindowFilter extends Overlay {
     if (!windowState || !windowElement?.isConnected || !windowElement.classList.contains('bm-windowed')) {return;}
     if (windowElement.querySelector('.bm-dragbar button[data-button-status="collapsed"]')) {return;}
 
+    const layout = this.#getActiveWindowedColorLayout(windowElement);
     const rect = windowElement.getBoundingClientRect();
-    const width = this.#clampWindowDimension(rect.width, this.windowMinWidth, Math.min(this.windowMaxWidth, window.innerWidth - 16));
-    const height = this.#clampWindowDimension(rect.height, this.windowMinHeight, Math.min(this.windowMaxHeight, window.innerHeight - 16));
+    const width = this.#clampWindowDimension(rect.width, this.windowMinWidth, this.#getWindowLayoutMaxWidth(layout));
+    const height = layout == 'horizontal'
+      ? this.#getWindowLayoutMaxHeight(layout)
+      : this.#clampWindowDimension(rect.height, this.#getWindowLayoutMinHeight(layout), this.#getWindowLayoutMaxHeight(layout));
 
     if (Math.round(rect.width) != width) {
       windowElement.style.width = `${width}px`;
@@ -544,6 +729,13 @@ export default class WindowFilter extends Overlay {
     windowState.y = clampedPosition.y;
     windowState.width = width;
     windowState.height = height;
+    windowState.colorLayout = layout;
+
+    const layoutSize = this.#getWindowedLayoutSize(layout);
+    if (layoutSize) {
+      layoutSize.width = width;
+      layoutSize.height = height;
+    }
 
     void this.settingsManager?.saveUserStorageNow();
   }
@@ -578,9 +770,8 @@ export default class WindowFilter extends Overlay {
     });
     this.handleResize(`#${this.windowID}.bm-window`, `#${this.windowID} .bm-resize-corner`, {
       minWidth: this.windowMinWidth,
-      minHeight: this.windowMinHeight,
-      maxWidth: Math.min(this.windowMaxWidth, window.innerWidth - 16),
-      maxHeight: Math.min(this.windowMaxHeight, window.innerHeight - 16),
+      minHeight: () => this.#getWindowLayoutMinHeight(this.#getActiveWindowedColorLayout(windowElement)),
+      maxHeight: () => this.#getWindowLayoutMaxHeight(this.#getActiveWindowedColorLayout(windowElement)),
       onEnd: ({element}) => this.#saveWindowState(element)
     });
 
@@ -593,6 +784,33 @@ export default class WindowFilter extends Overlay {
     window.addEventListener('resize', this.windowViewportResizeHandler);
   }
 
+  /** Converts vertical wheel input into horizontal scrolling for the horizontal color layout.
+   * @param {HTMLElement} scrollableContainer
+   * @since 0.95.0
+   */
+  #initializeHorizontalScrollWheel(scrollableContainer) {
+    if (!scrollableContainer) {return;}
+
+    if (this.windowHorizontalWheelHandler && this.windowHorizontalWheelElement) {
+      this.windowHorizontalWheelElement.removeEventListener('wheel', this.windowHorizontalWheelHandler);
+    }
+
+    this.windowHorizontalWheelElement = scrollableContainer;
+    this.windowHorizontalWheelHandler = event => {
+      const windowElement = scrollableContainer.closest(`#${this.windowID}.bm-windowed`);
+      if (!windowElement?.classList.contains('bm-filter-layout-horizontal')) {return;}
+      if (scrollableContainer.scrollWidth <= scrollableContainer.clientWidth) {return;}
+
+      const horizontalDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!horizontalDelta) {return;}
+
+      scrollableContainer.scrollLeft += horizontalDelta;
+      event.preventDefault();
+    };
+
+    scrollableContainer.addEventListener('wheel', this.windowHorizontalWheelHandler, {passive: false});
+  }
+
   /** Creates the color list container.
    * @param {HTMLElement} parentElement - Parent element to add the color list to as a child
    * @since 0.88.222
@@ -600,7 +818,9 @@ export default class WindowFilter extends Overlay {
   #buildColorList(parentElement) {
 
     // Figures out if this window is fullscreen or windowed mode
-    const isWindowedMode = parentElement.closest(`#${this.windowID}`)?.classList.contains('bm-windowed');
+    const parentWindow = parentElement.closest(`#${this.windowID}`);
+    const isWindowedMode = parentWindow?.classList.contains('bm-windowed');
+    const isHorizontalWindowedMode = isWindowedMode && parentWindow?.classList.contains('bm-filter-layout-horizontal');
     // Note: `undefined` is expected to behave as if `false`
     
     console.log(`Is Windowed Mode: ${isWindowedMode}`);
@@ -614,9 +834,6 @@ export default class WindowFilter extends Overlay {
 
     // For each color in the palette...
     for (const color of this.palette) {
-
-      // Converts the RGB color to hexdecimal
-      const colorValueHex = '#' + rgbToHex(color.rgb).toUpperCase();
 
       // Relative Luminance
       const lumin = calculateRelativeLuminance(color.rgb);
@@ -689,9 +906,8 @@ export default class WindowFilter extends Overlay {
                 this.#syncColorToggleLabel(button, color);
               }
             ).buildElement()
-            .addSmall({'textContent': `#${color.id.toString().padStart(2, 0)}`, 'style': `color: ${((color.id == -1) || (color.id == 0)) ? 'white' : textColorForPaletteColorBackground}`}).buildElement()
             .addHeader(2, {'textContent': color.name, 'style': `color: ${((color.id == -1) || (color.id == 0)) ? 'white' : textColorForPaletteColorBackground}`}).buildElement()
-            .addSmall({'class': 'bm-filter-color-pxl-cnt', 'textContent': `${colorCorrectLocalized} / ${colorTotalLocalized}`, 'style': `color: ${((color.id == -1) || (color.id == 0)) ? 'white' : textColorForPaletteColorBackground}; flex: 1 1 auto; text-align: right;`}).buildElement()
+            .addSmall({'class': 'bm-filter-color-pxl-cnt', 'innerHTML': isHorizontalWindowedMode ? `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}` : `${colorCorrectLocalized} / ${colorTotalLocalized}`, 'style': `color: ${((color.id == -1) || (color.id == 0)) ? 'white' : textColorForPaletteColorBackground}; flex: 1 1 auto; text-align: right;`}).buildElement()
           .buildElement()
         .buildElement();
       } else {
@@ -733,7 +949,6 @@ export default class WindowFilter extends Overlay {
               ).buildElement()
             .buildElement()
             .addDiv({'class': 'bm-filter-color-title'})
-              .addSmall({'textContent': `#${color.id.toString().padStart(2, 0)} / ${(color.id == -2) ? 'mixed' : colorValueHex}`}).buildElement()
               .addHeader(2, {'textContent': color.name}).buildElement()
             .buildElement()
           .buildElement()
@@ -1000,20 +1215,20 @@ export default class WindowFilter extends Overlay {
       }
     }
 
-    // Obtains the correct / total pixels display element, or `undefined` if in fullscreen mode
-    const windowedColorTotals = document.querySelector('#bm-filter-windowed-color-totals');
+    const windowedDragbarTotals = document.querySelector('#bm-filter-windowed-color-totals-dragbar');
+    const windowedInlineTotals = document.querySelector('#bm-filter-windowed-color-totals-inline');
 
-    // If the element exists...
-    if (windowedColorTotals) {
+    // Returns the number, unlocalized (no space to localize)
+    // OR returns the three characters on either end of the string, with the middle replaced with an ellipse.
+    // E.g. '1234567' or '123…678'
+    const allCorrectCompact = (this.allPixelsCorrectTotal.toString().length > 7) ? this.allPixelsCorrectTotal.toString().slice(0, 2) + '…' + this.allPixelsCorrectTotal.toString().slice(-3) : this.allPixelsCorrectTotal.toString();
+    const allTotalCompact = (this.allPixelsTotal.toString().length > 7) ? this.allPixelsTotal.toString().slice(0, 2) + '…' + this.allPixelsTotal.toString().slice(-3) : this.allPixelsTotal.toString();
 
-      // Returns the number, unlocalized (no space to localize)
-      // OR returns the three characters on either end of the string, with the middle replaced with an ellipse.
-      // E.g. '1234567' or '123…678'
-      const allCorrect = (this.allPixelsCorrectTotal.toString().length > 7) ? this.allPixelsCorrectTotal.toString().slice(0, 2) + '…' + this.allPixelsCorrectTotal.toString().slice(-3) : this.allPixelsCorrectTotal.toString();
-      const allTotal = (this.allPixelsTotal.toString().length > 7) ? this.allPixelsTotal.toString().slice(0, 2) + '…' + this.allPixelsTotal.toString().slice(-3) : this.allPixelsTotal.toString();
-
-      // Updates the display with XSS protection enabled (because why not)
-      this.updateInnerHTML('#bm-filter-windowed-color-totals', `${allCorrect}/${allTotal}`, true);
+    if (windowedDragbarTotals) {
+      this.updateInnerHTML('#bm-filter-windowed-color-totals-dragbar', `${allCorrectCompact}/${allTotalCompact}`, true);
+    }
+    if (windowedInlineTotals) {
+      this.updateInnerHTML('#bm-filter-windowed-color-totals-inline', `${localizeNumber(this.allPixelsCorrectTotal)} / ${localizeNumber(this.allPixelsTotal)}`, true);
     }
 
     this.updateInnerHTML('#bm-filter-tile-load', `${localizeNumber(this.tilesLoadedTotal)} / ${localizeNumber(this.tilesTotal)}`);
@@ -1053,7 +1268,10 @@ export default class WindowFilter extends Overlay {
       const pixelCount = document.querySelector(`#${this.windowID} .bm-filter-color[data-id="${colorID}"] .bm-filter-color-pxl-cnt`);
       if (pixelCount) {
         const isWindowedPixelCount = !!pixelCount.closest(`#${this.windowID}.bm-windowed`);
-        if (isWindowedPixelCount) {
+        const isHorizontalWindowedPixelCount = !!pixelCount.closest(`#${this.windowID}.bm-windowed.bm-filter-layout-horizontal`);
+        if (isHorizontalWindowedPixelCount) {
+          pixelCount.innerHTML = `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}`;
+        } else if (isWindowedPixelCount) {
           pixelCount.textContent = `${colorCorrectLocalized} / ${colorTotalLocalized}`;
         } else {
           pixelCount.innerHTML = `${colorCorrectLocalized} /<br>${colorTotalLocalized}`;
