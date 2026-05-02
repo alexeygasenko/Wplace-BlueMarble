@@ -4128,7 +4128,7 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().bui
   var WindowWizard = _WindowWizard;
 
   // src/templateManager.js
-  var _TemplateManager_instances, restoreFilteredColorsFromSettings_fn, persistFilteredColors_fn, loadTemplate_fn, storeTemplates_fn, parseBlueMarble_fn, parseOSU_fn, calculateCorrectPixelsOnTile_And_FilterTile_fn, drawIncorrectHighlightMarker_fn;
+  var _TemplateManager_instances, restoreFilteredColorsFromSettings_fn, persistFilteredColors_fn, loadTemplate_fn, storeTemplates_fn, parseBlueMarble_fn, parseOSU_fn, calculateCorrectPixelsOnTile_And_FilterTile_fn, buildMissingHighlightClusters_fn, drawMissingHighlightCluster_fn, withAlpha_fn, drawIncorrectHighlightMarker_fn;
   var TemplateManager = class {
     /** The constructor for the {@link TemplateManager} class.
      * @param {string} name - The name of the userscript
@@ -4773,6 +4773,51 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
     };
     const incorrectHighlightPhase = Math.floor(Date.now() / 150);
     const incorrectHighlights = [];
+    const maxIncorrectHighlightMarkers = 900;
+    const incorrectHighlightBucketSize = pixelSize * 10;
+    const incorrectHighlightBuckets = /* @__PURE__ */ new Set();
+    const missingHighlightBucketSize = pixelSize * 16;
+    const missingHighlightBuckets = /* @__PURE__ */ new Map();
+    const queueIncorrectHighlight = ({ row, column, color }) => {
+      if (incorrectHighlights.length >= maxIncorrectHighlightMarkers) {
+        return;
+      }
+      const bucketKey = `${Math.floor(row / incorrectHighlightBucketSize)},${Math.floor(column / incorrectHighlightBucketSize)}`;
+      if (incorrectHighlightBuckets.has(bucketKey)) {
+        return;
+      }
+      incorrectHighlightBuckets.add(bucketKey);
+      incorrectHighlights.push({
+        row,
+        column,
+        color
+      });
+    };
+    const queueMissingHighlight = ({ row, column, color }) => {
+      const bucketRow = Math.floor(row / missingHighlightBucketSize);
+      const bucketColumn = Math.floor(column / missingHighlightBucketSize);
+      const bucketKey = `${bucketRow},${bucketColumn}`;
+      const bucket = missingHighlightBuckets.get(bucketKey);
+      if (bucket) {
+        bucket.minRow = Math.min(bucket.minRow, row);
+        bucket.maxRow = Math.max(bucket.maxRow, row);
+        bucket.minColumn = Math.min(bucket.minColumn, column);
+        bucket.maxColumn = Math.max(bucket.maxColumn, column);
+        bucket.count++;
+        return;
+      }
+      missingHighlightBuckets.set(bucketKey, {
+        bucketRow,
+        bucketColumn,
+        bucketSize: missingHighlightBucketSize,
+        minRow: row,
+        maxRow: row,
+        minColumn: column,
+        maxColumn: column,
+        count: 1,
+        color
+      });
+    };
     for (let templateRow = 1; templateRow < templateHeight; templateRow += pixelSize) {
       for (let templateColumn = 1; templateColumn < templateWidth; templateColumn += pixelSize) {
         const tileRow = templateCoordY + templateRow + tilePixelOffsetY;
@@ -4813,7 +4858,7 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
           if (hasHighlightColorFilter && (shouldHighlightSelectedColorMissing || tilePixelAlpha > tolerance) || !hasHighlightColorFilter && (shouldTransparentTilePixelsBeHighlighted || tilePixelAlpha > tolerance)) {
             const templatePixelColor = templatePixelAlpha > tolerance ? template32[templateRow * templateWidth + templateColumn] : tilePixelAbove;
             if (hasHighlightColorFilter) {
-              incorrectHighlights.push({
+              (highlightMode == "missing" ? queueMissingHighlight : queueIncorrectHighlight)({
                 row: templateRow,
                 column: templateColumn,
                 color: templatePixelColor
@@ -4842,21 +4887,200 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
         _colorpalette.set(bestTemplateColorID, colorIDcount ? colorIDcount + 1 : 1);
       }
     }
-    for (const highlight of incorrectHighlights) {
-      __privateMethod(this, _TemplateManager_instances, drawIncorrectHighlightMarker_fn).call(this, {
-        template: template32,
-        templateWidth,
-        templateHeight,
-        row: highlight.row,
-        column: highlight.column,
-        centerColor: highlight.color,
-        colors: incorrectHighlightColors,
-        phase: incorrectHighlightPhase
-      });
+    if (hasHighlightColorFilter && highlightMode == "missing") {
+      const missingHighlightClusters = __privateMethod(this, _TemplateManager_instances, buildMissingHighlightClusters_fn).call(this, missingHighlightBuckets, 96);
+      for (const cluster of missingHighlightClusters) {
+        __privateMethod(this, _TemplateManager_instances, drawMissingHighlightCluster_fn).call(this, {
+          template: template32,
+          templateWidth,
+          templateHeight,
+          cluster,
+          colors: incorrectHighlightColors,
+          phase: incorrectHighlightPhase,
+          pixelSize
+        });
+      }
+    } else {
+      for (const highlight of incorrectHighlights) {
+        __privateMethod(this, _TemplateManager_instances, drawIncorrectHighlightMarker_fn).call(this, {
+          template: template32,
+          templateWidth,
+          templateHeight,
+          row: highlight.row,
+          column: highlight.column,
+          centerColor: highlight.color,
+          colors: incorrectHighlightColors,
+          phase: incorrectHighlightPhase
+        });
+      }
     }
     console.log(`List of template pixels that match the tile:`);
     console.log(_colorpalette);
     return { correctPixels: _colorpalette, filteredTemplate: template32 };
+  };
+  /** Builds connected blob bounds for dense missing-pixel highlighting.
+   * @param {Map<string, Object>} bucketMap
+   * @param {number} maxClusters
+   * @returns {Array<Object>}
+   * @since 0.97.0
+   */
+  buildMissingHighlightClusters_fn = function(bucketMap, maxClusters) {
+    if (!bucketMap?.size) {
+      return [];
+    }
+    const visited = /* @__PURE__ */ new Set();
+    const clusters = [];
+    const neighborDeltas = [
+      [-1, -1],
+      [-1, 0],
+      [-1, 1],
+      [0, -1],
+      [0, 1],
+      [1, -1],
+      [1, 0],
+      [1, 1]
+    ];
+    for (const [bucketKey, startBucket] of bucketMap) {
+      if (visited.has(bucketKey)) {
+        continue;
+      }
+      const queue = [startBucket];
+      const cluster = {
+        minRow: startBucket.minRow,
+        maxRow: startBucket.maxRow,
+        minColumn: startBucket.minColumn,
+        maxColumn: startBucket.maxColumn,
+        count: 0,
+        color: startBucket.color,
+        buckets: []
+      };
+      visited.add(bucketKey);
+      for (let queueIndex = 0; queueIndex < queue.length; queueIndex++) {
+        const bucket = queue[queueIndex];
+        cluster.minRow = Math.min(cluster.minRow, bucket.minRow);
+        cluster.maxRow = Math.max(cluster.maxRow, bucket.maxRow);
+        cluster.minColumn = Math.min(cluster.minColumn, bucket.minColumn);
+        cluster.maxColumn = Math.max(cluster.maxColumn, bucket.maxColumn);
+        cluster.count += bucket.count;
+        cluster.buckets.push(bucket);
+        for (const [rowDelta, columnDelta] of neighborDeltas) {
+          const neighborKey = `${bucket.bucketRow + rowDelta},${bucket.bucketColumn + columnDelta}`;
+          if (visited.has(neighborKey)) {
+            continue;
+          }
+          const neighbor = bucketMap.get(neighborKey);
+          if (!neighbor) {
+            continue;
+          }
+          visited.add(neighborKey);
+          queue.push(neighbor);
+        }
+      }
+      clusters.push(cluster);
+    }
+    return clusters.sort((a, b) => b.count - a.count).slice(0, maxClusters);
+  };
+  /** Draws one soft contour around a cluster of missing pixels.
+   * @param {Object} params
+   * @param {Uint32Array} params.template
+   * @param {number} params.templateWidth
+   * @param {number} params.templateHeight
+   * @param {Object} params.cluster
+   * @param {Object} params.colors
+   * @param {number} params.phase
+   * @param {number} params.pixelSize
+   * @since 0.97.0
+   */
+  drawMissingHighlightCluster_fn = function({
+    template: template32,
+    templateWidth,
+    templateHeight,
+    cluster,
+    colors,
+    phase,
+    pixelSize
+  }) {
+    const padding = pixelSize * 2;
+    const outerThickness = Math.max(1, Math.round(pixelSize * 0.58));
+    const innerThickness = Math.max(1, Math.round(pixelSize * 0.36));
+    const innerInset = pixelSize * 2;
+    const softColors = {
+      cyan: 3372219136,
+      magenta: 3103732735
+    };
+    const setPixel = (row, column, color) => {
+      if (row < 0 || row >= templateHeight || column < 0 || column >= templateWidth) {
+        return;
+      }
+      template32[row * templateWidth + column] = color;
+    };
+    const contourColor = (isInner = false) => {
+      return isInner ? softColors.magenta : softColors.cyan;
+    };
+    const drawHorizontal = (row, startColumn, endColumn, thickness, isInner = false) => {
+      if (startColumn > endColumn) {
+        return;
+      }
+      for (let column = startColumn; column <= endColumn; column++) {
+        for (let offset = -thickness; offset <= thickness; offset++) {
+          setPixel(row + offset, column, contourColor(isInner));
+        }
+      }
+    };
+    const drawVertical = (column, startRow, endRow, thickness, isInner = false) => {
+      if (startRow > endRow) {
+        return;
+      }
+      for (let row = startRow; row <= endRow; row++) {
+        for (let offset = -thickness; offset <= thickness; offset++) {
+          setPixel(row, column + offset, contourColor(isInner));
+        }
+      }
+    };
+    const bucketSet = new Set(cluster.buckets.map((bucket) => `${bucket.bucketRow},${bucket.bucketColumn}`));
+    const hasBucket = (bucket, rowDelta, columnDelta) => bucketSet.has(`${bucket.bucketRow + rowDelta},${bucket.bucketColumn + columnDelta}`);
+    const drawBucketBoundary = ({ bucket, inset = 0, thickness = outerThickness, isInner = false }) => {
+      const bucketTop = bucket.bucketRow * bucket.bucketSize;
+      const bucketLeft = bucket.bucketColumn * bucket.bucketSize;
+      const bucketBottom = bucketTop + bucket.bucketSize - 1;
+      const bucketRight = bucketLeft + bucket.bucketSize - 1;
+      const top = Math.max(0, Math.floor(bucketTop - padding));
+      const bottom = Math.min(templateHeight - 1, Math.ceil(bucketBottom + padding));
+      const left = Math.max(0, Math.floor(bucketLeft - padding));
+      const right = Math.min(templateWidth - 1, Math.ceil(bucketRight + padding));
+      if (!hasBucket(bucket, -1, 0)) {
+        drawHorizontal(top + inset, left, right, thickness, isInner);
+      }
+      if (!hasBucket(bucket, 1, 0)) {
+        drawHorizontal(bottom - inset, left, right, thickness, isInner);
+      }
+      if (!hasBucket(bucket, 0, -1)) {
+        drawVertical(left + inset, top, bottom, thickness, isInner);
+      }
+      if (!hasBucket(bucket, 0, 1)) {
+        drawVertical(right - inset, top, bottom, thickness, isInner);
+      }
+    };
+    for (const bucket of cluster.buckets) {
+      drawBucketBoundary({ bucket });
+      if (bucket.count >= 3) {
+        drawBucketBoundary({
+          bucket,
+          inset: innerInset,
+          thickness: innerThickness,
+          isInner: true
+        });
+      }
+    }
+  };
+  /** Returns the same Uint32 RGBA color with a new alpha channel.
+   * @param {number} color
+   * @param {number} alpha
+   * @returns {number}
+   * @since 0.97.0
+   */
+  withAlpha_fn = function(color, alpha) {
+    return color & 16777215 | (Math.max(0, Math.min(255, alpha)) & 255) << 24;
   };
   /** Draws a loud marker around one incorrect pixel for color-specific highlighting.
    * @param {Object} params
@@ -4893,17 +5117,19 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
     const waveRadius = radiusPixels * pixelSize;
     const innerRadius = Math.max(pixelSize * 3, waveRadius - pixelSize * 4);
     const midRadius = Math.max(pixelSize * 2, waveRadius - pixelSize * 2);
-    const outerRingThickness = pixelSize * 1.25;
-    const midRingThickness = pixelSize * 1.05;
-    const innerRingThickness = pixelSize * 0.9;
+    const outerRingThickness = pixelSize * 0.52;
+    const midRingThickness = pixelSize * 0.46;
+    const innerRingThickness = pixelSize * 0.4;
+    const spokeHalfThickness = Math.max(0, Math.floor(pixelSize * 0.22));
     const phaseIsEven = (phase & 1) == 0;
     const phaseModThree = phase % 3;
-    for (let rowDelta = -1; rowDelta <= 1; rowDelta++) {
-      for (let columnDelta = -1; columnDelta <= 1; columnDelta++) {
-        const isCenter = rowDelta == 0 && columnDelta == 0;
-        const isAlternatingCell = (rowDelta + columnDelta + phase & 1) == 0;
-        setSubpixel(rowDelta, columnDelta, isCenter ? centerColor : isAlternatingCell ? colors.yellow : colors.coral);
-      }
+    const crossStart = Math.max(1, pixelSize);
+    const crossEnd = Math.max(crossStart + 1, pixelSize * 2);
+    for (let offset = crossStart; offset <= crossEnd; offset++) {
+      setSubpixel(-offset, 0, colors.yellow);
+      setSubpixel(offset, 0, colors.yellow);
+      setSubpixel(0, -offset, colors.yellow);
+      setSubpixel(0, offset, colors.yellow);
     }
     for (let rowDelta = -waveRadius; rowDelta <= waveRadius; rowDelta++) {
       for (let columnDelta = -waveRadius; columnDelta <= waveRadius; columnDelta++) {
@@ -4911,7 +5137,7 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
         const isOuterRing = Math.abs(distance - waveRadius) <= outerRingThickness;
         const isMidRing = Math.abs(distance - midRadius) <= midRingThickness;
         const isInnerRing = Math.abs(distance - innerRadius) <= innerRingThickness;
-        const isSpoke = Math.abs(rowDelta) <= 1 && Math.abs(columnDelta) <= waveRadius && (Math.abs(columnDelta) / pixelSize + phase) % 5 < 1 || Math.abs(columnDelta) <= 1 && Math.abs(rowDelta) <= waveRadius && (Math.abs(rowDelta) / pixelSize + phase) % 5 < 1;
+        const isSpoke = Math.abs(rowDelta) <= spokeHalfThickness && Math.abs(columnDelta) >= crossStart && Math.abs(columnDelta) <= waveRadius && (Math.abs(columnDelta) / pixelSize + phase) % 5 < 1 || Math.abs(columnDelta) <= spokeHalfThickness && Math.abs(rowDelta) >= crossStart && Math.abs(rowDelta) <= waveRadius && (Math.abs(rowDelta) / pixelSize + phase) % 5 < 1;
         if (!isOuterRing && !isMidRing && !isInnerRing && !isSpoke) {
           continue;
         }
@@ -4931,7 +5157,7 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
       }
     }
     for (const [rowDelta, columnDelta] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) {
-      setSubpixel(rowDelta, columnDelta, phaseIsEven ? colors.coral : colors.yellow);
+      setSubpixel(rowDelta, columnDelta, colors.yellow);
     }
   };
 
@@ -5427,4 +5653,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: b5cc1cdbe88f
+// Build Hash: 559f3a7d74bf
