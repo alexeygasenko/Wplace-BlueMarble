@@ -2470,6 +2470,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
   var windowedIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 7.5V10H7.5M16.5 10H14V7.5M14 16.5V14h2.5M7.5 14H10v2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var horizontalLayoutIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7.5h15M4.5 16.5h15"/><path d="M7.5 5v5M12 5v5M16.5 5v5M7.5 14v5M12 14v5M16.5 14v5"/></g></svg>';
   var verticalLayoutIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4.5v15M16 4.5v15"/><path d="M5.5 7.5h5M5.5 12h5M5.5 16.5h5M13.5 7.5h5M13.5 12h5M13.5 16.5h5"/></g></svg>';
+  var incorrectHighlightIcon = '<svg class="bm-filter-highlight-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6.4"/><path d="M12 3.8V7M12 17v3.2M3.8 12H7M17 12h3.2"/><path d="m9.3 9.3 5.4 5.4M14.7 9.3l-5.4 5.4"/></g></svg>';
   function localizeCompactDate(date) {
     const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -2478,7 +2479,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     const minute = String(date.getMinutes()).padStart(2, "0");
     return `${day}.${month}.${year} ${hour}:${minute}`;
   }
-  var _WindowFilter_instances, getWindowState_fn2, setWindowOpenState_fn, prefersWindowedMode_fn, setWindowModePreference_fn, getWindowedColorLayout_fn, getActiveWindowedColorLayout_fn, getWindowedLayoutSize_fn, getWindowLayoutMaxWidth_fn, getWindowLayoutMinHeight_fn, getWindowLayoutMaxHeight_fn, saveWindowLayoutSize_fn, restoreWindowLayoutSize_fn, applyWindowedColorLayout_fn, syncSortFormControls_fn, initializeCustomSortDropdowns_fn, closeCustomSortDropdowns_fn, cleanupCustomSortDropdowns_fn, closeWindow_fn2, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn2, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, initializeHorizontalScrollWheel_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, syncColorToggleLabel_fn, toggleColorVisibility_fn, animateColorToggleIcon_fn, initializeColorBlockToggle_fn, calculatePixelStatistics_fn;
+  var _WindowFilter_instances, getWindowState_fn2, setWindowOpenState_fn, prefersWindowedMode_fn, setWindowModePreference_fn, getWindowedColorLayout_fn, getActiveWindowedColorLayout_fn, getWindowedLayoutSize_fn, getWindowLayoutMaxWidth_fn, getWindowLayoutMinHeight_fn, getWindowLayoutMaxHeight_fn, saveWindowLayoutSize_fn, restoreWindowLayoutSize_fn, applyWindowedColorLayout_fn, syncSortFormControls_fn, initializeCustomSortDropdowns_fn, closeCustomSortDropdowns_fn, cleanupCustomSortDropdowns_fn, closeWindow_fn2, startAutoRefresh_fn, stopAutoRefresh_fn, cleanupWindowPersistence_fn, clampWindowDimension_fn, clampWindowPosition_fn2, restoreWindowState_fn, saveWindowState_fn, scheduleWindowStateSave_fn, initializeWindowedPersistence_fn, initializeHorizontalScrollWheel_fn, buildColorList_fn, sortColorList_fn, selectColorList_fn, syncColorToggleLabel_fn, toggleColorVisibility_fn, toggleIncorrectHighlightColor_fn, getIncorrectHighlightButtonLabel_fn, syncIncorrectHighlightButtons_fn, animateColorToggleIcon_fn, initializeColorBlockToggle_fn, calculatePixelStatistics_fn;
   var WindowFilter = class extends Overlay {
     /** Constructor for the color filter window
      * @param {*} executor - The executing class
@@ -3451,6 +3452,9 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
         colorIncorrect
       } = colorStatistics[color.id];
       const isColorHidden = !!(this.templateManager.shouldFilterColor.get(color.id) || false);
+      const isIncorrectHighlightActive = this.templateManager.getIncorrectHighlightColorID?.() == color.id;
+      const incorrectHighlightMode = isIncorrectHighlightActive ? this.templateManager.getIncorrectHighlightMode?.() : "inactive";
+      const incorrectHighlightLabel = __privateMethod(this, _WindowFilter_instances, getIncorrectHighlightButtonLabel_fn).call(this, color.name, incorrectHighlightMode);
       const hasNoPixels = Number(colorTotal) === 0;
       if (isWindowedMode) {
         const styleBackgroundStar = `background-size: auto 100%; background-repeat: repeat-x; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50,5L79,91L2,39L98,39L21,91' fill='${textColorForPaletteColorBackground}' fill-opacity='.1'/></svg>");`;
@@ -3461,6 +3465,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
           "data-name": color.name,
           "data-premium": +color.premium,
           "data-state": isColorHidden ? "hidden" : "shown",
+          "data-highlight": incorrectHighlightMode,
           "data-correct": !Number.isNaN(parseInt(colorCorrect)) ? colorCorrect : "0",
           "data-total": colorTotal,
           "data-percent": colorPercent.slice(-1) == "%" ? colorPercent.slice(0, -1) : "0",
@@ -3483,6 +3488,26 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
             }
             __privateMethod(this, _WindowFilter_instances, syncColorToggleLabel_fn).call(this, button, color);
           }
+        ).buildElement().addButton(
+          {
+            "class": "bm-button-trans bm-filter-color-highlight " + bgEffectForButtons,
+            "aria-label": incorrectHighlightLabel,
+            "aria-pressed": isIncorrectHighlightActive ? "true" : "false",
+            "title": incorrectHighlightLabel.replace(/\.$/, ""),
+            "data-mode": incorrectHighlightMode,
+            "innerHTML": incorrectHighlightIcon,
+            "style": `color: ${textColorForPaletteColorBackground};`
+          },
+          (instance, button) => {
+            button.onclick = (event) => {
+              event.stopPropagation();
+              __privateMethod(this, _WindowFilter_instances, toggleIncorrectHighlightColor_fn).call(this, button, color);
+            };
+            button.onkeydown = (event) => event.stopPropagation();
+            if (!color.id) {
+              button.disabled = true;
+            }
+          }
         ).buildElement().addHeader(2, { "textContent": color.name, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-cnt", "innerHTML": hasNoPixels ? "-" : isHorizontalWindowedMode ? `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}` : `${colorCorrectLocalized} / ${colorTotalLocalized}`, "style": `color: ${color.id == -1 || color.id == 0 ? "white" : textColorForPaletteColorBackground}; flex: 1 1 auto; text-align: right;` }).buildElement().buildElement().buildElement();
       } else {
         colorList.addDiv({
@@ -3492,6 +3517,7 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
           "data-name": color.name,
           "data-premium": +color.premium,
           "data-state": isColorHidden ? "hidden" : "shown",
+          "data-highlight": incorrectHighlightMode,
           "data-correct": !Number.isNaN(parseInt(colorCorrect)) ? colorCorrect : "0",
           "data-total": colorTotal,
           "data-percent": colorPercent.slice(-1) == "%" ? colorPercent.slice(0, -1) : "0",
@@ -3513,6 +3539,25 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
               button.disabled = true;
             }
             __privateMethod(this, _WindowFilter_instances, syncColorToggleLabel_fn).call(this, button, color);
+          }
+        ).buildElement().addButton(
+          {
+            "class": "bm-button-trans bm-filter-color-highlight",
+            "aria-label": incorrectHighlightLabel,
+            "aria-pressed": isIncorrectHighlightActive ? "true" : "false",
+            "title": incorrectHighlightLabel.replace(/\.$/, ""),
+            "data-mode": incorrectHighlightMode,
+            "innerHTML": incorrectHighlightIcon
+          },
+          (instance, button) => {
+            button.onclick = (event) => {
+              event.stopPropagation();
+              __privateMethod(this, _WindowFilter_instances, toggleIncorrectHighlightColor_fn).call(this, button, color);
+            };
+            button.onkeydown = (event) => event.stopPropagation();
+            if (!color.id) {
+              button.disabled = true;
+            }
           }
         ).buildElement().buildElement().addDiv({ "class": "bm-filter-color-title" }).addHeader(2, { "textContent": color.name }).buildElement().buildElement().buildElement().addDiv({ "class": "bm-filter-color-meta" }).addDiv({ "class": "bm-filter-color-progress" }).addSpan({ "class": "bm-filter-color-pxl-cnt", "innerHTML": hasNoPixels ? "-" : `${colorCorrectLocalized} /<br>${colorTotalLocalized}` }).buildElement().addSmall({ "class": "bm-filter-color-pxl-desc", "innerHTML": `${colorPercent} done<br>${typeof colorIncorrect == "number" && !isNaN(colorIncorrect) ? colorIncorrect : "???"} off` }).buildElement().buildElement().buildElement().buildElement();
       }
@@ -3613,6 +3658,54 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
     button.disabled = false;
     button.style.textDecoration = "";
   };
+  /** Toggles incorrect-pixel highlighting for one template color.
+   * @param {HTMLButtonElement} button - The color highlight button
+   * @param {Object} color - Palette color metadata
+   * @since 0.97.0
+   */
+  toggleIncorrectHighlightColor_fn = function(button, color) {
+    if (!button || button.disabled || !color.id) {
+      return;
+    }
+    this.templateManager.toggleIncorrectHighlightColor(color.id);
+    __privateMethod(this, _WindowFilter_instances, syncIncorrectHighlightButtons_fn).call(this);
+  };
+  /** Returns the next-action label for the color highlight button.
+   * @param {string} colorName
+   * @param {'inactive' | 'incorrect' | 'missing'} mode
+   * @returns {string}
+   * @since 0.97.0
+   */
+  getIncorrectHighlightButtonLabel_fn = function(colorName, mode) {
+    if (mode == "incorrect") {
+      return `Show only transparent pixels that should be ${colorName || "this color"}.`;
+    }
+    if (mode == "missing") {
+      return `Stop highlighting ${colorName || "this color"} pixels.`;
+    }
+    return `Highlight incorrect ${colorName || "this color"} pixels.`;
+  };
+  /** Updates color highlight buttons and color-card state.
+   * @since 0.97.0
+   */
+  syncIncorrectHighlightButtons_fn = function() {
+    const highlightedColorID = this.templateManager.getIncorrectHighlightColorID?.();
+    const highlightedMode = this.templateManager.getIncorrectHighlightMode?.() ?? "incorrect";
+    const buttons = document.querySelectorAll(`#${this.windowID} .bm-filter-color-highlight`);
+    for (const button of buttons) {
+      const colorElement = button.closest(".bm-filter-color");
+      const colorID = Number(colorElement?.dataset["id"]);
+      const isActive = Number.isFinite(colorID) && colorID == highlightedColorID;
+      const colorName = colorElement?.dataset["name"] || "";
+      const mode = isActive ? highlightedMode : "inactive";
+      const label = __privateMethod(this, _WindowFilter_instances, getIncorrectHighlightButtonLabel_fn).call(this, colorName, mode);
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      button.dataset["mode"] = mode;
+      button.ariaLabel = label;
+      button.title = label.replace(/\.$/, "");
+      colorElement?.setAttribute("data-highlight", mode);
+    }
+  };
   /** Animates the eye slash only for direct visibility toggles.
    * @param {HTMLButtonElement} button - The color visibility button
    * @param {'hide' | 'show'} direction - Which slash animation to play
@@ -3657,6 +3750,9 @@ Getting Y ${pixelY}-${pixelY + drawSizeY}`);
       __privateMethod(this, _WindowFilter_instances, toggleColorVisibility_fn).call(this, button, color);
     };
     colorElement.onkeydown = (event) => {
+      if (event.target instanceof Element && event.target.closest("button, a, input, select, textarea")) {
+        return;
+      }
       if (event.key != "Enter" && event.key != " ") {
         return;
       }
@@ -4032,7 +4128,7 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().bui
   var WindowWizard = _WindowWizard;
 
   // src/templateManager.js
-  var _TemplateManager_instances, restoreFilteredColorsFromSettings_fn, persistFilteredColors_fn, loadTemplate_fn, storeTemplates_fn, parseBlueMarble_fn, parseOSU_fn, calculateCorrectPixelsOnTile_And_FilterTile_fn;
+  var _TemplateManager_instances, restoreFilteredColorsFromSettings_fn, persistFilteredColors_fn, loadTemplate_fn, storeTemplates_fn, parseBlueMarble_fn, parseOSU_fn, calculateCorrectPixelsOnTile_And_FilterTile_fn, buildMissingHighlightClusters_fn, drawMissingHighlightCluster_fn, withAlpha_fn, drawIncorrectHighlightMarker_fn;
   var TemplateManager = class {
     /** The constructor for the {@link TemplateManager} class.
      * @param {string} name - The name of the userscript
@@ -4059,6 +4155,8 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().bui
       this.templatesShouldBeDrawn = true;
       this.templatePixelsCorrect = null;
       this.shouldFilterColor = /* @__PURE__ */ new Map();
+      this.highlightIncorrectColorID = null;
+      this.highlightIncorrectMode = "incorrect";
     }
     /** Updates the stored instance of the main window.
      * @param {WindowMain} windowMain - The main window instance
@@ -4091,6 +4189,60 @@ Version: ${this.version}`, "readOnly": true }).buildElement().buildElement().bui
         this.shouldFilterColor.delete(parsedColorID);
       }
       __privateMethod(this, _TemplateManager_instances, persistFilteredColors_fn).call(this);
+    }
+    /** Returns the color currently used to restrict incorrect-pixel highlighting.
+     * @returns {number | null}
+     * @since 0.97.0
+     */
+    getIncorrectHighlightColorID() {
+      return this.highlightIncorrectColorID;
+    }
+    /** Returns the active color-specific highlight mode.
+     * @returns {'incorrect' | 'missing'}
+     * @since 0.97.0
+     */
+    getIncorrectHighlightMode() {
+      return this.highlightIncorrectMode;
+    }
+    /** Restricts incorrect-pixel highlighting to one template color, or clears the restriction.
+     * @param {number | null} colorID
+     * @param {'incorrect' | 'missing'} [mode='incorrect']
+     * @returns {number | null}
+     * @since 0.97.0
+     */
+    setIncorrectHighlightColor(colorID, mode = "incorrect") {
+      if (colorID === null || typeof colorID == "undefined") {
+        this.highlightIncorrectColorID = null;
+        this.highlightIncorrectMode = "incorrect";
+        return this.highlightIncorrectColorID;
+      }
+      const parsedColorID = Number(colorID);
+      if (!Number.isFinite(parsedColorID) || parsedColorID == 0) {
+        return this.highlightIncorrectColorID;
+      }
+      this.highlightIncorrectColorID = parsedColorID;
+      this.highlightIncorrectMode = mode == "missing" ? "missing" : "incorrect";
+      return this.highlightIncorrectColorID;
+    }
+    /** Cycles the color currently used to restrict incorrect-pixel highlighting.
+     * The cycle is: off -> all incorrect pixels -> missing transparent pixels -> off.
+     * @param {number} colorID
+     * @returns {{colorID: number | null, mode: 'incorrect' | 'missing'}}
+     * @since 0.97.0
+     */
+    toggleIncorrectHighlightColor(colorID) {
+      const parsedColorID = Number(colorID);
+      if (!Number.isFinite(parsedColorID) || parsedColorID == 0) {
+        return { colorID: this.highlightIncorrectColorID, mode: this.highlightIncorrectMode };
+      }
+      if (this.highlightIncorrectColorID != parsedColorID) {
+        this.setIncorrectHighlightColor(parsedColorID, "incorrect");
+      } else if (this.highlightIncorrectMode == "incorrect") {
+        this.setIncorrectHighlightColor(parsedColorID, "missing");
+      } else {
+        this.setIncorrectHighlightColor(null);
+      }
+      return { colorID: this.highlightIncorrectColorID, mode: this.highlightIncorrectMode };
     }
     /** Creates the JSON object to store templates in
      * @returns {{ whoami: string, scriptVersion: string, schemaVersion: string, templates: Object }} The JSON object
@@ -4367,6 +4519,11 @@ Version: ${this.version}`);
       const highlightPattern = this.settingsManager?.userSettings?.highlight || [[2, 0, 0]];
       const highlightPatternIndexZero = highlightPattern?.[0];
       const highlightDisabled = highlightPattern?.length == 1 && highlightPatternIndexZero?.[0] == 2 && highlightPatternIndexZero?.[1] == 0 && highlightPatternIndexZero?.[2] == 0;
+      const incorrectHighlightColorID = this.getIncorrectHighlightColorID();
+      const hasIncorrectHighlightColor = Number.isFinite(incorrectHighlightColorID);
+      const incorrectHighlightMode = this.getIncorrectHighlightMode();
+      const fallbackHighlightPattern = [[1, 0, 1], [2, 0, 0], [1, -1, 0], [1, 1, 0], [1, 0, -1]];
+      const effectiveHighlightPattern = highlightDisabled && hasIncorrectHighlightColor ? fallbackHighlightPattern : highlightPattern;
       for (const template of templatesToDraw) {
         console.log(`Template:`);
         console.log(template);
@@ -4389,8 +4546,10 @@ Version: ${this.version}`);
           tile: tileBeforeTemplates32,
           template: templateBeforeFilter32,
           templateInfo: [coordXtoDrawAt, coordYtoDrawAt, template.bitmap.width, template.bitmap.height],
-          highlightPattern,
-          highlightDisabled
+          highlightPattern: effectiveHighlightPattern,
+          highlightDisabled: highlightDisabled && !hasIncorrectHighlightColor,
+          highlightColorID: incorrectHighlightColorID,
+          highlightMode: incorrectHighlightMode
         });
         let pixelsCorrectTotal = 0;
         const transparentColorID = 0;
@@ -4400,7 +4559,7 @@ Version: ${this.version}`);
           }
           pixelsCorrectTotal += total;
         }
-        if (this.shouldFilterColor.size != 0 || templateHasErased || !highlightDisabled) {
+        if (this.shouldFilterColor.size != 0 || templateHasErased || !highlightDisabled || hasIncorrectHighlightColor) {
           console.log("Colors to filter: ", this.shouldFilterColor);
           context.drawImage(await createImageBitmap(new ImageData(new Uint8ClampedArray(templateAfterFilter.buffer), template.bitmap.width, template.bitmap.height)), coordXtoDrawAt, coordYtoDrawAt);
         }
@@ -4578,6 +4737,8 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
    * @param {Array<Number, Number, Number, Number>} params.templateInfo - Information about template location and size
    * @param {Array<number[]>} params.highlightPattern - The highlight pattern selected by the user
    * @param {boolean} params.highlightDisabled - Should highlighting be disabled?
+   * @param {number | null} params.highlightColorID - Restricts highlighting to one template color when set
+   * @param {'incorrect' | 'missing'} params.highlightMode - Which color-specific highlight mode to use
    * @returns {{correctPixels: Map<number, number>, filteredTemplate: Uint32Array}} A Map containing the color IDs (keys) and how many correct pixels there are for that color (values)
    */
   calculateCorrectPixelsOnTile_And_FilterTile_fn = function({
@@ -4585,7 +4746,9 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
     template: template32,
     templateInfo: templateInformation,
     highlightPattern,
-    highlightDisabled
+    highlightDisabled,
+    highlightColorID = null,
+    highlightMode = "incorrect"
   }) {
     const pixelSize = this.drawMult;
     const tileWidth = this.tileSize * pixelSize;
@@ -4598,8 +4761,63 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
     const templateHeight = templateInformation[3];
     const tolerance = this.paletteTolerance;
     const shouldTransparentTilePixelsBeHighlighted = !this.settingsManager?.userSettings?.flags?.includes("hl-noTrans");
+    const hasHighlightColorFilter = Number.isFinite(highlightColorID);
     const { palette: _, LUT: lookupTable } = this.paletteBM;
     const _colorpalette = /* @__PURE__ */ new Map();
+    const incorrectHighlightColors = {
+      cyan: 4294961012,
+      blue: 4294948481,
+      yellow: 4284284927,
+      coral: 4283585279,
+      white: 4294967295
+    };
+    const incorrectHighlightPhase = Math.floor(Date.now() / 150);
+    const incorrectHighlights = [];
+    const maxIncorrectHighlightMarkers = 900;
+    const incorrectHighlightBucketSize = pixelSize * 10;
+    const incorrectHighlightBuckets = /* @__PURE__ */ new Set();
+    const missingHighlightBucketSize = pixelSize * 16;
+    const missingHighlightBuckets = /* @__PURE__ */ new Map();
+    const queueIncorrectHighlight = ({ row, column, color }) => {
+      if (incorrectHighlights.length >= maxIncorrectHighlightMarkers) {
+        return;
+      }
+      const bucketKey = `${Math.floor(row / incorrectHighlightBucketSize)},${Math.floor(column / incorrectHighlightBucketSize)}`;
+      if (incorrectHighlightBuckets.has(bucketKey)) {
+        return;
+      }
+      incorrectHighlightBuckets.add(bucketKey);
+      incorrectHighlights.push({
+        row,
+        column,
+        color
+      });
+    };
+    const queueMissingHighlight = ({ row, column, color }) => {
+      const bucketRow = Math.floor(row / missingHighlightBucketSize);
+      const bucketColumn = Math.floor(column / missingHighlightBucketSize);
+      const bucketKey = `${bucketRow},${bucketColumn}`;
+      const bucket = missingHighlightBuckets.get(bucketKey);
+      if (bucket) {
+        bucket.minRow = Math.min(bucket.minRow, row);
+        bucket.maxRow = Math.max(bucket.maxRow, row);
+        bucket.minColumn = Math.min(bucket.minColumn, column);
+        bucket.maxColumn = Math.max(bucket.maxColumn, column);
+        bucket.count++;
+        return;
+      }
+      missingHighlightBuckets.set(bucketKey, {
+        bucketRow,
+        bucketColumn,
+        bucketSize: missingHighlightBucketSize,
+        minRow: row,
+        maxRow: row,
+        minColumn: column,
+        maxColumn: column,
+        count: 1,
+        color
+      });
+    };
     for (let templateRow = 1; templateRow < templateHeight; templateRow += pixelSize) {
       for (let templateColumn = 1; templateColumn < templateWidth; templateColumn += pixelSize) {
         const tileRow = templateCoordY + templateRow + tilePixelOffsetY;
@@ -4633,9 +4851,20 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
             }
           }
         }
-        if (!highlightDisabled && templatePixelAlpha > tolerance && bestTileColorID != bestTemplateColorID) {
-          if (shouldTransparentTilePixelsBeHighlighted || tilePixelAlpha > tolerance) {
-            const templatePixelColor = template32[templateRow * templateWidth + templateColumn];
+        const shouldHighlightSelectedColorMismatch = hasHighlightColorFilter && tilePixelAlpha > tolerance && highlightMode == "incorrect" && (bestTemplateColorID == highlightColorID && bestTileColorID != bestTemplateColorID || bestTileColorID == highlightColorID && bestTemplateColorID != highlightColorID);
+        const shouldHighlightSelectedColorMissing = hasHighlightColorFilter && highlightMode == "missing" && bestTemplateColorID == highlightColorID && templatePixelAlpha > tolerance && tilePixelAlpha <= tolerance;
+        const shouldHighlightGeneralMismatch = !hasHighlightColorFilter && templatePixelAlpha > tolerance && bestTileColorID != bestTemplateColorID;
+        if (!highlightDisabled && (shouldHighlightSelectedColorMismatch || shouldHighlightSelectedColorMissing || shouldHighlightGeneralMismatch)) {
+          if (hasHighlightColorFilter && (shouldHighlightSelectedColorMissing || tilePixelAlpha > tolerance) || !hasHighlightColorFilter && (shouldTransparentTilePixelsBeHighlighted || tilePixelAlpha > tolerance)) {
+            const templatePixelColor = templatePixelAlpha > tolerance ? template32[templateRow * templateWidth + templateColumn] : tilePixelAbove;
+            if (hasHighlightColorFilter) {
+              (highlightMode == "missing" ? queueMissingHighlight : queueIncorrectHighlight)({
+                row: templateRow,
+                column: templateColumn,
+                color: templatePixelColor
+              });
+              continue;
+            }
             for (const subpixelPattern of highlightPattern) {
               const [subpixelState, subpixelColumnDelta, subpixelRowDelta] = subpixelPattern;
               const subpixelColor = subpixelState != 0 ? subpixelState != 1 ? templatePixelColor : 4278190335 : 0;
@@ -4658,9 +4887,278 @@ Use Blue Marble version ${scriptVersion} or load a new template.`);
         _colorpalette.set(bestTemplateColorID, colorIDcount ? colorIDcount + 1 : 1);
       }
     }
+    if (hasHighlightColorFilter && highlightMode == "missing") {
+      const missingHighlightClusters = __privateMethod(this, _TemplateManager_instances, buildMissingHighlightClusters_fn).call(this, missingHighlightBuckets, 96);
+      for (const cluster of missingHighlightClusters) {
+        __privateMethod(this, _TemplateManager_instances, drawMissingHighlightCluster_fn).call(this, {
+          template: template32,
+          templateWidth,
+          templateHeight,
+          cluster,
+          colors: incorrectHighlightColors,
+          phase: incorrectHighlightPhase,
+          pixelSize
+        });
+      }
+    } else {
+      for (const highlight of incorrectHighlights) {
+        __privateMethod(this, _TemplateManager_instances, drawIncorrectHighlightMarker_fn).call(this, {
+          template: template32,
+          templateWidth,
+          templateHeight,
+          row: highlight.row,
+          column: highlight.column,
+          centerColor: highlight.color,
+          colors: incorrectHighlightColors,
+          phase: incorrectHighlightPhase
+        });
+      }
+    }
     console.log(`List of template pixels that match the tile:`);
     console.log(_colorpalette);
     return { correctPixels: _colorpalette, filteredTemplate: template32 };
+  };
+  /** Builds connected blob bounds for dense missing-pixel highlighting.
+   * @param {Map<string, Object>} bucketMap
+   * @param {number} maxClusters
+   * @returns {Array<Object>}
+   * @since 0.97.0
+   */
+  buildMissingHighlightClusters_fn = function(bucketMap, maxClusters) {
+    if (!bucketMap?.size) {
+      return [];
+    }
+    const visited = /* @__PURE__ */ new Set();
+    const clusters = [];
+    const neighborDeltas = [
+      [-1, -1],
+      [-1, 0],
+      [-1, 1],
+      [0, -1],
+      [0, 1],
+      [1, -1],
+      [1, 0],
+      [1, 1]
+    ];
+    for (const [bucketKey, startBucket] of bucketMap) {
+      if (visited.has(bucketKey)) {
+        continue;
+      }
+      const queue = [startBucket];
+      const cluster = {
+        minRow: startBucket.minRow,
+        maxRow: startBucket.maxRow,
+        minColumn: startBucket.minColumn,
+        maxColumn: startBucket.maxColumn,
+        count: 0,
+        color: startBucket.color,
+        buckets: []
+      };
+      visited.add(bucketKey);
+      for (let queueIndex = 0; queueIndex < queue.length; queueIndex++) {
+        const bucket = queue[queueIndex];
+        cluster.minRow = Math.min(cluster.minRow, bucket.minRow);
+        cluster.maxRow = Math.max(cluster.maxRow, bucket.maxRow);
+        cluster.minColumn = Math.min(cluster.minColumn, bucket.minColumn);
+        cluster.maxColumn = Math.max(cluster.maxColumn, bucket.maxColumn);
+        cluster.count += bucket.count;
+        cluster.buckets.push(bucket);
+        for (const [rowDelta, columnDelta] of neighborDeltas) {
+          const neighborKey = `${bucket.bucketRow + rowDelta},${bucket.bucketColumn + columnDelta}`;
+          if (visited.has(neighborKey)) {
+            continue;
+          }
+          const neighbor = bucketMap.get(neighborKey);
+          if (!neighbor) {
+            continue;
+          }
+          visited.add(neighborKey);
+          queue.push(neighbor);
+        }
+      }
+      clusters.push(cluster);
+    }
+    return clusters.sort((a, b) => b.count - a.count).slice(0, maxClusters);
+  };
+  /** Draws one soft contour around a cluster of missing pixels.
+   * @param {Object} params
+   * @param {Uint32Array} params.template
+   * @param {number} params.templateWidth
+   * @param {number} params.templateHeight
+   * @param {Object} params.cluster
+   * @param {Object} params.colors
+   * @param {number} params.phase
+   * @param {number} params.pixelSize
+   * @since 0.97.0
+   */
+  drawMissingHighlightCluster_fn = function({
+    template: template32,
+    templateWidth,
+    templateHeight,
+    cluster,
+    colors,
+    phase,
+    pixelSize
+  }) {
+    const padding = pixelSize * 2;
+    const outerThickness = Math.max(1, Math.round(pixelSize * 0.58));
+    const innerThickness = Math.max(1, Math.round(pixelSize * 0.36));
+    const innerInset = pixelSize * 2;
+    const softColors = {
+      cyan: 3372219136,
+      magenta: 3103732735
+    };
+    const setPixel = (row, column, color) => {
+      if (row < 0 || row >= templateHeight || column < 0 || column >= templateWidth) {
+        return;
+      }
+      template32[row * templateWidth + column] = color;
+    };
+    const contourColor = (isInner = false) => {
+      return isInner ? softColors.magenta : softColors.cyan;
+    };
+    const drawHorizontal = (row, startColumn, endColumn, thickness, isInner = false) => {
+      if (startColumn > endColumn) {
+        return;
+      }
+      for (let column = startColumn; column <= endColumn; column++) {
+        for (let offset = -thickness; offset <= thickness; offset++) {
+          setPixel(row + offset, column, contourColor(isInner));
+        }
+      }
+    };
+    const drawVertical = (column, startRow, endRow, thickness, isInner = false) => {
+      if (startRow > endRow) {
+        return;
+      }
+      for (let row = startRow; row <= endRow; row++) {
+        for (let offset = -thickness; offset <= thickness; offset++) {
+          setPixel(row, column + offset, contourColor(isInner));
+        }
+      }
+    };
+    const bucketSet = new Set(cluster.buckets.map((bucket) => `${bucket.bucketRow},${bucket.bucketColumn}`));
+    const hasBucket = (bucket, rowDelta, columnDelta) => bucketSet.has(`${bucket.bucketRow + rowDelta},${bucket.bucketColumn + columnDelta}`);
+    const drawBucketBoundary = ({ bucket, inset = 0, thickness = outerThickness, isInner = false }) => {
+      const bucketTop = bucket.bucketRow * bucket.bucketSize;
+      const bucketLeft = bucket.bucketColumn * bucket.bucketSize;
+      const bucketBottom = bucketTop + bucket.bucketSize - 1;
+      const bucketRight = bucketLeft + bucket.bucketSize - 1;
+      const top = Math.max(0, Math.floor(bucketTop - padding));
+      const bottom = Math.min(templateHeight - 1, Math.ceil(bucketBottom + padding));
+      const left = Math.max(0, Math.floor(bucketLeft - padding));
+      const right = Math.min(templateWidth - 1, Math.ceil(bucketRight + padding));
+      if (!hasBucket(bucket, -1, 0)) {
+        drawHorizontal(top + inset, left, right, thickness, isInner);
+      }
+      if (!hasBucket(bucket, 1, 0)) {
+        drawHorizontal(bottom - inset, left, right, thickness, isInner);
+      }
+      if (!hasBucket(bucket, 0, -1)) {
+        drawVertical(left + inset, top, bottom, thickness, isInner);
+      }
+      if (!hasBucket(bucket, 0, 1)) {
+        drawVertical(right - inset, top, bottom, thickness, isInner);
+      }
+    };
+    for (const bucket of cluster.buckets) {
+      drawBucketBoundary({ bucket });
+      if (bucket.count >= 3) {
+        drawBucketBoundary({
+          bucket,
+          inset: innerInset,
+          thickness: innerThickness,
+          isInner: true
+        });
+      }
+    }
+  };
+  /** Returns the same Uint32 RGBA color with a new alpha channel.
+   * @param {number} color
+   * @param {number} alpha
+   * @returns {number}
+   * @since 0.97.0
+   */
+  withAlpha_fn = function(color, alpha) {
+    return color & 16777215 | (Math.max(0, Math.min(255, alpha)) & 255) << 24;
+  };
+  /** Draws a loud marker around one incorrect pixel for color-specific highlighting.
+   * @param {Object} params
+   * @param {Uint32Array} params.template
+   * @param {number} params.templateWidth
+   * @param {number} params.templateHeight
+   * @param {number} params.row
+   * @param {number} params.column
+   * @param {number} params.centerColor
+   * @param {Object} params.colors
+   * @param {number} params.phase
+   * @since 0.97.0
+   */
+  drawIncorrectHighlightMarker_fn = function({
+    template: template32,
+    templateWidth,
+    templateHeight,
+    row: templateRow,
+    column: templateColumn,
+    centerColor,
+    colors,
+    phase
+  }) {
+    const setSubpixel = (rowDelta, columnDelta, color) => {
+      const row = templateRow + rowDelta;
+      const column = templateColumn + columnDelta;
+      if (row < 0 || row >= templateHeight || column < 0 || column >= templateWidth) {
+        return;
+      }
+      template32[row * templateWidth + column] = color;
+    };
+    const pixelSize = this.drawMult;
+    const radiusPixels = 10 + phase % 4;
+    const waveRadius = radiusPixels * pixelSize;
+    const innerRadius = Math.max(pixelSize * 3, waveRadius - pixelSize * 4);
+    const midRadius = Math.max(pixelSize * 2, waveRadius - pixelSize * 2);
+    const outerRingThickness = pixelSize * 0.52;
+    const midRingThickness = pixelSize * 0.46;
+    const innerRingThickness = pixelSize * 0.4;
+    const spokeHalfThickness = Math.max(0, Math.floor(pixelSize * 0.22));
+    const phaseIsEven = (phase & 1) == 0;
+    const phaseModThree = phase % 3;
+    const crossStart = Math.max(1, pixelSize);
+    const crossEnd = Math.max(crossStart + 1, pixelSize * 2);
+    for (let offset = crossStart; offset <= crossEnd; offset++) {
+      setSubpixel(-offset, 0, colors.yellow);
+      setSubpixel(offset, 0, colors.yellow);
+      setSubpixel(0, -offset, colors.yellow);
+      setSubpixel(0, offset, colors.yellow);
+    }
+    for (let rowDelta = -waveRadius; rowDelta <= waveRadius; rowDelta++) {
+      for (let columnDelta = -waveRadius; columnDelta <= waveRadius; columnDelta++) {
+        const distance = Math.hypot(rowDelta, columnDelta);
+        const isOuterRing = Math.abs(distance - waveRadius) <= outerRingThickness;
+        const isMidRing = Math.abs(distance - midRadius) <= midRingThickness;
+        const isInnerRing = Math.abs(distance - innerRadius) <= innerRingThickness;
+        const isSpoke = Math.abs(rowDelta) <= spokeHalfThickness && Math.abs(columnDelta) >= crossStart && Math.abs(columnDelta) <= waveRadius && (Math.abs(columnDelta) / pixelSize + phase) % 5 < 1 || Math.abs(columnDelta) <= spokeHalfThickness && Math.abs(rowDelta) >= crossStart && Math.abs(rowDelta) <= waveRadius && (Math.abs(rowDelta) / pixelSize + phase) % 5 < 1;
+        if (!isOuterRing && !isMidRing && !isInnerRing && !isSpoke) {
+          continue;
+        }
+        if (isOuterRing && (Math.floor((Math.atan2(rowDelta, columnDelta) + Math.PI) * 6) + phaseModThree) % 3 == 0) {
+          setSubpixel(rowDelta, columnDelta, colors.white);
+          continue;
+        }
+        if (isOuterRing) {
+          setSubpixel(rowDelta, columnDelta, phaseIsEven ? colors.cyan : colors.blue);
+        } else if (isMidRing) {
+          setSubpixel(rowDelta, columnDelta, phaseIsEven ? colors.yellow : colors.cyan);
+        } else if (isInnerRing) {
+          setSubpixel(rowDelta, columnDelta, colors.coral);
+        } else if (isSpoke) {
+          setSubpixel(rowDelta, columnDelta, phaseIsEven ? colors.blue : colors.yellow);
+        }
+      }
+    }
+    for (const [rowDelta, columnDelta] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) {
+      setSubpixel(rowDelta, columnDelta, colors.yellow);
+    }
   };
 
   // src/apiManager.js
@@ -5155,4 +5653,4 @@ Time Since Blink: ${String(Math.floor(elapsed / 6e4)).padStart(2, "0")}:${String
   }
 })();
 
-// Build Hash: 4ba9924b3f72
+// Build Hash: 559f3a7d74bf

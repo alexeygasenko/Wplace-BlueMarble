@@ -7,6 +7,7 @@ const fullscreenIcon = '<svg class="bm-button-icon bm-button-icon-fullscreen" vi
 const windowedIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.8 4.8l5.2 5.2M19.2 4.8L14 10M19.2 19.2L14 14M4.8 19.2L10 14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 7.5V10H7.5M16.5 10H14V7.5M14 16.5V14h2.5M7.5 14H10v2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const horizontalLayoutIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7.5h15M4.5 16.5h15"/><path d="M7.5 5v5M12 5v5M16.5 5v5M7.5 14v5M12 14v5M16.5 14v5"/></g></svg>';
 const verticalLayoutIcon = '<svg class="bm-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4.5v15M16 4.5v15"/><path d="M5.5 7.5h5M5.5 12h5M5.5 16.5h5M13.5 7.5h5M13.5 12h5M13.5 16.5h5"/></g></svg>';
+const incorrectHighlightIcon = '<svg class="bm-filter-highlight-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6.4"/><path d="M12 3.8V7M12 17v3.2M3.8 12H7M17 12h3.2"/><path d="m9.3 9.3 5.4 5.4M14.7 9.3l-5.4 5.4"/></g></svg>';
 
 function localizeCompactDate(date) {
   const day = String(date.getDate()).padStart(2, '0');
@@ -1096,6 +1097,9 @@ export default class WindowFilter extends Overlay {
       } = colorStatistics[color.id];
 
       const isColorHidden = !!(this.templateManager.shouldFilterColor.get(color.id) || false);
+      const isIncorrectHighlightActive = this.templateManager.getIncorrectHighlightColorID?.() == color.id;
+      const incorrectHighlightMode = isIncorrectHighlightActive ? this.templateManager.getIncorrectHighlightMode?.() : 'inactive';
+      const incorrectHighlightLabel = this.#getIncorrectHighlightButtonLabel(color.name, incorrectHighlightMode);
       const hasNoPixels = Number(colorTotal) === 0;
 
       // Add the color to the color list DOM
@@ -1111,6 +1115,7 @@ export default class WindowFilter extends Overlay {
           'data-name': color.name,
           'data-premium': +color.premium,
           'data-state': isColorHidden ? 'hidden' : 'shown',
+          'data-highlight': incorrectHighlightMode,
           'data-correct': !Number.isNaN(parseInt(colorCorrect)) ? colorCorrect : '0',
           'data-total': colorTotal,
           'data-percent': (colorPercent.slice(-1) == '%') ? colorPercent.slice(0, -1) : '0',
@@ -1136,6 +1141,23 @@ export default class WindowFilter extends Overlay {
                 this.#syncColorToggleLabel(button, color);
               }
             ).buildElement()
+            .addButton({
+              'class': 'bm-button-trans bm-filter-color-highlight ' + bgEffectForButtons,
+              'aria-label': incorrectHighlightLabel,
+              'aria-pressed': isIncorrectHighlightActive ? 'true' : 'false',
+              'title': incorrectHighlightLabel.replace(/\.$/, ''),
+              'data-mode': incorrectHighlightMode,
+              'innerHTML': incorrectHighlightIcon,
+              'style': `color: ${textColorForPaletteColorBackground};`},
+              (instance, button) => {
+                button.onclick = event => {
+                  event.stopPropagation();
+                  this.#toggleIncorrectHighlightColor(button, color);
+                };
+                button.onkeydown = event => event.stopPropagation();
+                if (!color.id) {button.disabled = true;}
+              }
+            ).buildElement()
             .addHeader(2, {'textContent': color.name, 'style': `color: ${((color.id == -1) || (color.id == 0)) ? 'white' : textColorForPaletteColorBackground}`}).buildElement()
             .addSmall({'class': 'bm-filter-color-pxl-cnt', 'innerHTML': hasNoPixels ? '-' : (isHorizontalWindowedMode ? `${colorCorrectLocalized}<br>out of ${colorTotalLocalized}` : `${colorCorrectLocalized} / ${colorTotalLocalized}`), 'style': `color: ${((color.id == -1) || (color.id == 0)) ? 'white' : textColorForPaletteColorBackground}; flex: 1 1 auto; text-align: right;`}).buildElement()
           .buildElement()
@@ -1150,6 +1172,7 @@ export default class WindowFilter extends Overlay {
           'data-name': color.name,
           'data-premium': +color.premium,
           'data-state': isColorHidden ? 'hidden' : 'shown',
+          'data-highlight': incorrectHighlightMode,
           'data-correct': !Number.isNaN(parseInt(colorCorrect)) ? colorCorrect : '0',
           'data-total': colorTotal,
           'data-percent': (colorPercent.slice(-1) == '%') ? colorPercent.slice(0, -1) : '0',
@@ -1175,6 +1198,22 @@ export default class WindowFilter extends Overlay {
                   // Disables the "hide color" button if the color is "Transparent" (or no ID exists)
                   if (!color.id) {button.disabled = true;}
                   this.#syncColorToggleLabel(button, color);
+                }
+              ).buildElement()
+              .addButton({
+                'class': 'bm-button-trans bm-filter-color-highlight',
+                'aria-label': incorrectHighlightLabel,
+                'aria-pressed': isIncorrectHighlightActive ? 'true' : 'false',
+                'title': incorrectHighlightLabel.replace(/\.$/, ''),
+                'data-mode': incorrectHighlightMode,
+                'innerHTML': incorrectHighlightIcon},
+                (instance, button) => {
+                  button.onclick = event => {
+                    event.stopPropagation();
+                    this.#toggleIncorrectHighlightColor(button, color);
+                  };
+                  button.onkeydown = event => event.stopPropagation();
+                  if (!color.id) {button.disabled = true;}
                 }
               ).buildElement()
             .buildElement()
@@ -1321,6 +1360,58 @@ export default class WindowFilter extends Overlay {
     button.style.textDecoration = '';
   }
 
+  /** Toggles incorrect-pixel highlighting for one template color.
+   * @param {HTMLButtonElement} button - The color highlight button
+   * @param {Object} color - Palette color metadata
+   * @since 0.97.0
+   */
+  #toggleIncorrectHighlightColor(button, color) {
+    if (!button || button.disabled || !color.id) {return;}
+
+    this.templateManager.toggleIncorrectHighlightColor(color.id);
+    this.#syncIncorrectHighlightButtons();
+  }
+
+  /** Returns the next-action label for the color highlight button.
+   * @param {string} colorName
+   * @param {'inactive' | 'incorrect' | 'missing'} mode
+   * @returns {string}
+   * @since 0.97.0
+   */
+  #getIncorrectHighlightButtonLabel(colorName, mode) {
+    if (mode == 'incorrect') {
+      return `Show only transparent pixels that should be ${colorName || 'this color'}.`;
+    }
+    if (mode == 'missing') {
+      return `Stop highlighting ${colorName || 'this color'} pixels.`;
+    }
+    return `Highlight incorrect ${colorName || 'this color'} pixels.`;
+  }
+
+  /** Updates color highlight buttons and color-card state.
+   * @since 0.97.0
+   */
+  #syncIncorrectHighlightButtons() {
+    const highlightedColorID = this.templateManager.getIncorrectHighlightColorID?.();
+    const highlightedMode = this.templateManager.getIncorrectHighlightMode?.() ?? 'incorrect';
+    const buttons = document.querySelectorAll(`#${this.windowID} .bm-filter-color-highlight`);
+
+    for (const button of buttons) {
+      const colorElement = button.closest('.bm-filter-color');
+      const colorID = Number(colorElement?.dataset['id']);
+      const isActive = Number.isFinite(colorID) && (colorID == highlightedColorID);
+      const colorName = colorElement?.dataset['name'] || '';
+      const mode = isActive ? highlightedMode : 'inactive';
+      const label = this.#getIncorrectHighlightButtonLabel(colorName, mode);
+
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      button.dataset['mode'] = mode;
+      button.ariaLabel = label;
+      button.title = label.replace(/\.$/, '');
+      colorElement?.setAttribute('data-highlight', mode);
+    }
+  }
+
   /** Animates the eye slash only for direct visibility toggles.
    * @param {HTMLButtonElement} button - The color visibility button
    * @param {'hide' | 'show'} direction - Which slash animation to play
@@ -1371,6 +1462,7 @@ export default class WindowFilter extends Overlay {
     };
 
     colorElement.onkeydown = event => {
+      if (event.target instanceof Element && event.target.closest('button, a, input, select, textarea')) {return;}
       if ((event.key != 'Enter') && (event.key != ' ')) {return;}
 
       event.preventDefault();
